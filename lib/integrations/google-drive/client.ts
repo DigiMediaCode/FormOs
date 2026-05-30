@@ -1,7 +1,6 @@
 import "server-only";
 
 import { Buffer } from "node:buffer";
-import { randomUUID } from "node:crypto";
 import { IntegrationProvider } from "@prisma/client";
 import {
   decryptIntegrationToken,
@@ -110,12 +109,25 @@ async function readGoogleApiError(response: Response): Promise<GoogleApiError> {
       error?: {
         message?: string;
         status?: string;
+        errors?: Array<{
+          message?: string;
+          reason?: string;
+        }>;
       };
     };
+    const firstError = body.error?.errors?.[0];
 
     return {
       status: response.status,
-      message: body.error?.message || body.error?.status || fallback.message,
+      message:
+        [
+          body.error?.message,
+          body.error?.status,
+          firstError?.reason,
+          firstError?.message,
+        ]
+          .filter(Boolean)
+          .join(" | ") || fallback.message,
     };
   } catch {
     try {
@@ -427,6 +439,8 @@ export async function ensureDriveFolder(
     q: queryParts.join(" and "),
     fields: "files(id,name)",
     spaces: "drive",
+    supportsAllDrives: "true",
+    includeItemsFromAllDrives: "true",
   });
   const searchResponse = await fetch(
     `${GOOGLE_DRIVE_FILES_URL}?${searchParams.toString()}`,
@@ -460,7 +474,12 @@ export async function ensureDriveFolder(
     return existingFolderId;
   }
 
-  const createResponse = await fetch(GOOGLE_DRIVE_FILES_URL, {
+  const createFolderParams = new URLSearchParams({
+    supportsAllDrives: "true",
+  });
+  const createResponse = await fetch(
+    `${GOOGLE_DRIVE_FILES_URL}?${createFolderParams.toString()}`,
+    {
     method: "POST",
     headers: {
       ...uploadHeaders(client),
@@ -471,7 +490,8 @@ export async function ensureDriveFolder(
       mimeType: GOOGLE_DRIVE_FOLDER_MIME_TYPE,
       parents: parentFolderId ? [parentFolderId] : undefined,
     }),
-  });
+    },
+  );
 
   if (!createResponse.ok) {
     const error = await readGoogleApiError(createResponse);
@@ -516,30 +536,16 @@ export async function uploadFileToDrive(
   const fileBuffer = Buffer.from(await input.file.arrayBuffer());
   const metadata = {
     name: fileName,
-    mimeType: input.mimeType,
     parents: [input.parentFolderId],
   };
-  const boundary = `formos_drive_${randomUUID().replace(/-/g, "")}`;
-  const metadataPart = Buffer.from(
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
-  );
-  const filePartHeader = Buffer.from(
-    `--${boundary}\r\nContent-Type: ${input.mimeType}\r\n\r\n`,
-  );
-  const closingBoundary = Buffer.from(`\r\n--${boundary}--\r\n`);
-  const body = Buffer.concat([
-    metadataPart,
-    filePartHeader,
-    fileBuffer,
-    closingBoundary,
-  ]);
 
   const searchParams = new URLSearchParams({
-    uploadType: "multipart",
+    uploadType: "resumable",
     fields: "id,name,mimeType,size,webViewLink,webContentLink",
+    supportsAllDrives: "true",
   });
 
-  logDriveDiagnostic("Uploading file to Google Drive.", {
+  logDriveDiagnostic("Starting Google Drive resumable upload.", {
     fileName,
     mimeType: input.mimeType,
     size: input.file.size,
@@ -547,18 +553,60 @@ export async function uploadFileToDrive(
     parentFolderId: input.parentFolderId,
   });
 
-  const response = await fetch(
+  const sessionResponse = await fetch(
     `${GOOGLE_DRIVE_UPLOAD_URL}?${searchParams.toString()}`,
     {
       method: "POST",
       headers: {
         ...uploadHeaders(client),
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-        "Content-Length": String(body.length),
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": input.mimeType,
+        "X-Upload-Content-Length": String(fileBuffer.length),
       },
-      body,
+      body: JSON.stringify(metadata),
     },
   );
+
+  if (!sessionResponse.ok) {
+    const error = await readGoogleApiError(sessionResponse);
+    logDriveError("Google Drive resumable upload session failed.", {
+      status: error.status,
+      message: error.message,
+      fileName,
+      mimeType: input.mimeType,
+      size: input.file.size,
+      parentFolderId: input.parentFolderId,
+    });
+    throw new Error("Unable to start Google Drive upload session.");
+  }
+
+  const uploadUrl = sessionResponse.headers.get("location");
+
+  if (!uploadUrl) {
+    logDriveError("Google Drive resumable upload session missing location.", {
+      fileName,
+      mimeType: input.mimeType,
+      size: input.file.size,
+      parentFolderId: input.parentFolderId,
+    });
+    throw new Error("Google Drive did not return an upload location.");
+  }
+
+  logDriveDiagnostic("Google Drive resumable upload session created.", {
+    fileName,
+    mimeType: input.mimeType,
+    size: input.file.size,
+    parentFolderId: input.parentFolderId,
+  });
+
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": input.mimeType,
+      "Content-Length": String(fileBuffer.length),
+    },
+    body: fileBuffer,
+  });
 
   if (!response.ok) {
     const error = await readGoogleApiError(response);
