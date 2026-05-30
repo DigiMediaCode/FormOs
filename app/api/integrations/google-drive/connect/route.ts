@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/auth/session";
+import { getAppRedirectUrl } from "@/lib/app-url";
 import { getGoogleDriveAuthUrl } from "@/lib/integrations/google-drive/client";
 import { createGoogleDriveOAuthState } from "@/lib/integrations/google-drive/oauth-state";
 
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
   const userId = await getSessionUserId();
 
   if (!userId) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
   const state = createGoogleDriveOAuthState(userId);
@@ -19,9 +20,8 @@ export async function GET(request: NextRequest) {
 
   if (!authUrl) {
     return NextResponse.redirect(
-      new URL(
+      getAppRedirectUrl(
         "/dashboard/settings/integrations?error=Google%20Drive%20OAuth%20is%20not%20configured.",
-        request.url,
       ),
     );
   }
