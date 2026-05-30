@@ -1,5 +1,7 @@
 import "server-only";
 
+import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 import { IntegrationProvider } from "@prisma/client";
 import {
   decryptIntegrationToken,
@@ -27,6 +29,11 @@ type GoogleTokenResponse = {
 
 type GoogleDriveClient = {
   accessToken: string;
+};
+
+type GoogleApiError = {
+  status: number;
+  message: string;
 };
 
 export type GoogleDriveFileMetadata = {
@@ -84,6 +91,46 @@ function uploadHeaders(client: GoogleDriveClient) {
   };
 }
 
+function logDriveDiagnostic(message: string, details?: Record<string, unknown>) {
+  console.info("[formos:google-drive]", message, details ?? {});
+}
+
+function logDriveError(message: string, details?: Record<string, unknown>) {
+  console.error("[formos:google-drive]", message, details ?? {});
+}
+
+async function readGoogleApiError(response: Response): Promise<GoogleApiError> {
+  const fallback = {
+    status: response.status,
+    message: response.statusText || "Google API request failed.",
+  };
+
+  try {
+    const body = (await response.json()) as {
+      error?: {
+        message?: string;
+        status?: string;
+      };
+    };
+
+    return {
+      status: response.status,
+      message: body.error?.message || body.error?.status || fallback.message,
+    };
+  } catch {
+    try {
+      const text = await response.text();
+
+      return {
+        status: response.status,
+        message: text.slice(0, 300) || fallback.message,
+      };
+    } catch {
+      return fallback;
+    }
+  }
+}
+
 async function refreshGoogleDriveAccessToken(
   userId: string,
   refreshToken: string,
@@ -110,6 +157,10 @@ async function refreshGoogleDriveAccessToken(
   const tokenResponse = (await response.json()) as GoogleTokenResponse;
 
   if (!response.ok || !tokenResponse.access_token) {
+    logDriveError("Access token refresh failed.", {
+      status: response.status,
+      hasRefreshToken: true,
+    });
     return null;
   }
 
@@ -129,6 +180,11 @@ async function refreshGoogleDriveAccessToken(
       expiresAt,
       scope: tokenResponse.scope ?? undefined,
     },
+  });
+
+  logDriveDiagnostic("Access token refreshed.", {
+    provider: IntegrationProvider.GOOGLE_DRIVE,
+    expiresAt: expiresAt?.toISOString() ?? null,
   });
 
   return tokenResponse.access_token;
@@ -285,7 +341,14 @@ export async function hasGoogleDriveIntegration(userId: string) {
     },
   });
 
-  return Boolean(integration);
+  const exists = Boolean(integration);
+
+  logDriveDiagnostic("Checked Google Drive integration status.", {
+    provider: IntegrationProvider.GOOGLE_DRIVE,
+    integrationExists: exists,
+  });
+
+  return exists;
 }
 
 export async function getGoogleDriveClientForUser(userId: string) {
@@ -304,6 +367,10 @@ export async function getGoogleDriveClientForUser(userId: string) {
   });
 
   if (!integration) {
+    logDriveDiagnostic("Google Drive integration missing.", {
+      provider: IntegrationProvider.GOOGLE_DRIVE,
+      integrationExists: false,
+    });
     return null;
   }
 
@@ -314,6 +381,14 @@ export async function getGoogleDriveClientForUser(userId: string) {
   const shouldRefresh =
     integration.expiresAt !== null &&
     integration.expiresAt.getTime() <= Date.now() + 60_000;
+
+  logDriveDiagnostic("Loaded Google Drive integration.", {
+    provider: IntegrationProvider.GOOGLE_DRIVE,
+    integrationExists: true,
+    hasRefreshToken: Boolean(refreshToken),
+    expiresAt: integration.expiresAt?.toISOString() ?? null,
+    tokenExpiredOrNearExpiry: shouldRefresh,
+  });
 
   if (shouldRefresh && refreshToken) {
     const refreshedAccessToken = await refreshGoogleDriveAccessToken(
@@ -361,6 +436,13 @@ export async function ensureDriveFolder(
   );
 
   if (!searchResponse.ok) {
+    const error = await readGoogleApiError(searchResponse);
+    logDriveError("Google Drive folder lookup failed.", {
+      status: error.status,
+      message: error.message,
+      folderName,
+      parentFolderId: parentFolderId ?? null,
+    });
     throw new Error("Unable to access Google Drive folders.");
   }
 
@@ -370,6 +452,11 @@ export async function ensureDriveFolder(
   const existingFolderId = searchResult.files?.find((file) => file.id)?.id;
 
   if (existingFolderId) {
+    logDriveDiagnostic("Using existing Google Drive folder.", {
+      folderName,
+      folderId: existingFolderId,
+      parentFolderId: parentFolderId ?? null,
+    });
     return existingFolderId;
   }
 
@@ -387,6 +474,13 @@ export async function ensureDriveFolder(
   });
 
   if (!createResponse.ok) {
+    const error = await readGoogleApiError(createResponse);
+    logDriveError("Google Drive folder creation failed.", {
+      status: error.status,
+      message: error.message,
+      folderName,
+      parentFolderId: parentFolderId ?? null,
+    });
     throw new Error("Unable to create a Google Drive folder.");
   }
 
@@ -395,6 +489,12 @@ export async function ensureDriveFolder(
   if (!createdFolder.id) {
     throw new Error("Google Drive did not return a folder id.");
   }
+
+  logDriveDiagnostic("Created Google Drive folder.", {
+    folderName,
+    folderId: createdFolder.id,
+    parentFolderId: parentFolderId ?? null,
+  });
 
   return createdFolder.id;
 }
@@ -413,33 +513,63 @@ export async function uploadFileToDrive(
   },
 ): Promise<GoogleDriveFileMetadata> {
   const fileName = sanitizeDriveFileName(input.fileName);
+  const fileBuffer = Buffer.from(await input.file.arrayBuffer());
   const metadata = {
     name: fileName,
     mimeType: input.mimeType,
     parents: [input.parentFolderId],
   };
-  const body = new FormData();
-
-  body.append(
-    "metadata",
-    new Blob([JSON.stringify(metadata)], { type: "application/json" }),
+  const boundary = `formos_drive_${randomUUID().replace(/-/g, "")}`;
+  const metadataPart = Buffer.from(
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`,
   );
-  body.append("file", input.file, fileName);
+  const filePartHeader = Buffer.from(
+    `--${boundary}\r\nContent-Type: ${input.mimeType}\r\n\r\n`,
+  );
+  const closingBoundary = Buffer.from(`\r\n--${boundary}--\r\n`);
+  const body = Buffer.concat([
+    metadataPart,
+    filePartHeader,
+    fileBuffer,
+    closingBoundary,
+  ]);
 
   const searchParams = new URLSearchParams({
     uploadType: "multipart",
     fields: "id,name,mimeType,size,webViewLink,webContentLink",
   });
+
+  logDriveDiagnostic("Uploading file to Google Drive.", {
+    fileName,
+    mimeType: input.mimeType,
+    size: input.file.size,
+    bufferSize: fileBuffer.length,
+    parentFolderId: input.parentFolderId,
+  });
+
   const response = await fetch(
     `${GOOGLE_DRIVE_UPLOAD_URL}?${searchParams.toString()}`,
     {
       method: "POST",
-      headers: uploadHeaders(client),
+      headers: {
+        ...uploadHeaders(client),
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+        "Content-Length": String(body.length),
+      },
       body,
     },
   );
 
   if (!response.ok) {
+    const error = await readGoogleApiError(response);
+    logDriveError("Google Drive file upload failed.", {
+      status: error.status,
+      message: error.message,
+      fileName,
+      mimeType: input.mimeType,
+      size: input.file.size,
+      parentFolderId: input.parentFolderId,
+    });
     throw new Error("Unable to upload file to Google Drive.");
   }
 
@@ -448,6 +578,13 @@ export async function uploadFileToDrive(
   if (!uploadedFile.id) {
     throw new Error("Google Drive did not return a file id.");
   }
+
+  logDriveDiagnostic("Google Drive file upload succeeded.", {
+    driveFileId: uploadedFile.id,
+    fileName: uploadedFile.name || fileName,
+    mimeType: uploadedFile.mimeType || input.mimeType,
+    size: Number(uploadedFile.size) || input.file.size,
+  });
 
   return {
     provider: "google_drive",

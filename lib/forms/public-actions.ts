@@ -166,6 +166,14 @@ function validateUploadFile(field: FormBuilderField, file: File) {
   return null;
 }
 
+function logUploadDiagnostic(message: string, details?: Record<string, unknown>) {
+  console.info("[formos:upload]", message, details ?? {});
+}
+
+function logUploadError(message: string, details?: Record<string, unknown>) {
+  console.error("[formos:upload]", message, details ?? {});
+}
+
 export async function getPublishedFormForPublicView(formId: string) {
   const form = await prisma.form.findUnique({
     where: {
@@ -224,6 +232,11 @@ export async function submitPublicForm(formId: string, formData: FormData) {
   const uploadRequests: UploadRequest[] = [];
   const uploadsAvailable = await hasGoogleDriveIntegration(form.ownerId);
 
+  logUploadDiagnostic("Public form upload availability checked.", {
+    formId: form.id,
+    uploadFieldsEnabled: uploadsAvailable,
+  });
+
   for (const field of formSnapshot.fields) {
     if (isSignatureField(field)) {
       const value = String(formData.get(field.id) ?? "").trim();
@@ -272,8 +285,24 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       const validationError = validateUploadFile(field, value);
 
       if (validationError) {
+        logUploadDiagnostic("Rejected invalid upload before Google Drive request.", {
+          fieldId: field.id,
+          fieldLabel: field.label || "Uploaded file",
+          fileName: value.name,
+          mimeType: value.type,
+          size: value.size,
+          reason: validationError,
+        });
         errorRedirect(form.id, validationError);
       }
+
+      logUploadDiagnostic("Accepted upload for Google Drive transfer.", {
+        fieldId: field.id,
+        fieldLabel: field.label || "Uploaded file",
+        fileName: value.name,
+        mimeType: value.type,
+        size: value.size,
+      });
 
       uploadRequests.push({
         fieldId: field.id,
@@ -342,6 +371,12 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     }
 
     try {
+      logUploadDiagnostic("Preparing Google Drive folders for submission uploads.", {
+        formId: form.id,
+        submissionId: submission.id,
+        uploadCount: uploadRequests.length,
+      });
+
       const rootFolderId = await ensureFormOSRootFolder(driveClient);
       const formFolderId = await ensureDriveFolder(
         driveClient,
@@ -355,7 +390,26 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       );
       const uploadedFiles: Record<string, GoogleDriveFileMetadata[]> = {};
 
+      logUploadDiagnostic("Google Drive upload folders ready.", {
+        formId: form.id,
+        submissionId: submission.id,
+        rootFolderId,
+        formFolderId,
+        submissionFolderId,
+      });
+
       for (const uploadRequest of uploadRequests) {
+        logUploadDiagnostic("Starting Google Drive file upload.", {
+          formId: form.id,
+          submissionId: submission.id,
+          fieldId: uploadRequest.fieldId,
+          fieldLabel: uploadRequest.label,
+          fileName: uploadRequest.file.name,
+          mimeType: uploadRequest.file.type,
+          size: uploadRequest.file.size,
+          targetFolderId: submissionFolderId,
+        });
+
         const uploadedFile = await uploadFileToDrive(driveClient, {
           file: uploadRequest.file,
           fileName: uploadRequest.file.name,
@@ -377,7 +431,13 @@ export async function submitPublicForm(formId: string, formData: FormData) {
           files: uploadedFiles as unknown as Prisma.InputJsonValue,
         },
       });
-    } catch {
+    } catch (error) {
+      logUploadError("Google Drive upload failed; deleting partial submission.", {
+        formId: form.id,
+        submissionId: submission.id,
+        uploadCount: uploadRequests.length,
+        errorMessage: error instanceof Error ? error.message : "Unknown upload error",
+      });
       await prisma.formSubmission.delete({
         where: {
           id: submission.id,
@@ -385,7 +445,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       });
       errorRedirect(
         form.id,
-        "We could not upload your file to Google Drive. Please try again.",
+        "File upload failed. Please contact the form owner.",
       );
     }
   }
