@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FormMode {
+  STANDARD
+  AGREEMENT
+  BOOKING
+}
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  NEW
+  REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum IntegrationProvider {
+  GOOGLE_DRIVE
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String?
+  email        String            @unique
+  passwordHash String
+  forms        Form[]
+  integrations UserIntegration[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model UserIntegration {
+  id           String              @id @default(cuid())
+  userId       String
+  provider     IntegrationProvider
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model Form {
+  id          String           @id @default(cuid())
+  ownerId     String
+  title       String
+  slug        String
+  description String?
+  mode        FormMode         @default(STANDARD)
+  version     Int              @default(1)
+  status      FormStatus       @default(DRAFT)
+  fields      Json
+  settings    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  submissions FormSubmission[]
+
+  @@unique([ownerId, slug])
+}
+
+model FormSubmission {
+  id           String           @id @default(cuid())
+  formId       String
+  ownerId      String
+  formVersion  Int
+  formSnapshot Json
+  data         Json
+  files        Json?
+  signatures   Json?
+  status       SubmissionStatus @default(NEW)
+  metadata     Json?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  form         Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([formId])
+}
