@@ -1,6 +1,5 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/auth/session";
@@ -12,6 +11,15 @@ function normalizeEmail(email: string) {
 
 function errorRedirect(path: "/login" | "/signup", message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
 }
 
 export async function signupAction(formData: FormData) {
@@ -36,10 +44,7 @@ export async function signupAction(formData: FormData) {
       },
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (isUniqueConstraintError(error)) {
       errorRedirect("/signup", "An account already exists for that email.");
     }
 
