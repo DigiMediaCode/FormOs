@@ -29,11 +29,17 @@ enum IntegrationProvider {
   GOOGLE_DRIVE
 }
 
+enum UserRole {
+  USER
+  SUPER_ADMIN
+}
+
 model User {
   id           String            @id @default(cuid())
   name         String?
   email        String            @unique
   passwordHash String
+  role         UserRole          @default(USER)
   forms        Form[]
   integrations UserIntegration[]
   createdAt    DateTime          @default(now())

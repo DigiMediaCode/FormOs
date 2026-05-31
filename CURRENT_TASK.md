@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 8.3: Upload UX + Google Drive Notices
+# CURRENT TASK — FormOS Milestone 9: Super Admin Foundation
 
 ## Project Context
 
@@ -19,123 +19,248 @@ Completed:
 * Milestone 8: Upload files to connected Google Drive
 * Milestone 8.1: Google Drive upload debugging/fix
 * Milestone 8.2: Google Drive folder selection + organized upload folders
-
-Current state:
-
-* FormOS is deployed live.
-* Supabase is connected.
-* Google Drive connection works.
-* Uploads to Google Drive work.
-* Selected parent folder works.
-* Form title and submitter-name folders work.
-* Do not touch CommerceOS.
+* Milestone 8.3: Upload UX + Google Drive notices
+* FormOS is deployed live on Hostinger
+* Supabase is connected
+* Prisma Migrate deployment workflow is active
+* Do not touch CommerceOS
 
 ## Goal
 
-Improve the public upload submission experience and add clear Google Drive notices.
+Add a Super Admin foundation for FormOS.
 
-Currently, photo/file uploads can take time, and the public user does not clearly know that submission is in progress. This can cause double-clicking and duplicate submissions.
+The platform owner should be able to access a protected admin area to monitor users, forms, submission counts, and Google Drive integration status.
 
-Also, users should be clearly informed that uploaded files go to the form owner’s Google Drive and are not permanently stored on FormOS.
+Super Admin must not get default access to sensitive submission contents or uploaded files.
 
-## Public Form Submit UX
+## Privacy Rule
 
-When the public user submits a form:
+Uploaded documents belong to the form owner, not FormOS.
 
-* Disable the submit button immediately.
-* Change submit button text to:
-  Submitting...
-* If the form has image uploads, show:
-  Please wait. Your files are uploading.
-* Prevent double submission.
-* If submission fails, re-enable the submit button.
-* If submission succeeds, show the existing success message.
+FormOS stores only Google Drive metadata for uploaded files.
 
-## Image Upload Disclaimer
+Super Admin should not see:
 
-Under every image_upload field on the public form, show:
+* uploaded file links
+* Google Drive file links
+* uploaded ID photos
+* driving licence images
+* passport/bank documents
+* OAuth access tokens
+* OAuth refresh tokens
+* raw sensitive submission answers by default
 
-Uploaded files are sent to the form owner’s connected Google Drive. FormOS does not permanently store your uploaded files on its server.
+Super Admin may see operational metadata only.
 
-Keep the wording clear and user-friendly.
+## Required Database Change
 
-## Google Drive Not Connected Message
+Add a UserRole enum:
 
-If the form has image_upload fields and the form owner has not connected Google Drive:
+* USER
+* SUPER_ADMIN
 
-On the public form, under the image_upload field, show:
+Update User model:
 
-File uploads are currently unavailable because the form owner has not connected Google Drive.
+* role UserRole @default(USER)
 
-If the field is required, public submission should remain blocked with friendly error.
+Create a Prisma migration using:
 
-## Dashboard / Builder Warning
+npx prisma migrate dev --name add_user_roles
 
-If a logged-in form owner has a form with image_upload fields but has not connected Google Drive, show a warning on relevant admin pages.
+Do not use prisma db push.
 
-Show this warning on at least:
+## First Super Admin User
 
-* /dashboard/forms/[formId]
-* /dashboard/forms/[formId]/builder
+For now, create a safe way to promote a user to SUPER_ADMIN.
 
-Warning text:
+Acceptable MVP options:
 
-This form contains image upload fields, but Google Drive is not connected. Public users will not be able to upload files until Google Drive is set up.
+Option A:
 
-Include link:
+* Add a script that promotes a user by email.
+* Example: scripts/make-super-admin.ts or scripts/make-super-admin.js
 
-Go to Settings / Integrations
+Option B:
 
-## Implementation Notes
+* Add a temporary server-side helper or documented SQL command.
 
-The public form likely needs a client component wrapper or client submit state.
+Preferred:
+Create a script.
 
-Do not break existing server action validation.
+The script should:
 
-Use simple state:
+* accept email from command line
+* find user by email
+* set role to SUPER_ADMIN
+* print safe success/failure message
+* not expose secrets
 
-* isSubmitting
-* hasUploadFields
+Example command:
 
-Disable button when isSubmitting is true.
+node scripts/make-super-admin.js [your@email.com](mailto:your@email.com)
 
-## Security / Safety
+## Admin Routes
 
-* Do not expose Google Drive tokens.
-* Do not expose private integration data.
-* Do not log uploaded file contents.
-* Keep all existing upload validation.
-* Keep all existing Drive upload logic.
-* Do not change where files are stored.
+Create:
+
+* /admin
+* /admin/users
+* /admin/forms
+
+Optional if easy:
+
+* /admin/submissions
+
+But keep it summary-only.
+
+## Access Control
+
+Only users with role SUPER_ADMIN can access /admin routes.
+
+If logged out:
+
+* redirect to /login
+
+If logged in but not SUPER_ADMIN:
+
+* show access denied or redirect to /dashboard
+
+Do not expose admin data to normal users.
+
+## Admin Layout / Navigation
+
+Create a simple admin layout/navigation.
+
+Links:
+
+* Admin Dashboard → /admin
+* Users → /admin/users
+* Forms → /admin/forms
+* Back to App Dashboard → /dashboard
+
+Keep it simple.
+
+## Admin Dashboard
+
+/admin should show basic stats:
+
+* total users
+* total forms
+* total published forms
+* total submissions
+* total Google Drive connected users
+
+Do not show uploaded file links.
+
+## Admin Users Page
+
+/admin/users should show a table/list:
+
+* name
+* email
+* role
+* created date
+* forms count
+* submissions count
+* Google Drive connected: Yes/No
+
+Do not show tokens.
+
+Do not show sensitive submission data.
+
+## Admin Forms Page
+
+/admin/forms should show a table/list:
+
+* form title
+* owner email
+* status
+* mode
+* version
+* submissions count
+* created date
+* updated date
+
+Do not show uploaded file links.
+
+Do not show full submission answers.
+
+## Optional Admin Submissions Summary
+
+If implemented:
+
+/admin/submissions should show summary only:
+
+* submission id
+* form title
+* owner email
+* status
+* created date
+* form version
+* file count
+
+Do not show answers.
+Do not show file links.
+Do not show Drive links.
+
+## Helpers
+
+Create helpers such as:
+
+* requireSuperAdmin
+* getAdminDashboardStats
+* getAdminUsers
+* getAdminForms
+* getAdminSubmissionSummary if needed
+
+## Security Requirements
+
+* Super Admin routes must be server-side protected.
+* Do not rely only on hiding UI links.
+* Do not expose OAuth tokens.
+* Do not expose Google Drive file links.
+* Do not expose sensitive submission answers.
+* Do not expose uploaded files.
+* Keep queries read-only for this milestone.
+* No user deletion yet.
+* No impersonation yet.
+* No role editing from UI yet.
 
 ## Out of Scope
 
-Do not build progress percentage.
-Do not build resumable uploads.
-Do not build Google Picker.
-Do not build Super Admin.
-Do not build PDF export.
-Do not build PDF import.
-Do not build templates.
-Do not build email notifications.
+Do not build user deletion.
+Do not build user suspension.
+Do not build impersonation.
+Do not build billing.
+Do not build role editing UI.
+Do not expose submission detail to Super Admin.
+Do not expose uploaded files to Super Admin.
+Do not build audit logs yet.
+Do not build office-use fields yet.
+Do not build notifications.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 8.3 is complete when:
+Milestone 9 is complete when:
 
-* Submit button disables immediately after click.
-* Submit button shows “Submitting...” while submission is in progress.
-* Uploading message appears for forms with image_upload fields.
-* Double submission is prevented.
-* Button re-enables if validation/upload fails.
-* Public image_upload fields show the Google Drive storage disclaimer.
-* Public image_upload fields show unavailable message when Drive is not connected.
-* Required image_upload validation still works.
-* Form detail page warns owner if image_upload exists but Drive is not connected.
-* Builder page warns owner if image_upload exists but Drive is not connected.
-* Existing public submissions still work.
-* Existing Google Drive upload still works.
+* UserRole enum exists.
+* User has role field with USER default.
+* Prisma migration exists for add_user_roles.
+* A safe script or documented method exists to promote a user to SUPER_ADMIN.
+* /admin route exists.
+* /admin/users route exists.
+* /admin/forms route exists.
+* Logged-out users cannot access /admin.
+* Normal users cannot access /admin.
+* SUPER_ADMIN user can access /admin.
+* Admin dashboard shows platform stats.
+* Admin users page shows users with counts and Drive connected status.
+* Admin forms page shows forms with owner and submission counts.
+* No uploaded file links are exposed to Super Admin.
+* No OAuth tokens are exposed.
+* No sensitive submission answers are exposed by default.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev --name add_user_roles creates migration.
 * npm run build passes.
