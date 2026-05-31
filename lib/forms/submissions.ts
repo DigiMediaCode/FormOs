@@ -34,6 +34,12 @@ export type SubmissionFileMetadata = {
   webViewLink: string | null;
   webContentLink: string | null;
   uploadedAt: string;
+  parentFolderId?: string;
+  parentFolderName?: string;
+  formFolderId?: string;
+  formFolderName?: string;
+  submissionFolderId?: string;
+  submissionFolderName?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -143,6 +149,22 @@ function normalizeFileMetadata(value: unknown): SubmissionFileMetadata | null {
       typeof value.webContentLink === "string" ? value.webContentLink : null,
     uploadedAt:
       typeof value.uploadedAt === "string" ? value.uploadedAt : "",
+    parentFolderId:
+      typeof value.parentFolderId === "string" ? value.parentFolderId : undefined,
+    parentFolderName:
+      typeof value.parentFolderName === "string" ? value.parentFolderName : undefined,
+    formFolderId:
+      typeof value.formFolderId === "string" ? value.formFolderId : undefined,
+    formFolderName:
+      typeof value.formFolderName === "string" ? value.formFolderName : undefined,
+    submissionFolderId:
+      typeof value.submissionFolderId === "string"
+        ? value.submissionFolderId
+        : undefined,
+    submissionFolderName:
+      typeof value.submissionFolderName === "string"
+        ? value.submissionFolderName
+        : undefined,
   };
 }
 

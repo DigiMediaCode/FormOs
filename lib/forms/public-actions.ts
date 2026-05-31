@@ -5,9 +5,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { DISPLAY_ONLY_FIELD_TYPES, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
 import {
-  ensureDriveFolder,
-  ensureFormOSRootFolder,
+  ensureFormFolder,
+  ensureSubmissionFolder,
+  extractSubmitterName,
   getGoogleDriveClientForUser,
+  getUploadParentFolderForUser,
   hasGoogleDriveIntegration,
   uploadFileToDrive,
   type GoogleDriveFileMetadata,
@@ -172,6 +174,23 @@ function logUploadDiagnostic(message: string, details?: Record<string, unknown>)
 
 function logUploadError(message: string, details?: Record<string, unknown>) {
   console.error("[formos:upload]", message, details ?? {});
+}
+
+function shortSubmissionId(submissionId: string) {
+  return submissionId.slice(0, 8);
+}
+
+function submissionFolderName(
+  fields: FormBuilderField[],
+  data: Record<string, string | boolean>,
+  submissionId: string,
+) {
+  const shortId = shortSubmissionId(submissionId);
+  const submitterName = extractSubmitterName(fields, data);
+
+  return submitterName
+    ? `${submitterName} - ${shortId}`
+    : `submission-${shortId}`;
 }
 
 export async function getPublishedFormForPublicView(formId: string) {
@@ -377,25 +396,31 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         uploadCount: uploadRequests.length,
       });
 
-      const rootFolderId = await ensureFormOSRootFolder(driveClient);
-      const formFolderId = await ensureDriveFolder(
+      const parentFolder = await getUploadParentFolderForUser(
+        driveClient,
+        form.ownerId,
+      );
+      const formFolder = await ensureFormFolder(
         driveClient,
         form.title,
-        rootFolderId,
+        parentFolder.id,
       );
-      const submissionFolderId = await ensureDriveFolder(
+      const submissionFolder = await ensureSubmissionFolder(
         driveClient,
-        `submission-${submission.id}`,
-        formFolderId,
+        submissionFolderName(formSnapshot.fields, submittedData, submission.id),
+        formFolder.id,
       );
       const uploadedFiles: Record<string, GoogleDriveFileMetadata[]> = {};
 
       logUploadDiagnostic("Google Drive upload folders ready.", {
         formId: form.id,
         submissionId: submission.id,
-        rootFolderId,
-        formFolderId,
-        submissionFolderId,
+        parentFolderId: parentFolder.id,
+        parentFolderName: parentFolder.name,
+        formFolderId: formFolder.id,
+        formFolderName: formFolder.name,
+        submissionFolderId: submissionFolder.id,
+        submissionFolderName: submissionFolder.name,
       });
 
       for (const uploadRequest of uploadRequests) {
@@ -407,14 +432,16 @@ export async function submitPublicForm(formId: string, formData: FormData) {
           fileName: uploadRequest.file.name,
           mimeType: uploadRequest.file.type,
           size: uploadRequest.file.size,
-          targetFolderId: submissionFolderId,
+          targetFolderId: submissionFolder.id,
         });
 
         const uploadedFile = await uploadFileToDrive(driveClient, {
           file: uploadRequest.file,
           fileName: uploadRequest.file.name,
           mimeType: uploadRequest.file.type,
-          parentFolderId: submissionFolderId,
+          parentFolder,
+          formFolder,
+          submissionFolder,
         });
 
         uploadedFiles[uploadRequest.fieldId] = [

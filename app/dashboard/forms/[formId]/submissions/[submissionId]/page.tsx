@@ -156,6 +156,11 @@ export default async function SubmissionDetailPage({
                         <p className="mt-1 text-sm text-slate-700">
                           {file.mimeType} - {formatFileSize(file.size)}
                         </p>
+                        {file.submissionFolderName ? (
+                          <p className="mt-1 text-sm text-slate-700">
+                            Folder: {file.submissionFolderName}
+                          </p>
+                        ) : null}
                         {file.webViewLink ? (
                           <Link
                             className="mt-3 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"

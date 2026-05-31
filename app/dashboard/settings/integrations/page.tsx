@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { GOOGLE_DRIVE_SCOPE, getGoogleDriveIntegrationStatus } from "@/lib/integrations/google-drive/client";
+import {
+  clearGoogleDriveUploadFolderAction,
+  saveGoogleDriveUploadFolderAction,
+} from "./actions";
 
 type IntegrationsPageProps = {
   searchParams: Promise<{
@@ -112,6 +116,62 @@ export default async function IntegrationsPage({
               </Link>
             )}
           </div>
+
+          {googleDrive.connected ? (
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <h3 className="text-base font-semibold text-slate-950">
+                Upload folder
+              </h3>
+              {googleDrive.uploadFolder ? (
+                <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-950">
+                    {googleDrive.uploadFolder.name}
+                  </p>
+                  <p className="mt-1 break-all text-xs text-slate-600">
+                    Folder ID: {googleDrive.uploadFolder.id}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Configured {formatDate(new Date(googleDrive.uploadFolder.configuredAt)) ?? "recently"}.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                  No custom upload folder is configured. Uploads will use or create
+                  a default FormOS Uploads folder in your Google Drive.
+                </p>
+              )}
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <form action={saveGoogleDriveUploadFolderAction} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+                    Google Drive Folder URL or Folder ID
+                    <input
+                      className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                      name="folderInput"
+                      placeholder="https://drive.google.com/drive/folders/..."
+                      type="text"
+                    />
+                  </label>
+                  <button
+                    className="self-end rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    type="submit"
+                  >
+                    Save Upload Folder
+                  </button>
+                </form>
+
+                <form action={clearGoogleDriveUploadFolderAction} className="sm:self-end">
+                  <button
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!googleDrive.uploadFolder}
+                    type="submit"
+                  >
+                    Clear Upload Folder
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

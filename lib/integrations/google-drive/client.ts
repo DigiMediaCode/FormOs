@@ -1,11 +1,12 @@
 import "server-only";
 
 import { Buffer } from "node:buffer";
-import { IntegrationProvider } from "@prisma/client";
+import { IntegrationProvider, Prisma } from "@prisma/client";
 import {
   decryptIntegrationToken,
   encryptIntegrationToken,
 } from "@/lib/integrations/tokens";
+import type { FormBuilderField } from "@/lib/forms/fields";
 import { prisma } from "@/lib/prisma";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -14,6 +15,15 @@ const GOOGLE_DRIVE_FILES_URL = "https://www.googleapis.com/drive/v3/files";
 const GOOGLE_DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files";
 const GOOGLE_DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
 const ROOT_UPLOAD_FOLDER_NAME = "FormOS Uploads";
+const SUBMITTER_NAME_LABELS = [
+  "full name",
+  "driver name",
+  "customer name",
+  "client name",
+  "applicant name",
+  "your name",
+  "name",
+];
 export const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 type GoogleTokenResponse = {
@@ -44,6 +54,12 @@ export type GoogleDriveFileMetadata = {
   webViewLink: string | null;
   webContentLink: string | null;
   uploadedAt: string;
+  parentFolderId: string;
+  parentFolderName: string;
+  formFolderId: string;
+  formFolderName: string;
+  submissionFolderId: string;
+  submissionFolderName: string;
 };
 
 type GoogleDriveUploadResponse = {
@@ -53,6 +69,17 @@ type GoogleDriveUploadResponse = {
   size?: string;
   webViewLink?: string;
   webContentLink?: string;
+};
+
+export type GoogleDriveUploadFolder = {
+  id: string;
+  name: string;
+  configuredAt: string;
+};
+
+export type GoogleDriveFolderReference = {
+  id: string;
+  name: string;
 };
 
 function getGoogleOAuthConfig() {
@@ -76,12 +103,26 @@ function escapeDriveQueryValue(value: string) {
 }
 
 function sanitizeDriveFileName(fileName: string) {
-  const cleaned = fileName
+  return sanitizeDriveName(fileName, "upload", 180);
+}
+
+export function sanitizeDriveFolderName(
+  folderName: string,
+  fallback = "Folder",
+  maxLength = 80,
+) {
+  return sanitizeDriveName(folderName, fallback, maxLength);
+}
+
+function sanitizeDriveName(value: string, fallback: string, maxLength: number) {
+  const cleaned = value
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-")
     .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength)
     .trim();
 
-  return cleaned || "upload";
+  return cleaned || fallback;
 }
 
 function uploadHeaders(client: GoogleDriveClient) {
@@ -96,6 +137,52 @@ function logDriveDiagnostic(message: string, details?: Record<string, unknown>) 
 
 function logDriveError(message: string, details?: Record<string, unknown>) {
   console.error("[formos:google-drive]", message, details ?? {});
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeIntegrationMetadata(value: unknown) {
+  return isRecord(value) ? value : {};
+}
+
+function normalizeUploadFolder(value: unknown): GoogleDriveUploadFolder | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (
+    typeof value.id !== "string" ||
+    typeof value.name !== "string" ||
+    typeof value.configuredAt !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    name: value.name,
+    configuredAt: value.configuredAt,
+  };
+}
+
+export function extractGoogleDriveFolderId(input: string) {
+  const value = input.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    const folderMatch = url.pathname.match(/\/folders\/([^/?#]+)/);
+    const id = folderMatch?.[1] || url.searchParams.get("id");
+
+    return id && /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
+  } catch {
+    return /^[A-Za-z0-9_-]+$/.test(value) ? value : null;
+  }
 }
 
 async function readGoogleApiError(response: Response): Promise<GoogleApiError> {
@@ -318,6 +405,7 @@ export async function getGoogleDriveIntegrationStatus(userId: string) {
       expiresAt: true,
       createdAt: true,
       updatedAt: true,
+      metadata: true,
     },
   });
 
@@ -328,8 +416,11 @@ export async function getGoogleDriveIntegrationStatus(userId: string) {
       expiresAt: null,
       connectedAt: null,
       updatedAt: null,
+      uploadFolder: null,
     };
   }
+
+  const metadata = normalizeIntegrationMetadata(integration.metadata);
 
   return {
     connected: true,
@@ -337,6 +428,7 @@ export async function getGoogleDriveIntegrationStatus(userId: string) {
     expiresAt: integration.expiresAt,
     connectedAt: integration.createdAt,
     updatedAt: integration.updatedAt,
+    uploadFolder: normalizeUploadFolder(metadata.uploadFolder),
   };
 }
 
@@ -523,20 +615,237 @@ export async function ensureFormOSRootFolder(client: GoogleDriveClient) {
   return ensureDriveFolder(client, ROOT_UPLOAD_FOLDER_NAME);
 }
 
+export async function validateGoogleDriveFolder(
+  client: GoogleDriveClient,
+  folderId: string,
+): Promise<GoogleDriveFolderReference> {
+  const searchParams = new URLSearchParams({
+    fields: "id,name,mimeType",
+    supportsAllDrives: "true",
+  });
+  const response = await fetch(
+    `${GOOGLE_DRIVE_FILES_URL}/${encodeURIComponent(folderId)}?${searchParams.toString()}`,
+    {
+      headers: uploadHeaders(client),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await readGoogleApiError(response);
+    logDriveError("Google Drive folder validation failed.", {
+      status: error.status,
+      message: error.message,
+      folderId,
+    });
+    throw new Error("Unable to access that Google Drive folder.");
+  }
+
+  const folder = (await response.json()) as {
+    id?: string;
+    name?: string;
+    mimeType?: string;
+  };
+
+  if (folder.mimeType !== GOOGLE_DRIVE_FOLDER_MIME_TYPE || !folder.id) {
+    throw new Error("The selected Google Drive item is not a folder.");
+  }
+
+  return {
+    id: folder.id,
+    name: folder.name || "Google Drive folder",
+  };
+}
+
+export async function saveGoogleDriveUploadFolder(
+  userId: string,
+  folderInput: string,
+) {
+  const folderId = extractGoogleDriveFolderId(folderInput);
+
+  if (!folderId) {
+    throw new Error("Enter a valid Google Drive folder URL or folder ID.");
+  }
+
+  const client = await getGoogleDriveClientForUser(userId);
+
+  if (!client) {
+    throw new Error("Connect Google Drive before choosing an upload folder.");
+  }
+
+  const folder = await validateGoogleDriveFolder(client, folderId);
+  const integration = await prisma.userIntegration.findUnique({
+    where: {
+      userId_provider: {
+        userId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+      },
+    },
+    select: {
+      metadata: true,
+    },
+  });
+  const metadata = normalizeIntegrationMetadata(integration?.metadata);
+  const uploadFolder: GoogleDriveUploadFolder = {
+    id: folder.id,
+    name: folder.name,
+    configuredAt: new Date().toISOString(),
+  };
+
+  await prisma.userIntegration.update({
+    where: {
+      userId_provider: {
+        userId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+      },
+    },
+    data: {
+      metadata: {
+        ...metadata,
+        uploadFolder,
+      } as Prisma.InputJsonValue,
+    },
+  });
+
+  return uploadFolder;
+}
+
+export async function clearGoogleDriveUploadFolder(userId: string) {
+  const integration = await prisma.userIntegration.findUnique({
+    where: {
+      userId_provider: {
+        userId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+      },
+    },
+    select: {
+      metadata: true,
+    },
+  });
+
+  if (!integration) {
+    throw new Error("Connect Google Drive before clearing an upload folder.");
+  }
+
+  const metadata = normalizeIntegrationMetadata(integration.metadata);
+  const { uploadFolder: _uploadFolder, ...nextMetadata } = metadata;
+
+  await prisma.userIntegration.update({
+    where: {
+      userId_provider: {
+        userId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+      },
+    },
+    data: {
+      metadata: nextMetadata as Prisma.InputJsonValue,
+    },
+  });
+}
+
+export async function getConfiguredUploadFolderForUser(userId: string) {
+  const integration = await prisma.userIntegration.findUnique({
+    where: {
+      userId_provider: {
+        userId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+      },
+    },
+    select: {
+      metadata: true,
+    },
+  });
+  const metadata = normalizeIntegrationMetadata(integration?.metadata);
+
+  return normalizeUploadFolder(metadata.uploadFolder);
+}
+
+export async function getUploadParentFolderForUser(
+  client: GoogleDriveClient,
+  userId: string,
+): Promise<GoogleDriveFolderReference> {
+  const configuredFolder = await getConfiguredUploadFolderForUser(userId);
+
+  if (configuredFolder) {
+    const folder = await validateGoogleDriveFolder(client, configuredFolder.id);
+
+    return {
+      id: folder.id,
+      name: folder.name,
+    };
+  }
+
+  const id = await ensureFormOSRootFolder(client);
+
+  return {
+    id,
+    name: ROOT_UPLOAD_FOLDER_NAME,
+  };
+}
+
+export async function ensureFormFolder(
+  client: GoogleDriveClient,
+  formTitle: string,
+  parentFolderId: string,
+): Promise<GoogleDriveFolderReference> {
+  const name = sanitizeDriveFolderName(formTitle, "Untitled form");
+
+  return {
+    id: await ensureDriveFolder(client, name, parentFolderId),
+    name,
+  };
+}
+
+export async function ensureSubmissionFolder(
+  client: GoogleDriveClient,
+  folderName: string,
+  formFolderId: string,
+): Promise<GoogleDriveFolderReference> {
+  const name = sanitizeDriveFolderName(folderName, "Submission");
+
+  return {
+    id: await ensureDriveFolder(client, name, formFolderId),
+    name,
+  };
+}
+
+export function extractSubmitterName(
+  fields: FormBuilderField[],
+  data: Record<string, string | boolean>,
+) {
+  const textLikeFields = fields.filter(
+    (field) => field.type === "text" || field.type === "textarea",
+  );
+
+  for (const labelNeedle of SUBMITTER_NAME_LABELS) {
+    const matchingField = textLikeFields.find((field) =>
+      field.label.toLowerCase().includes(labelNeedle),
+    );
+    const value = matchingField ? data[matchingField.id] : null;
+
+    if (typeof value === "string" && value.trim()) {
+      return sanitizeDriveFolderName(value, "", 60) || null;
+    }
+  }
+
+  return null;
+}
+
 export async function uploadFileToDrive(
   client: GoogleDriveClient,
   input: {
     file: File;
     fileName: string;
     mimeType: string;
-    parentFolderId: string;
+    parentFolder: GoogleDriveFolderReference;
+    formFolder: GoogleDriveFolderReference;
+    submissionFolder: GoogleDriveFolderReference;
   },
 ): Promise<GoogleDriveFileMetadata> {
   const fileName = sanitizeDriveFileName(input.fileName);
   const fileBuffer = Buffer.from(await input.file.arrayBuffer());
   const metadata = {
     name: fileName,
-    parents: [input.parentFolderId],
+    parents: [input.submissionFolder.id],
   };
 
   const searchParams = new URLSearchParams({
@@ -550,7 +859,9 @@ export async function uploadFileToDrive(
     mimeType: input.mimeType,
     size: input.file.size,
     bufferSize: fileBuffer.length,
-    parentFolderId: input.parentFolderId,
+    parentFolderId: input.parentFolder.id,
+    formFolderId: input.formFolder.id,
+    submissionFolderId: input.submissionFolder.id,
   });
 
   const sessionResponse = await fetch(
@@ -575,7 +886,9 @@ export async function uploadFileToDrive(
       fileName,
       mimeType: input.mimeType,
       size: input.file.size,
-      parentFolderId: input.parentFolderId,
+      parentFolderId: input.parentFolder.id,
+      formFolderId: input.formFolder.id,
+      submissionFolderId: input.submissionFolder.id,
     });
     throw new Error("Unable to start Google Drive upload session.");
   }
@@ -587,7 +900,9 @@ export async function uploadFileToDrive(
       fileName,
       mimeType: input.mimeType,
       size: input.file.size,
-      parentFolderId: input.parentFolderId,
+      parentFolderId: input.parentFolder.id,
+      formFolderId: input.formFolder.id,
+      submissionFolderId: input.submissionFolder.id,
     });
     throw new Error("Google Drive did not return an upload location.");
   }
@@ -596,7 +911,9 @@ export async function uploadFileToDrive(
     fileName,
     mimeType: input.mimeType,
     size: input.file.size,
-    parentFolderId: input.parentFolderId,
+    parentFolderId: input.parentFolder.id,
+    formFolderId: input.formFolder.id,
+    submissionFolderId: input.submissionFolder.id,
   });
 
   const response = await fetch(uploadUrl, {
@@ -616,7 +933,9 @@ export async function uploadFileToDrive(
       fileName,
       mimeType: input.mimeType,
       size: input.file.size,
-      parentFolderId: input.parentFolderId,
+      parentFolderId: input.parentFolder.id,
+      formFolderId: input.formFolder.id,
+      submissionFolderId: input.submissionFolder.id,
     });
     throw new Error("Unable to upload file to Google Drive.");
   }
@@ -643,6 +962,12 @@ export async function uploadFileToDrive(
     webViewLink: uploadedFile.webViewLink || null,
     webContentLink: uploadedFile.webContentLink || null,
     uploadedAt: new Date().toISOString(),
+    parentFolderId: input.parentFolder.id,
+    parentFolderName: input.parentFolder.name,
+    formFolderId: input.formFolder.id,
+    formFolderName: input.formFolder.name,
+    submissionFolderId: input.submissionFolder.id,
+    submissionFolderName: input.submissionFolder.name,
   };
 }
 

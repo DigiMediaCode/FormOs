@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 8: Upload Files to Connected Google Drive
+# CURRENT TASK — FormOS Milestone 8.2: Google Drive Folder Selection + Organized Upload Folders
 
 ## Project Context
 
@@ -16,222 +16,249 @@ Completed:
 * Milestone 6: Signature canvas + initials canvas
 * Milestone 7: Google Drive integration setup
 * Milestone 7.1: Dashboard navigation layout
+* Milestone 8: Upload files to connected Google Drive
+* Milestone 8.1: Google Drive upload debugging/fix
 
 Current state:
 
-* FormOS has its own .env
-* FormOS uses its own PostgreSQL database
-* FormOS runs on port 3001
-* Form owners can connect Google Drive
-* image_upload field exists in builder but is not functional yet
-* Do not touch CommerceOS
+* FormOS is deployed live.
+* Supabase is connected.
+* Google Drive connection works.
+* File upload path has been debugged/fixed.
+* Do not touch CommerceOS.
 
 ## Goal
 
-Make image/file upload fields functional by uploading submitted files to the form owner’s connected Google Drive.
+Allow the FormOS user/form owner to choose a Google Drive parent folder for uploads.
 
-FormOS should not permanently store uploaded files on its own server.
+When public users upload files through forms, FormOS should organize uploaded files inside the selected folder using this structure:
 
-This is important because uploaded files may include sensitive ID documents, driving licences, or other private documents.
+Selected Google Drive Folder/
+Form Title/
+Submitter Name - Submission ID/
+uploaded files
+
+If no submitter name is found, use:
+
+Selected Google Drive Folder/
+Form Title/
+submission-{submissionId}/
+uploaded files
 
 ## Product Behaviour
 
-When a public user submits a form with image_upload fields:
+A logged-in FormOS user should be able to:
 
-1. FormOS checks whether the form owner has connected Google Drive.
-2. If Drive is connected, FormOS uploads the submitted file to the owner’s Google Drive.
-3. FormOS stores only metadata/link information in FormSubmission.files.
-4. FormOS does not permanently store the file on FormOS server.
-5. Submission viewer shows file metadata and a Drive link if available.
+1. Go to Dashboard → Settings / Integrations.
+2. See Google Drive connected status.
+3. Add a Google Drive folder URL or folder ID.
+4. Save it as the upload parent folder.
+5. See the selected folder name after saving.
+6. Clear/reset the selected folder.
 
-If Drive is not connected:
+When a public form is submitted with file uploads:
 
-* image_upload fields should show a clear unavailable message.
-* required image_upload fields should prevent submission.
-* non-required image_upload fields can be skipped.
+1. FormOS uploads files into the selected Google Drive parent folder.
+2. Inside that parent folder, FormOS creates or reuses a folder named after the form title.
+3. Inside the form title folder, FormOS creates a folder named after the submitter if a name field exists.
+4. If no name field exists or value is empty, FormOS creates a folder using submission ID.
+5. Files are uploaded into that final submission folder.
+6. FormOS stores only safe Google Drive metadata in FormSubmission.files.
 
-## Field Type To Implement
+## Drive Folder Structure
 
-Implement public input support for:
+Example:
 
-* image_upload
+Selected folder:
+CabCare Driver Forms
 
-## Public Form Behaviour
+Form title:
+Vehicle Hire Agreement
 
-For image_upload fields:
+Submitter name:
+Ali Khan
 
-* Render a file input.
-* Accept images by default.
-* Support required validation.
-* Show helper text explaining files will be uploaded to the form owner’s Google Drive.
-* If owner has no Google Drive integration, show upload unavailable message.
+Submission ID:
+cm8x123abc
 
-## Upload Rules
+Final structure:
 
-Allowed MIME types for MVP:
+CabCare Driver Forms/
+Vehicle Hire Agreement/
+Ali Khan - cm8x123/
+licence-front.jpg
+licence-back.jpg
 
-* image/jpeg
-* image/png
-* image/webp
-* application/pdf
+Fallback:
 
-Maximum file size for MVP:
+CabCare Driver Forms/
+Vehicle Hire Agreement/
+submission-cm8x123/
+licence-front.jpg
 
-* 10MB
+## Google Drive Folder Input
 
-Reject unsupported files with friendly error.
+On /dashboard/settings/integrations, add:
 
-Do not allow executable files.
+* Google Drive Folder URL or Folder ID input
+* Save Upload Folder button
+* Clear Upload Folder button
+* Current selected folder display:
 
-## Google Drive Upload
+  * folder name
+  * folder ID, partially shown if preferred
 
-Use the form owner’s saved Google Drive integration.
+Accept either:
 
-Use the narrow Google Drive scope already configured:
+* Raw folder ID
+* Folder URL like:
+  https://drive.google.com/drive/folders/{folderId}
 
-https://www.googleapis.com/auth/drive.file
+## Folder Validation
 
-Upload files into a folder structure like:
+When saving folder:
 
-FormOS Uploads/
-{Form Title}/
-submission-{submissionId}/
-{originalFileName}
+1. Extract folderId safely.
+2. Use connected Google Drive token.
+3. Call Drive API to check the folder exists.
+4. Confirm mimeType is:
+   application/vnd.google-apps.folder
+5. Save folder ID and name in UserIntegration.metadata.
 
-If folder creation is too much for this milestone, use a simpler FormOS Uploads folder first, but keep helper functions structured so nested folders can be added later.
-
-## Important Submission Flow
-
-Current submission logic creates FormSubmission after validation.
-
-For file uploads, we need a safe order.
-
-Recommended:
-
-1. Validate form and fields.
-2. Validate files.
-3. Create FormSubmission record with normal data/signatures first.
-4. Upload files to Google Drive using submissionId in folder name.
-5. Update FormSubmission.files with uploaded file metadata.
-6. If file upload fails for a required image field, return friendly error and avoid leaving bad/partial submission if possible.
-
-If atomic rollback is difficult, mark the submission clearly or delete failed submission.
-
-## Storage Rules
-
-Save uploaded file metadata in:
-
-FormSubmission.files
-
-Suggested shape:
+Suggested metadata shape:
 
 {
-"fieldId": [
-{
-"provider": "google_drive",
-"driveFileId": "abc123",
-"fileName": "licence-front.jpg",
-"mimeType": "image/jpeg",
-"size": 123456,
-"webViewLink": "https://drive.google.com/...",
-"webContentLink": "https://drive.google.com/...",
-"uploadedAt": "2026-05-30T..."
+"uploadFolder": {
+"id": "folderId",
+"name": "Folder Name",
+"configuredAt": "ISO date"
 }
-]
 }
+
+Reject invalid/inaccessible/non-folder IDs with friendly error.
+
+## Upload Folder Logic
+
+Update Google Drive upload helpers to support:
+
+* getConfiguredUploadFolderForUser
+* ensureDriveFolder
+* ensureFormFolder
+* ensureSubmissionFolder
+* sanitizeDriveFolderName
+* extractSubmitterName
+
+Folder logic:
+
+1. Parent folder:
+
+   * use configured uploadFolder.id if present
+   * otherwise create/use default "FormOS Uploads" folder
+
+2. Form folder:
+
+   * create/reuse folder using sanitized form title
+
+3. Submission folder:
+
+   * try to extract submitter name from submitted data
+   * use first public text-like field where label includes:
+
+     * name
+     * full name
+     * driver name
+     * customer name
+     * client name
+     * applicant name
+     * your name
+   * sanitize folder name
+   * use "{submitterName} - {shortSubmissionId}"
+   * fallback to "submission-{shortSubmissionId}"
+
+4. Upload files into the submission folder.
+
+## Submitter Name Detection
+
+Create helper:
+
+extractSubmitterName(fields, data)
+
+Rules:
+
+* Only use submitted public answer fields.
+* Prefer text-like fields:
+
+  * text
+  * textarea
+* Look for field labels containing name-related words.
+* Ignore display-only fields.
+* Ignore office/internal fields if such visibility exists later.
+* Trim whitespace.
+* Sanitize unsafe characters.
+* Limit folder name length.
+
+Fallback:
+
+submission-{shortSubmissionId}
+
+## File Metadata
+
+Update FormSubmission.files metadata to include:
+
+* provider
+* driveFileId
+* fileName
+* mimeType
+* size
+* webViewLink
+* webContentLink
+* uploadedAt
+* parentFolderId
+* parentFolderName
+* formFolderId
+* formFolderName
+* submissionFolderId
+* submissionFolderName
 
 Do not store file binary in database.
 
-Do not store files permanently on FormOS server.
-
-## Google Drive Helpers
-
-Create or update helpers under:
-
-lib/integrations/google-drive/
-
-Suggested helpers:
-
-* getGoogleDriveClientForUser
-* ensureFormOSRootFolder
-* ensureDriveFolder
-* uploadFileToDrive
-
-These helpers should:
-
-* load owner’s Google Drive integration
-* decrypt tokens through centralized token helpers
-* refresh token if needed, if already supported by current OAuth client
-* upload file stream/buffer to Drive
-* return safe metadata only
-
-## Public Submit Update
-
-Update submitPublicForm to handle FormData with files.
-
-It should:
-
-* process normal fields
-* process signature/initials
-* process image_upload files
-* validate required image_upload fields
-* upload files to owner’s Google Drive if connected
-* save file metadata in FormSubmission.files
-* continue saving formSnapshot
-* continue saving metadata
-
-## Submission Viewer Update
-
-Update submission detail page to display uploaded files.
-
-For image_upload fields:
-
-* use labels from formSnapshot.fields
-* show file name
-* show MIME type
-* show size
-* show link to Google Drive file if webViewLink exists
-* do not attempt to proxy/download file through FormOS
-
 ## Security Requirements
 
-* Only use owner’s connected Google Drive tokens server-side.
 * Do not expose OAuth tokens.
-* Do not log tokens.
-* Do not log uploaded file contents.
-* Validate file type and size server-side.
-* Do not permanently store uploaded files on FormOS.
-* Do not expose files publicly through FormOS.
-* Store only safe metadata.
+* Do not log OAuth tokens.
+* Do not log file contents.
+* Only logged-in owner can configure their upload folder.
+* Public submitter cannot choose target Drive folder.
+* Validate folder server-side.
+* Store safe metadata only.
 * Friendly errors only.
 
 ## Out of Scope
 
-Do not build local/S3/R2 file storage.
+Do not implement Google Picker yet.
+Do not build Super Admin yet.
 Do not build PDF export.
 Do not build PDF import.
 Do not build templates.
 Do not build email notifications.
-Do not build file previews inside FormOS.
-Do not build virus scanning yet.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 8 is complete when:
+Milestone 8.2 is complete when:
 
-* image_upload fields render as functional file inputs on public forms.
-* Supported image/PDF files can be uploaded.
-* Unsupported file types are rejected.
-* Files over 10MB are rejected.
-* Required image_upload validation works.
-* If owner has no Google Drive connected, uploads are unavailable and required upload fields block submission.
-* If owner has Google Drive connected, files upload to their Drive.
-* FormSubmission.files stores safe Google Drive metadata only.
-* File binaries are not stored in the database.
-* Submission detail page displays uploaded file metadata and Drive links.
-* Existing text/select/checkbox/signature/initials submissions still work.
-* Tokens are not exposed or logged.
+* Connected user can save a Google Drive folder URL or folder ID.
+* Invalid folder IDs are rejected.
+* Selected folder name/status appears on integrations page.
+* User can clear/reset selected folder.
+* Public uploads go into selected parent folder.
+* FormOS creates/reuses a form-title folder inside selected parent folder.
+* FormOS creates a submitter-name folder inside form folder when name field exists.
+* FormOS falls back to submission ID when name field is missing.
+* Uploaded files are saved inside the correct final submission folder.
+* FormSubmission.files stores folder metadata.
+* Existing Google Drive upload still works.
+* Existing public submissions still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.
