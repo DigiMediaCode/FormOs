@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
+import { sendFormCompletedNotification } from "@/lib/notifications/form-notifications";
 import { prisma } from "@/lib/prisma";
 
 const OFFICE_SUPPORTED_FIELD_TYPES = [
@@ -97,4 +98,58 @@ export async function saveOfficeFields(
 
   revalidatePath(detailPath);
   redirect(`${detailPath}?success=Office fields saved.`);
+}
+
+export async function markOfficeCompleted(formId: string, submissionId: string) {
+  const user = await requireCurrentUser();
+  const submission = await prisma.formSubmission.findFirst({
+    where: {
+      id: submissionId,
+      formId,
+      ownerId: user.id,
+    },
+    select: {
+      id: true,
+      formSnapshot: true,
+      data: true,
+      officeCompletedAt: true,
+      form: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!submission) {
+    notFound();
+  }
+
+  const detailPath = `/dashboard/forms/${formId}/submissions/${submissionId}`;
+
+  if (submission.officeCompletedAt) {
+    redirect(`${detailPath}?success=Office work is already marked completed.`);
+  }
+
+  const completedAt = new Date();
+
+  await prisma.formSubmission.update({
+    where: {
+      id: submission.id,
+    },
+    data: {
+      officeCompletedAt: completedAt,
+      officeCompletedById: user.id,
+    },
+  });
+
+  await sendFormCompletedNotification({
+    formTitle: submission.form.title,
+    completedAt,
+    formSnapshot: submission.formSnapshot,
+    data: submission.data,
+  });
+
+  revalidatePath(detailPath);
+  redirect(`${detailPath}?success=Office work marked completed.`);
 }

@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 10: Office Use Only Fields
+# CURRENT TASK — FormOS Milestone 11: Lark Email Notifications
 
 ## Project Context
 
@@ -21,216 +21,294 @@ Completed:
 * Milestone 8.2: Google Drive folder selection + organized upload folders
 * Milestone 8.3: Upload UX + Google Drive notices
 * Milestone 9: Super Admin foundation
+* Milestone 10: Office Use Only fields
 
 Current state:
 
 * FormOS is deployed live on Hostinger.
 * Supabase is connected.
 * Prisma Migrate deployment workflow is active.
-* Super Admin dashboard exists but is mostly view-only.
+* Google Drive uploads work.
+* Office Use Only fields work.
+* Super Admin foundation exists.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add Office Use Only fields.
+Add Lark-powered email notifications for important FormOS events.
 
-A form owner should be able to mark certain fields as internal/office-only in the builder.
+The first email notifications should be:
 
-Public users should not see or fill office-only fields.
+1. User signup notification
+2. User login notification
+3. New form submission notification to form owner
+4. Form completed notification to public submitter
 
-After a submission is received, the form owner should be able to fill office-only fields from the submission detail page.
+Use Lark Suite as the email provider.
 
-This is important for agreement and application workflows where the business completes internal details after the customer submits the form.
+## Important Direction
 
-## Example Use Case
+Do not use Resend.
 
-Vehicle Hire Agreement:
+Do not remove the existing password login system.
 
-Public submitter fills:
+Do not implement email OTP login yet.
 
-* full name
-* date of birth
-* phone
-* driving licence number
-* address
-* uploaded ID images
-* signature
+Do not implement Lark SSO login yet.
 
-Office fills later:
+This milestone is only about email notifications through Lark.
 
-* vehicle registration
-* weekly rent
-* bond amount
-* pickup date
-* pickup time
-* fuel level
-* vehicle clean/washed
-* internal notes
-* approval/processing details
+## Email Provider
 
-## Field Visibility
+Create an email abstraction so FormOS can use Lark now and optionally support other providers later.
 
-Add field visibility support.
+Suggested structure:
 
-Each form field should support:
+lib/email/
+send-email.ts
+providers/lark.ts
+templates/
 
-visibility: "PUBLIC" | "OFFICE"
+Environment variables:
 
-Default:
+EMAIL_PROVIDER=lark
+LARK_APP_ID=
+LARK_APP_SECRET=
+LARK_SENDER_EMAIL=
+APP_URL=
 
-PUBLIC
+Do not commit real secrets.
 
-If missing on older fields, treat as PUBLIC.
+Do not expose Lark tokens or app secrets.
 
-## Builder Update
+## Notification 1 — User Signup
 
-In the form builder, each field should have an option:
+When a user signs up successfully, send a welcome/signup email to the new user.
 
-Office use only
+Subject:
 
-This should set:
+Welcome to FormOS
 
-visibility = "OFFICE"
+Email should include:
+
+* user name if available
+* user email
+* dashboard link
+* short welcome message
+
+Dashboard link:
+
+{APP_URL}/dashboard
+
+If email fails, signup should still succeed.
+
+## Notification 2 — User Login
+
+When a user logs in successfully, send a login notification email to that user.
+
+Subject:
+
+New login to your FormOS account
+
+Email should include:
+
+* user email
+* login date/time
+* short security notice:
+  "If this was you, no action is needed. If this was not you, please secure your account."
+
+If email fails, login should still succeed.
+
+Do not send login email for failed login attempts.
+
+Do not reveal whether an email exists during failed login.
+
+## Notification 3 — Form Submitted to Owner
+
+When a public form submission succeeds, send an email to the form owner.
+
+Subject:
+
+New submission received: {Form Title}
+
+Email should include:
+
+* form title
+* submitted date/time
+* submission dashboard link:
+  {APP_URL}/dashboard/forms/{formId}/submissions/{submissionId}
+* short message:
+  "Log in to FormOS to review the submission and complete any office-use fields."
+
+Do not include uploaded file links.
+
+Do not include Google Drive file links.
+
+Do not include OAuth tokens.
+
+Do not include full sensitive answers by default.
+
+If email fails, public submission should still succeed.
+
+## Notification 4 — Form Completed to Submitter
+
+When the form owner marks office use work as completed, send an email to the public submitter.
+
+This should happen only when the submission transitions from incomplete to completed.
+
+Do not send this email every time office fields are saved.
+
+The email should go to the submitter email if FormOS can detect one.
+
+Submitter email detection:
+
+Create helper:
+
+extractSubmitterEmail(fields, data)
 
 Rules:
 
-* Office-only fields should still be saved in Form.fields.
-* Office-only fields can be moved/reordered like other fields.
-* Office-only fields should be visually marked in builder.
-* Existing fields without visibility should behave as PUBLIC.
+* Use formSnapshot.fields.
+* Use submitted public data.
+* Prefer fields of type email.
+* If multiple email fields exist, use the first valid email field.
+* If no email type exists, fallback to text fields with labels containing:
 
-## Public Form Behaviour
+  * email
+  * e-mail
+  * your email
+  * contact email
+* Validate the detected value looks like an email.
+* If no submitter email is found, skip the completed email safely and log a safe warning.
 
-Public form should only render fields where:
+Subject:
 
-visibility is missing OR visibility === "PUBLIC"
+Your form has been completed: {Form Title}
 
-Public form should not render office-only fields.
+Email should include:
 
-Public required validation should ignore office-only fields.
+* form title
+* completed date/time
+* message that the form owner has completed processing the submission
+* optional dashboard/public view link only if a safe public completed-view link already exists
 
-Public submission data should not include office-only fields.
+For now, if no public completed-view route exists, do not include a link.
 
-Display-only fields marked as OFFICE should also be hidden from public form.
+Do not include uploaded file links.
 
-## Submission Model Update
+Do not include Google Drive file links.
 
-Add fields to FormSubmission:
+Do not attach files.
 
-* officeData Json?
-* officeCompletedAt DateTime?
-* officeCompletedById String?
+Do not attach PDFs.
 
-Create Prisma migration:
+## Office Completion Trigger
 
-npx prisma migrate dev --name add_office_use_fields
+Use the existing Office Use Only flow.
 
-Do not use prisma db push.
+If there is already a Mark Office Completed button/action, send the completed email there.
 
-## Submission Detail Update
+If not, add a simple Mark Office Completed action/button.
 
-On /dashboard/forms/[formId]/submissions/[submissionId]:
+Rules:
 
-Add an Office Use Only section.
+* Only the form owner can mark office work completed.
+* Super Admin should not complete forms in this milestone.
+* Email should only send when officeCompletedAt was previously empty and is now being set.
+* If officeCompletedAt already exists, do not resend automatically.
 
-Show all fields from formSnapshot.fields where:
+## App URL
 
-visibility === "OFFICE"
+Use the existing APP_URL helper.
 
-Allow the form owner to fill/save office-only answers.
+Do not generate links using:
 
-Supported office input field types for this milestone:
+* 0.0.0.0
+* localhost
+* 127.0.0.1
+* request host in production
 
-* text
-* textarea
-* date
-* phone
-* email
-* address
-* number
-* currency
-* select
-* checkbox
+All production email links must use APP_URL.
 
-For now:
+## Error Handling
 
-* image_upload office fields can show "Not supported for office use yet"
-* signature office fields can show "Not supported for office use yet"
-* initials office fields can show "Not supported for office use yet"
+Email failure must not break core actions.
 
-Save office answers into:
+If email fails:
 
-FormSubmission.officeData
+* signup still succeeds
+* login still succeeds
+* submission still succeeds
+* office completion still succeeds
+* server logs only safe error message
+* user does not see raw Lark/provider error
 
-Do not mix office answers into public data.
+## Security Requirements
 
-## Office Completion
+Do not log:
 
-Add a button:
+* LARK_APP_SECRET
+* Lark access tokens
+* OAuth tokens
+* passwords
+* uploaded file contents
+* full sensitive submission data
 
-Save Office Fields
+Do not include in emails:
 
-Optional if simple:
+* Google Drive file links
+* uploaded file links
+* OAuth tokens
+* passwords
+* full sensitive submission answers by default
 
-Mark Office Completed
+## Lark Provider Requirements
 
-If implemented, Mark Office Completed should set:
+Implement Lark email provider safely.
 
-* officeCompletedAt = now
-* officeCompletedById = current user id
+The provider should:
 
-Do not send email yet.
-
-## Security / Ownership
-
-Only the form owner can edit officeData.
-
-Logged-out users cannot access submission detail.
-
-Other users cannot access or edit another owner’s office fields.
-
-Super Admin should not edit office fields in this milestone.
-
-## Answer Rendering
-
-Submission detail page should show:
-
-1. Public submitted answers
-2. Uploaded files/signatures
-3. Office Use Only fields and saved office answers
-
-Use labels from formSnapshot.fields.
+* obtain required Lark app/tenant token if needed
+* send email from LARK_SENDER_EMAIL
+* support subject
+* support recipient
+* support text body
+* optionally support HTML body
+* handle API errors safely
+* never expose app secret or tokens
 
 ## Out of Scope
 
-Do not build email notifications.
-Do not send completed form to submitter yet.
-Do not build PDF export.
-Do not build PDF import.
-Do not build templates.
-Do not build office file uploads.
-Do not build office signatures.
-Do not build Super Admin edit actions.
+Do not build email OTP login yet.
+Do not build Lark SSO login yet.
+Do not remove password login.
+Do not send PDF attachments.
+Do not attach uploaded files.
+Do not build email template editor.
+Do not build notification preferences UI.
+Do not build SMS/WhatsApp.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 10 is complete when:
+Milestone 11 is complete when:
 
-* Builder supports Office use only checkbox per field.
-* Field visibility is saved as PUBLIC or OFFICE.
-* Older fields without visibility still work as PUBLIC.
-* Public form hides office-only fields.
-* Public validation ignores office-only fields.
-* Public submission does not save office-only values in public data.
-* FormSubmission has officeData, officeCompletedAt, officeCompletedById fields.
-* Prisma migration exists for office use fields.
-* Submission detail shows Office Use Only section.
-* Form owner can fill and save office fields.
-* Saved officeData persists after refresh.
-* Office fields are separate from public submission data.
-* Owner-only security is enforced.
-* Super Admin does not get office edit access in this milestone.
+* Lark email provider abstraction exists.
+* Lark environment variables are documented in .env.example.
+* Signup sends welcome email if Lark is configured.
+* Login sends successful-login notification email if Lark is configured.
+* Failed login does not send login email.
+* New public form submission sends email to form owner.
+* Form completed sends email to submitter if submitter email can be detected.
+* Form completed email is not resent repeatedly when already completed.
+* Email failure does not break signup, login, public submission, or office completion.
+* Emails do not include uploaded file links.
+* Emails do not include Google Drive links.
+* Emails do not expose Lark tokens, OAuth tokens, or secrets.
+* Existing auth still works.
+* Existing public form submission still works.
+* Existing Google Drive upload still works.
+* Existing Office Use Only flow still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

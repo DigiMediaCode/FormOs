@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { saveOfficeFields } from "@/lib/forms/office-actions";
+import { markOfficeCompleted, saveOfficeFields } from "@/lib/forms/office-actions";
 import { getFormSubmissionById } from "@/lib/forms/submissions";
 import type { FormBuilderField } from "@/lib/forms/fields";
 
@@ -307,6 +307,16 @@ export default async function SubmissionDetailPage({
               </button>
             </form>
           )}
+          {!submission.officeCompletedAt ? (
+            <form action={markOfficeCompleted.bind(null, form.id, submission.id)} className="mt-4">
+              <button
+                className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                type="submit"
+              >
+                Mark Office Completed
+              </button>
+            </form>
+          ) : null}
         </section>
 
         <section className="rounded-md border border-slate-200 bg-white p-6">

@@ -19,6 +19,7 @@ import {
   uploadFileToDrive,
   type GoogleDriveFileMetadata,
 } from "@/lib/integrations/google-drive/client";
+import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifications";
 import { prisma } from "@/lib/prisma";
 
 const SIGNATURE_FIELD_TYPES = ["signature", "initials"];
@@ -243,6 +244,11 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       status: true,
       fields: true,
       settings: true,
+      owner: {
+        select: {
+          email: true,
+        },
+      },
     },
   });
 
@@ -485,6 +491,14 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       );
     }
   }
+
+  await sendNewSubmissionNotification({
+    ownerEmail: form.owner.email,
+    formId: form.id,
+    submissionId: submission.id,
+    formTitle: form.title,
+    submittedAt: submission.createdAt,
+  });
 
   redirect(`/f/${form.id}?success=${encodeURIComponent(successMessage)}`);
 }

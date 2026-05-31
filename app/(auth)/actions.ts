@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import {
+  sendLoginNotification,
+  sendSignupNotification,
+} from "@/lib/notifications/auth-notifications";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -36,13 +40,19 @@ export async function signupAction(formData: FormData) {
   }
 
   try {
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name: name || null,
         email,
         passwordHash: await hashPassword(password),
       },
+      select: {
+        name: true,
+        email: true,
+      },
     });
+
+    await sendSignupNotification(user);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       errorRedirect("/signup", "An account already exists for that email.");
@@ -66,6 +76,7 @@ export async function loginAction(formData: FormData) {
     where: { email },
     select: {
       id: true,
+      email: true,
       passwordHash: true,
     },
   });
@@ -81,6 +92,7 @@ export async function loginAction(formData: FormData) {
   }
 
   await createSession(user.id);
+  await sendLoginNotification({ email: user.email });
   redirect("/dashboard");
 }
 
