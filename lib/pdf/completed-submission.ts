@@ -35,7 +35,7 @@ type PdfContext = {
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
 const MARGIN_X = 50;
-const TOP_MARGIN = 52;
+const TOP_MARGIN = 44;
 const BOTTOM_MARGIN = 72;
 const TEXT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const MAX_SIGNATURE_DATA_URL_LENGTH = 750_000;
@@ -181,40 +181,31 @@ function drawText(
 
 function drawHeader(context: PdfContext, title: string) {
   const headerTop = context.y;
-  const headerHeight = 100;
-  const titleX = MARGIN_X + 112;
-  const titleWidth = PAGE_WIDTH - titleX - MARGIN_X;
-  const titleLines = wrapText(title, context.bold, 25, titleWidth);
+  const logoBoxHeight = 70;
+  const uppercaseTitle = safeText(title).toUpperCase();
+  const titleLines = wrapText(uppercaseTitle, context.bold, 21, TEXT_WIDTH - 36);
+  const titleBlockHeight = titleLines.length * 25;
+  const headerHeight = logoBoxHeight + 22 + titleBlockHeight + 22;
 
-  ensureSpace(context, headerHeight + Math.max(0, titleLines.length - 2) * 28);
-
-  context.page.drawRectangle({
-    x: MARGIN_X,
-    y: headerTop - headerHeight + 8,
-    width: TEXT_WIDTH,
-    height: headerHeight,
-    color: COLORS.tealSoft,
-    borderColor: COLORS.line,
-    borderWidth: 0.6,
-  });
+  ensureSpace(context, headerHeight);
 
   if (context.logo) {
-    const maxWidth = 74;
-    const maxHeight = 52;
+    const maxWidth = 92;
+    const maxHeight = 56;
     const scale = Math.min(maxWidth / context.logo.width, maxHeight / context.logo.height, 1);
     const width = context.logo.width * scale;
     const height = context.logo.height * scale;
 
     context.page.drawImage(context.logo, {
-      x: MARGIN_X + 20,
-      y: headerTop - 58,
+      x: MARGIN_X,
+      y: headerTop - height,
       width,
       height,
     });
   } else {
     context.page.drawRectangle({
-      x: MARGIN_X + 20,
-      y: headerTop - 64,
+      x: MARGIN_X,
+      y: headerTop - 44,
       width: 60,
       height: 44,
       color: COLORS.white,
@@ -222,28 +213,36 @@ function drawHeader(context: PdfContext, title: string) {
       borderWidth: 0.6,
     });
     context.page.drawText("FormOS", {
-      x: MARGIN_X + 29,
-      y: headerTop - 47,
+      x: MARGIN_X + 9,
+      y: headerTop - 27,
       size: 10,
       font: context.bold,
       color: COLORS.teal,
     });
   }
 
-  let titleY = headerTop - 34;
+  let titleY = headerTop - logoBoxHeight - 20;
 
   for (const line of titleLines) {
+    const lineWidth = context.bold.widthOfTextAtSize(line, 21);
     context.page.drawText(line, {
-      x: titleX,
+      x: (PAGE_WIDTH - lineWidth) / 2,
       y: titleY,
-      size: 25,
+      size: 21,
       font: context.bold,
       color: COLORS.teal,
     });
-    titleY -= 29;
+    titleY -= 25;
   }
 
-  context.y = headerTop - headerHeight - 18;
+  context.page.drawLine({
+    start: { x: MARGIN_X, y: titleY + 7 },
+    end: { x: PAGE_WIDTH - MARGIN_X, y: titleY + 7 },
+    thickness: 0.8,
+    color: COLORS.line,
+  });
+
+  context.y = titleY - 16;
 }
 
 function drawSectionHeading(context: PdfContext, text: string) {

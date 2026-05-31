@@ -1,246 +1,122 @@
-# CURRENT TASK — FormOS Milestone 13.2: PDF Branding and Visual Polish
+# CURRENT TASK — FormOS Milestone 13.3: Final PDF Header Layout Fix
 
 ## Project Context
 
-FormOS is a standalone SaaS-style form builder project.
+FormOS completed PDF generation is working.
 
 Current state:
 
-* Completed submission PDF generation works.
-* PDF is emailed to both form owner and submitter.
-* Clean PDF layout already exists.
-* PDF currently contains the correct content but still looks plain/basic.
+* PDF is generated successfully.
+* PDF is emailed to both owner and submitter.
+* Logo appears in the PDF.
+* Footer works.
+* PDF content is mostly correct.
 * Do not touch CommerceOS.
 
-## Goal
+## Problem
 
-Improve the design and UI of the completed PDF.
+The PDF logo positioning and header layout are not correct.
 
-The PDF should feel more polished and professional by improving:
+The desired layout is:
 
-* typography
-* font sizes
-* spacing
-* layout hierarchy
-* visual readability
-* branding
+1. Logo at the top-left corner.
+2. Form title underneath the logo/header area.
+3. Form title should be centered.
+4. Form title should be uppercase.
+5. Form data should start below the centered title.
+6. Use a clean sans-serif font family/style.
+7. Maintain clean spacing.
 
-Also add the owner/company logo at the top-left corner of the PDF.
+## Required PDF Header Layout
 
-## Important Direction
+At the top of the first page:
 
-Do not change the core PDF content structure unnecessarily.
+* Place logo at the top-left.
+* Keep logo size reasonable.
+* Logo should not overlap the title or form content.
+* Add spacing below logo/header area.
+* Show form title centered below the logo/header area.
+* Convert form title to uppercase.
+* Use larger bold sans-serif styling for the title.
+* Add spacing below the title before form data begins.
 
-This milestone is about visual polish, not changing the business logic.
+Suggested visual structure:
 
-Keep the PDF simple, clean, and readable.
+[Logo top-left]
 
-Do not add back technical metadata such as:
+```
+                FORM TITLE IN UPPERCASE
+```
+
+Form data starts here...
+
+## Typography
+
+Use a clean sans-serif font.
+
+Preferred:
+
+* Helvetica / Helvetica-Bold if using built-in PDF fonts
+* Or another clean sans-serif font already supported by the current PDF library
+
+Do not add external font files unless absolutely necessary.
+
+Suggested sizing:
+
+* Title: 18–22pt bold
+* Section headings: 12–14pt bold
+* Field labels: 10–11pt bold or medium
+* Field values: 10–11pt regular
+* Footer: 8–9pt regular
+
+## Spacing
+
+Improve spacing:
+
+* top margin should be clean
+* logo should have breathing room
+* title should not be too close to logo
+* form data should not start too close to title
+* fields should not feel cramped
+* signatures should have enough vertical space
+
+## Existing Rules To Keep
+
+Do not add back:
 
 * submission ID
 * form version
 * submitted date
 * uploaded file metadata
-* public/office section headings
+* public/office headings
+* storage links
 
-## Branding Requirement
-
-Add a logo at the top-left of the PDF.
-
-Implementation direction:
-
-* Support a logo image file from a known project path, such as:
-
-  * `public/pdf-logo.png`
-  * or another clearly defined path used by the PDF generator
-* If logo file exists, render it in the top-left of the first page.
-* If logo file is missing, PDF generation should still work without breaking.
-
-For now, a single configured logo file is enough.
-
-Do not build full per-user branding management yet.
-
-## Header Layout
-
-The first page header should be improved.
-
-Required layout:
-
-* Logo on top-left
-* Form title centered or visually centered in the header area
-* Clean spacing under the header
-* Optional horizontal divider line below header if it improves readability
-
-Header should look professional, not crowded.
-
-## Typography
-
-Use nicer fonts if supported by the chosen PDF library.
-
-Preferred direction:
-
-* clean sans-serif font
-* visually distinct heading font weight
-* readable body font
-* reasonable font sizes
-
-Suggested typography style:
-
-* Form title: larger and bold
-* Section headings: medium-large and bold
-* Field labels: medium weight
-* Field values: regular readable size
-* Footer: smaller subtle size
-
-If custom fonts are possible cleanly, use them.
-If not, use the best built-in font available with a clean style.
-
-## Spacing and Layout
-
-Improve spacing throughout the PDF.
-
-Requirements:
-
-* proper top/bottom margins
-* consistent spacing between fields
-* more breathing room between groups/sections
-* enough white space around signatures
-* consistent line height
-* avoid cramped text
-* page breaks should be handled cleanly
-
-If a section is too close to the page bottom, move it to the next page cleanly.
-
-## Field Rendering Style
-
-Keep the body simple and polished.
-
-Recommended format:
-
-* Label
-* Value beneath or beside it in a neat layout
-
-If suitable, use one of these:
-
-Option A:
-Label on one line, value on next line
-
-Option B:
-Label on left, value on right
-
-Choose whichever is simpler and cleaner in the current PDF engine.
-
-For long fields like textarea/address/html text:
-
-* allow multi-line rendering
-* preserve spacing
-* avoid overlap
-
-For checkbox fields:
-
-* show clear Yes / No
-
-For signature/initials:
-
-* show label
-* render signature image below with clean spacing
-* optionally draw a light border or signature line area if helpful
-
-## Section Heading Styling
-
-If `section_heading` fields are present, style them better.
-
-Requirements:
-
-* slightly larger font
-* bold
-* spacing above and below
-* visually distinct from normal labels
-
-Do not over-design.
-
-## Static/HTML Content Styling
-
-If static text / html content is already rendered in the PDF:
-
-* keep it readable
-* use smaller paragraph spacing
-* avoid giant blocks of dense text
-* preserve clear paragraph breaks
-
-No fancy HTML rendering is required.
-
-## Footer
-
-Keep footer simple.
-
-Footer text must remain:
+Footer should still only say:
 
 Form Created using FormOS
 
-But improve presentation:
-
-* centered
-* smaller font size
-* subtle style
-* positioned consistently on each page
-
-Do not add other metadata in footer.
-
-## Technical / Implementation Guidance
-
-Likely file area:
-
-* `lib/pdf/`
-* existing `generateCompletedSubmissionPdf` helper
-
-Improve PDF generation logic only.
-
-Do not change:
-
-* Office Use Only logic
-* email sending logic
-* Lark provider logic
-* Google Drive logic
-* Dropbox logic
-* submission flow
-* database schema unless absolutely necessary
-
-## Fallback Behaviour
-
-If logo file is not found:
-
-* PDF should still generate normally
-* skip logo gracefully
-* do not crash PDF generation
+Footer should remain centered.
 
 ## Out of Scope
 
-Do not build per-user branding settings.
-Do not build multiple logo management.
-Do not build theme designer.
-Do not redesign the whole form builder.
-Do not add uploaded photos to PDF.
-Do not add uploaded file metadata back.
+Do not change email delivery.
+Do not change Lark provider.
+Do not change Office Use Only logic.
+Do not change Google Drive or Dropbox logic.
+Do not change database schema.
+Do not change form builder.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 13.2 is complete when:
+This task is complete when:
 
-* PDF design is visually improved.
-* PDF uses cleaner typography.
-* Font sizes are more reasonable.
-* Spacing is improved across the document.
-* Header layout is improved.
-* Logo appears on the top-left when the logo file exists.
-* PDF still works if logo file is missing.
-* Form title remains prominent and clean.
-* Signatures are displayed with better spacing.
+* Logo appears at the top-left corner.
+* Form title appears below the logo/header area.
+* Form title is centered.
+* Form title is uppercase.
+* Form data starts below the title with proper spacing.
+* PDF uses clean sans-serif font styling.
 * Footer still only says "Form Created using FormOS".
-* Footer is centered and visually cleaner.
-* Existing email delivery to owner and submitter still works.
-* Existing clean content rules still remain intact.
-* npx prisma validate passes.
-* npx prisma generate passes.
+* Existing PDF emailing to owner and submitter still works.
 * npm run build passes.
