@@ -73,7 +73,13 @@ function renderInput(field: FormBuilderField) {
   );
 }
 
-function renderField(field: FormBuilderField, uploadsAvailable: boolean) {
+function renderField(
+  field: FormBuilderField,
+  uploadsAvailable: boolean,
+  options: {
+    firstSignatureFieldId: string | null;
+  },
+) {
   if (field.type === "section_heading") {
     return (
       <section className="border-b border-slate-200 pb-3" key={field.id}>
@@ -103,9 +109,14 @@ function renderField(field: FormBuilderField, uploadsAvailable: boolean) {
   }
 
   if (field.type === "signature" || field.type === "initials") {
+    const isFirstSignature =
+      field.type === "signature" && field.id === options.firstSignatureFieldId;
+
     return (
       <SignaturePadField
         fieldId={field.id}
+        firstSignatureFieldId={options.firstSignatureFieldId}
+        isFirstSignature={isFirstSignature}
         key={field.id}
         label={field.label}
         required={field.required}
@@ -199,6 +210,8 @@ export default async function PublicFormPage({
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";
   const publicFields = form.fields.filter(isPublicField);
   const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
+  const firstSignatureFieldId =
+    publicFields.find((field) => field.type === "signature")?.id ?? null;
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -231,7 +244,11 @@ export default async function PublicFormPage({
 
         <form action={submitAction} className="mt-8 flex flex-col gap-6 rounded-md border border-slate-200 bg-white p-6">
           {publicFields.length > 0 ? (
-            publicFields.map((field) => renderField(field, form.uploadsAvailable))
+            publicFields.map((field) =>
+              renderField(field, form.uploadsAvailable, {
+                firstSignatureFieldId,
+              }),
+            )
           ) : (
             <p className="text-sm leading-6 text-slate-700">
               This form does not have fields yet.

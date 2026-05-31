@@ -1,6 +1,7 @@
 import { FormMode } from "@prisma/client";
 import Link from "next/link";
 import { createForm } from "@/lib/forms/actions";
+import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
 
 type NewFormPageProps = {
   searchParams: Promise<{
@@ -33,6 +34,15 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
         ) : null}
 
         <form action={createForm} className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Create blank form
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              Start with an empty form and add fields in the builder.
+            </p>
+          </div>
+
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Title
             <input
@@ -79,6 +89,31 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
             </Link>
           </div>
         </form>
+
+        <section className="rounded-md border border-slate-200 bg-white p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+                Create from template
+              </p>
+              <h2 className="mt-2 text-lg font-semibold text-slate-950">
+                Vehicle Hire Agreement
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+                Creates an editable agreement form with driver details, ID uploads,
+                acknowledgements, signatures, and office-use-only handover fields.
+              </p>
+            </div>
+            <form action={createVehicleHireAgreementTemplate}>
+              <button
+                className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
+                type="submit"
+              >
+                Use Template
+              </button>
+            </form>
+          </div>
+        </section>
       </div>
     </main>
   );

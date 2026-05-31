@@ -2,15 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 
+const FIRST_SIGNATURE_EVENT = "formos:first-signature-changed";
+
 type SignaturePadFieldProps = {
   fieldId: string;
   label: string;
   required: boolean;
   variant: "signature" | "initials";
+  firstSignatureFieldId?: string | null;
+  isFirstSignature?: boolean;
 };
 
 function canvasHeightFor(variant: SignaturePadFieldProps["variant"]) {
   return variant === "initials" ? 120 : 180;
+}
+
+declare global {
+  interface Window {
+    formosFirstSignatureValue?: string;
+  }
 }
 
 export function SignaturePadField({
@@ -18,10 +28,15 @@ export function SignaturePadField({
   label,
   required,
   variant,
+  firstSignatureFieldId,
+  isFirstSignature = false,
 }: SignaturePadFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawingRef = useRef(false);
   const [value, setValue] = useState("");
+  const [firstSignatureValue, setFirstSignatureValue] = useState("");
+  const canReuseFirstSignature =
+    variant === "signature" && Boolean(firstSignatureFieldId) && !isFirstSignature;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,6 +65,44 @@ export function SignaturePadField({
     context.strokeStyle = "#0f172a";
   }, [variant]);
 
+  useEffect(() => {
+    if (isFirstSignature) {
+      window.formosFirstSignatureValue = value;
+      window.dispatchEvent(
+        new CustomEvent(FIRST_SIGNATURE_EVENT, {
+          detail: {
+            fieldId,
+            value,
+          },
+        }),
+      );
+    }
+  }, [fieldId, isFirstSignature, value]);
+
+  useEffect(() => {
+    if (!canReuseFirstSignature) {
+      return;
+    }
+
+    setFirstSignatureValue(window.formosFirstSignatureValue ?? "");
+
+    function handleFirstSignatureChange(event: Event) {
+      const detail = (event as CustomEvent<{ fieldId?: string; value?: string }>).detail;
+
+      if (!firstSignatureFieldId || detail?.fieldId !== firstSignatureFieldId) {
+        return;
+      }
+
+      setFirstSignatureValue(detail.value ?? "");
+    }
+
+    window.addEventListener(FIRST_SIGNATURE_EVENT, handleFirstSignatureChange);
+
+    return () => {
+      window.removeEventListener(FIRST_SIGNATURE_EVENT, handleFirstSignatureChange);
+    };
+  }, [canReuseFirstSignature, firstSignatureFieldId]);
+
   function pointFor(event: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current;
 
@@ -72,6 +125,25 @@ export function SignaturePadField({
     }
 
     setValue(canvas.toDataURL("image/png"));
+  }
+
+  function drawDataUrl(dataUrl: string) {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+
+    if (!canvas || !context || !dataUrl) {
+      return;
+    }
+
+    const image = new Image();
+    image.onload = () => {
+      const rect = canvas.getBoundingClientRect();
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, rect.width, canvasHeightFor(variant));
+      setValue(dataUrl);
+    };
+    image.src = dataUrl;
   }
 
   function startDrawing(event: React.PointerEvent<HTMLCanvasElement>) {
@@ -126,20 +198,40 @@ export function SignaturePadField({
     setValue("");
   }
 
+  function reuseFirstSignature() {
+    if (!firstSignatureValue) {
+      return;
+    }
+
+    drawDataUrl(firstSignatureValue);
+  }
+
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="text-sm font-medium text-slate-800" htmlFor={fieldId}>
           {label}
           {required ? <span className="ml-1 text-red-700">*</span> : null}
         </label>
-        <button
-          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-          onClick={clearCanvas}
-          type="button"
-        >
-          Clear
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canReuseFirstSignature ? (
+            <button
+              className="rounded-md border border-teal-700 bg-white px-3 py-1.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white"
+              disabled={!firstSignatureValue}
+              onClick={reuseFirstSignature}
+              type="button"
+            >
+              Use first signature
+            </button>
+          ) : null}
+          <button
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+            onClick={clearCanvas}
+            type="button"
+          >
+            Clear
+          </button>
+        </div>
       </div>
       <canvas
         className="w-full touch-none rounded-md border border-slate-300 bg-white"
@@ -154,6 +246,9 @@ export function SignaturePadField({
       <input name={fieldId} type="hidden" value={value} />
       <p className="text-xs text-slate-500">
         Draw your {variant === "initials" ? "initials" : "signature"} in the box.
+        {canReuseFirstSignature && !firstSignatureValue
+          ? " Sign the first signature field first to reuse it here."
+          : ""}
       </p>
     </section>
   );

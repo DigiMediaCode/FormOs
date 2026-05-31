@@ -6,6 +6,7 @@ import {
   publishForm,
   unpublishForm,
 } from "@/lib/forms/actions";
+import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -50,6 +51,31 @@ export default async function FormsPage() {
             Create Form
           </Link>
         </header>
+
+        <section className="rounded-md border border-slate-200 bg-white p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+                Template
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">
+                Vehicle Hire Agreement
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Create a ready-to-edit agreement with uploads, signatures, and
+                office-use-only vehicle handover fields.
+              </p>
+            </div>
+            <form action={createVehicleHireAgreementTemplate}>
+              <button
+                className="rounded-md border border-teal-700 bg-white px-4 py-2.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50"
+                type="submit"
+              >
+                Use Template
+              </button>
+            </form>
+          </div>
+        </section>
 
         {forms.length === 0 ? (
           <section className="rounded-md border border-dashed border-slate-300 bg-white p-8">
