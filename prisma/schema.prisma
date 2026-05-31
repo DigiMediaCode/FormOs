@@ -27,6 +27,7 @@ enum SubmissionStatus {
 
 enum IntegrationProvider {
   GOOGLE_DRIVE
+  LARK_MAIL
 }
 
 enum UserRole {

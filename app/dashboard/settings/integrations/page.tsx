@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { GOOGLE_DRIVE_SCOPE, getGoogleDriveIntegrationStatus } from "@/lib/integrations/google-drive/client";
+import { LARK_MAIL_SCOPE, getLarkMailIntegrationStatus } from "@/lib/integrations/lark-mail/client";
 import {
   clearGoogleDriveUploadFolderAction,
   saveGoogleDriveUploadFolderAction,
@@ -36,6 +38,10 @@ export default async function IntegrationsPage({
 
   const { error, success } = await searchParams;
   const googleDrive = await getGoogleDriveIntegrationStatus(user.id);
+  const isSuperAdmin = user.role === UserRole.SUPER_ADMIN;
+  const larkMail = isSuperAdmin
+    ? await getLarkMailIntegrationStatus(user.id)
+    : null;
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -173,6 +179,70 @@ export default async function IntegrationsPage({
             </div>
           ) : null}
         </section>
+
+        {larkMail ? (
+          <section className="rounded-md border border-slate-200 bg-white p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-xl font-semibold text-slate-950">
+                    Lark Mail
+                  </h2>
+                  <span
+                    className={`rounded-md border px-2 py-1 text-xs font-medium ${
+                      larkMail.connected
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-slate-200 bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {larkMail.connected ? "Connected" : "Not connected"}
+                  </span>
+                  <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800">
+                    Super Admin
+                  </span>
+                </div>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700">
+                  FormOS uses Lark Mail to send signup, login, submission, and
+                  completion notifications from your configured sender mailbox.
+                </p>
+                <p className="mt-3 text-xs text-slate-500">
+                  Sender mailbox: {larkMail.senderEmail ?? "Not configured"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Requested scope: {LARK_MAIL_SCOPE}
+                </p>
+                {larkMail.connected ? (
+                  <p className="mt-3 text-xs text-slate-500">
+                    Connected {formatDate(larkMail.connectedAt) ?? "recently"}.
+                  </p>
+                ) : (
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-amber-800">
+                    Lark Mail requires the sender mailbox to authorize FormOS.
+                    App tenant tokens cannot send user mailbox email.
+                  </p>
+                )}
+              </div>
+
+              {larkMail.connected ? (
+                <form action="/api/integrations/lark-mail/disconnect" method="post">
+                  <button
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                    type="submit"
+                  >
+                    Disconnect
+                  </button>
+                </form>
+              ) : (
+                <Link
+                  className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                  href="/api/integrations/lark-mail/connect"
+                >
+                  Connect
+                </Link>
+              )}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   );
