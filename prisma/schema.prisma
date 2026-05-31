@@ -83,19 +83,22 @@ model Form {
 }
 
 model FormSubmission {
-  id           String           @id @default(cuid())
-  formId       String
-  ownerId      String
-  formVersion  Int
-  formSnapshot Json
-  data         Json
-  files        Json?
-  signatures   Json?
-  status       SubmissionStatus @default(NEW)
-  metadata     Json?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  form         Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  id                  String           @id @default(cuid())
+  formId              String
+  ownerId             String
+  formVersion         Int
+  formSnapshot        Json
+  data                Json
+  files               Json?
+  signatures          Json?
+  officeData          Json?
+  officeCompletedAt   DateTime?
+  officeCompletedById String?
+  status              SubmissionStatus @default(NEW)
+  metadata            Json?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  form                Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([formId])

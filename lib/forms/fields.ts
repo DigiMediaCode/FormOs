@@ -18,6 +18,8 @@ export const SUPPORTED_FIELD_TYPES = [
 ] as const;
 
 export type FormFieldType = (typeof SUPPORTED_FIELD_TYPES)[number];
+export const FIELD_VISIBILITIES = ["PUBLIC", "OFFICE"] as const;
+export type FormFieldVisibility = (typeof FIELD_VISIBILITIES)[number];
 
 export type FormBuilderField = {
   id: string;
@@ -29,9 +31,11 @@ export type FormBuilderField = {
   options: string[];
   content: string;
   settings: Record<string, unknown>;
+  visibility: FormFieldVisibility;
 };
 
 const SUPPORTED_FIELD_TYPE_SET = new Set<string>(SUPPORTED_FIELD_TYPES);
+const FIELD_VISIBILITY_SET = new Set<string>(FIELD_VISIBILITIES);
 
 export const DISPLAY_ONLY_FIELD_TYPES: FormFieldType[] = [
   "static_text",
@@ -41,6 +45,20 @@ export const DISPLAY_ONLY_FIELD_TYPES: FormFieldType[] = [
 
 export function isSupportedFieldType(type: string): type is FormFieldType {
   return SUPPORTED_FIELD_TYPE_SET.has(type);
+}
+
+export function isSupportedFieldVisibility(
+  visibility: string,
+): visibility is FormFieldVisibility {
+  return FIELD_VISIBILITY_SET.has(visibility);
+}
+
+export function isPublicField(field: FormBuilderField) {
+  return field.visibility === "PUBLIC";
+}
+
+export function isOfficeField(field: FormBuilderField) {
+  return field.visibility === "OFFICE";
 }
 
 export function fieldTypeLabel(type: FormFieldType) {
@@ -92,6 +110,9 @@ export function normalizeFormFields(value: unknown): FormBuilderField[] {
         options: normalizeOptions(field.options),
         content: String(field.content ?? ""),
         settings: isRecord(field.settings) ? field.settings : {},
+        visibility: isSupportedFieldVisibility(String(field.visibility ?? "PUBLIC"))
+          ? String(field.visibility ?? "PUBLIC") as FormFieldVisibility
+          : "PUBLIC",
       };
     })
     .filter((field): field is FormBuilderField => field !== null)
@@ -128,6 +149,7 @@ export function validateFormFields(value: unknown) {
     const required = rawField.required;
     const order = Number(rawField.order);
     const content = String(rawField.content ?? "").trim();
+    const visibility = String(rawField.visibility ?? "PUBLIC").trim();
 
     if (!id) {
       return {
@@ -164,6 +186,13 @@ export function validateFormFields(value: unknown) {
       };
     }
 
+    if (!isSupportedFieldVisibility(visibility)) {
+      return {
+        fields: null,
+        error: `Field ${index + 1} has an invalid visibility value.`,
+      };
+    }
+
     if (
       type !== "static_text" &&
       type !== "html" &&
@@ -196,6 +225,7 @@ export function validateFormFields(value: unknown) {
       options,
       content,
       settings: isRecord(rawField.settings) ? rawField.settings : {},
+      visibility,
     });
   }
 

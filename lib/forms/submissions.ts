@@ -2,7 +2,13 @@ import "server-only";
 
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { DISPLAY_ONLY_FIELD_TYPES, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
+import {
+  DISPLAY_ONLY_FIELD_TYPES,
+  isOfficeField,
+  isPublicField,
+  normalizeFormFields,
+  type FormBuilderField,
+} from "@/lib/forms/fields";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 import { prisma } from "@/lib/prisma";
 
@@ -41,6 +47,25 @@ export type SubmissionFileMetadata = {
   submissionFolderId?: string;
   submissionFolderName?: string;
 };
+
+export type OfficeFieldAnswer = {
+  field: FormBuilderField;
+  value: string | boolean;
+  supported: boolean;
+};
+
+const OFFICE_SUPPORTED_FIELD_TYPES = [
+  "text",
+  "textarea",
+  "date",
+  "phone",
+  "email",
+  "address",
+  "number",
+  "currency",
+  "select",
+  "checkbox",
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -189,7 +214,7 @@ export function buildSubmissionAnswers(
   const submittedFiles = isRecord(files) ? files : {};
 
   return fields
-    .filter((field) => !DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
+    .filter((field) => isPublicField(field) && !DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
     .map((field) => {
       const rawSignature = submittedSignatures[field.id];
       const imageDataUrl = isValidImageDataUrl(rawSignature)
@@ -215,7 +240,7 @@ export function buildSubmissionAnswers(
 
 export function buildSubmissionContext(fields: FormBuilderField[]) {
   return fields
-    .filter((field) => DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
+    .filter((field) => isPublicField(field) && DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
     .map((field) => ({
       id: field.id,
       type: field.type,
@@ -224,6 +249,28 @@ export function buildSubmissionContext(fields: FormBuilderField[]) {
         field.type === "html"
           ? sanitizeFormHtml(field.content)
           : field.content || field.label,
+    }));
+}
+
+export function normalizeOfficeData(data: unknown) {
+  return isRecord(data) ? data : {};
+}
+
+export function buildOfficeFieldAnswers(
+  fields: FormBuilderField[],
+  officeData: unknown,
+): OfficeFieldAnswer[] {
+  const savedOfficeData = normalizeOfficeData(officeData);
+
+  return fields
+    .filter(isOfficeField)
+    .map((field) => ({
+      field,
+      value:
+        field.type === "checkbox"
+          ? savedOfficeData[field.id] === true
+          : String(savedOfficeData[field.id] ?? ""),
+      supported: OFFICE_SUPPORTED_FIELD_TYPES.includes(field.type),
     }));
 }
 
@@ -272,6 +319,9 @@ export async function getFormSubmissions(formId: string) {
       data: true,
       signatures: true,
       files: true,
+      officeData: true,
+      officeCompletedAt: true,
+      officeCompletedById: true,
       status: true,
       createdAt: true,
     },
@@ -321,6 +371,9 @@ export async function getFormSubmissionById(formId: string, submissionId: string
       data: true,
       signatures: true,
       files: true,
+      officeData: true,
+      officeCompletedAt: true,
+      officeCompletedById: true,
       status: true,
       metadata: true,
       createdAt: true,
@@ -346,6 +399,7 @@ export async function getFormSubmissionById(formId: string, submissionId: string
         submission.files,
       ),
       context: buildSubmissionContext(snapshot.fields),
+      officeFields: buildOfficeFieldAnswers(snapshot.fields, submission.officeData),
       metadata: isRecord(submission.metadata) ? submission.metadata : {},
     },
   };

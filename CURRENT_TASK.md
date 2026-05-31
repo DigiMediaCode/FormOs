@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 9: Super Admin Foundation
+# CURRENT TASK — FormOS Milestone 10: Office Use Only Fields
 
 ## Project Context
 
@@ -20,247 +20,217 @@ Completed:
 * Milestone 8.1: Google Drive upload debugging/fix
 * Milestone 8.2: Google Drive folder selection + organized upload folders
 * Milestone 8.3: Upload UX + Google Drive notices
-* FormOS is deployed live on Hostinger
-* Supabase is connected
-* Prisma Migrate deployment workflow is active
-* Do not touch CommerceOS
+* Milestone 9: Super Admin foundation
+
+Current state:
+
+* FormOS is deployed live on Hostinger.
+* Supabase is connected.
+* Prisma Migrate deployment workflow is active.
+* Super Admin dashboard exists but is mostly view-only.
+* Do not touch CommerceOS.
 
 ## Goal
 
-Add a Super Admin foundation for FormOS.
+Add Office Use Only fields.
 
-The platform owner should be able to access a protected admin area to monitor users, forms, submission counts, and Google Drive integration status.
+A form owner should be able to mark certain fields as internal/office-only in the builder.
 
-Super Admin must not get default access to sensitive submission contents or uploaded files.
+Public users should not see or fill office-only fields.
 
-## Privacy Rule
+After a submission is received, the form owner should be able to fill office-only fields from the submission detail page.
 
-Uploaded documents belong to the form owner, not FormOS.
+This is important for agreement and application workflows where the business completes internal details after the customer submits the form.
 
-FormOS stores only Google Drive metadata for uploaded files.
+## Example Use Case
 
-Super Admin should not see:
+Vehicle Hire Agreement:
 
-* uploaded file links
-* Google Drive file links
-* uploaded ID photos
-* driving licence images
-* passport/bank documents
-* OAuth access tokens
-* OAuth refresh tokens
-* raw sensitive submission answers by default
+Public submitter fills:
 
-Super Admin may see operational metadata only.
+* full name
+* date of birth
+* phone
+* driving licence number
+* address
+* uploaded ID images
+* signature
 
-## Required Database Change
+Office fills later:
 
-Add a UserRole enum:
+* vehicle registration
+* weekly rent
+* bond amount
+* pickup date
+* pickup time
+* fuel level
+* vehicle clean/washed
+* internal notes
+* approval/processing details
 
-* USER
-* SUPER_ADMIN
+## Field Visibility
 
-Update User model:
+Add field visibility support.
 
-* role UserRole @default(USER)
+Each form field should support:
 
-Create a Prisma migration using:
+visibility: "PUBLIC" | "OFFICE"
 
-npx prisma migrate dev --name add_user_roles
+Default:
+
+PUBLIC
+
+If missing on older fields, treat as PUBLIC.
+
+## Builder Update
+
+In the form builder, each field should have an option:
+
+Office use only
+
+This should set:
+
+visibility = "OFFICE"
+
+Rules:
+
+* Office-only fields should still be saved in Form.fields.
+* Office-only fields can be moved/reordered like other fields.
+* Office-only fields should be visually marked in builder.
+* Existing fields without visibility should behave as PUBLIC.
+
+## Public Form Behaviour
+
+Public form should only render fields where:
+
+visibility is missing OR visibility === "PUBLIC"
+
+Public form should not render office-only fields.
+
+Public required validation should ignore office-only fields.
+
+Public submission data should not include office-only fields.
+
+Display-only fields marked as OFFICE should also be hidden from public form.
+
+## Submission Model Update
+
+Add fields to FormSubmission:
+
+* officeData Json?
+* officeCompletedAt DateTime?
+* officeCompletedById String?
+
+Create Prisma migration:
+
+npx prisma migrate dev --name add_office_use_fields
 
 Do not use prisma db push.
 
-## First Super Admin User
+## Submission Detail Update
 
-For now, create a safe way to promote a user to SUPER_ADMIN.
+On /dashboard/forms/[formId]/submissions/[submissionId]:
 
-Acceptable MVP options:
+Add an Office Use Only section.
 
-Option A:
+Show all fields from formSnapshot.fields where:
 
-* Add a script that promotes a user by email.
-* Example: scripts/make-super-admin.ts or scripts/make-super-admin.js
+visibility === "OFFICE"
 
-Option B:
+Allow the form owner to fill/save office-only answers.
 
-* Add a temporary server-side helper or documented SQL command.
+Supported office input field types for this milestone:
 
-Preferred:
-Create a script.
-
-The script should:
-
-* accept email from command line
-* find user by email
-* set role to SUPER_ADMIN
-* print safe success/failure message
-* not expose secrets
-
-Example command:
-
-node scripts/make-super-admin.js [your@email.com](mailto:your@email.com)
-
-## Admin Routes
-
-Create:
-
-* /admin
-* /admin/users
-* /admin/forms
-
-Optional if easy:
-
-* /admin/submissions
-
-But keep it summary-only.
-
-## Access Control
-
-Only users with role SUPER_ADMIN can access /admin routes.
-
-If logged out:
-
-* redirect to /login
-
-If logged in but not SUPER_ADMIN:
-
-* show access denied or redirect to /dashboard
-
-Do not expose admin data to normal users.
-
-## Admin Layout / Navigation
-
-Create a simple admin layout/navigation.
-
-Links:
-
-* Admin Dashboard → /admin
-* Users → /admin/users
-* Forms → /admin/forms
-* Back to App Dashboard → /dashboard
-
-Keep it simple.
-
-## Admin Dashboard
-
-/admin should show basic stats:
-
-* total users
-* total forms
-* total published forms
-* total submissions
-* total Google Drive connected users
-
-Do not show uploaded file links.
-
-## Admin Users Page
-
-/admin/users should show a table/list:
-
-* name
+* text
+* textarea
+* date
+* phone
 * email
-* role
-* created date
-* forms count
-* submissions count
-* Google Drive connected: Yes/No
+* address
+* number
+* currency
+* select
+* checkbox
 
-Do not show tokens.
+For now:
 
-Do not show sensitive submission data.
+* image_upload office fields can show "Not supported for office use yet"
+* signature office fields can show "Not supported for office use yet"
+* initials office fields can show "Not supported for office use yet"
 
-## Admin Forms Page
+Save office answers into:
 
-/admin/forms should show a table/list:
+FormSubmission.officeData
 
-* form title
-* owner email
-* status
-* mode
-* version
-* submissions count
-* created date
-* updated date
+Do not mix office answers into public data.
 
-Do not show uploaded file links.
+## Office Completion
 
-Do not show full submission answers.
+Add a button:
 
-## Optional Admin Submissions Summary
+Save Office Fields
 
-If implemented:
+Optional if simple:
 
-/admin/submissions should show summary only:
+Mark Office Completed
 
-* submission id
-* form title
-* owner email
-* status
-* created date
-* form version
-* file count
+If implemented, Mark Office Completed should set:
 
-Do not show answers.
-Do not show file links.
-Do not show Drive links.
+* officeCompletedAt = now
+* officeCompletedById = current user id
 
-## Helpers
+Do not send email yet.
 
-Create helpers such as:
+## Security / Ownership
 
-* requireSuperAdmin
-* getAdminDashboardStats
-* getAdminUsers
-* getAdminForms
-* getAdminSubmissionSummary if needed
+Only the form owner can edit officeData.
 
-## Security Requirements
+Logged-out users cannot access submission detail.
 
-* Super Admin routes must be server-side protected.
-* Do not rely only on hiding UI links.
-* Do not expose OAuth tokens.
-* Do not expose Google Drive file links.
-* Do not expose sensitive submission answers.
-* Do not expose uploaded files.
-* Keep queries read-only for this milestone.
-* No user deletion yet.
-* No impersonation yet.
-* No role editing from UI yet.
+Other users cannot access or edit another owner’s office fields.
+
+Super Admin should not edit office fields in this milestone.
+
+## Answer Rendering
+
+Submission detail page should show:
+
+1. Public submitted answers
+2. Uploaded files/signatures
+3. Office Use Only fields and saved office answers
+
+Use labels from formSnapshot.fields.
 
 ## Out of Scope
 
-Do not build user deletion.
-Do not build user suspension.
-Do not build impersonation.
-Do not build billing.
-Do not build role editing UI.
-Do not expose submission detail to Super Admin.
-Do not expose uploaded files to Super Admin.
-Do not build audit logs yet.
-Do not build office-use fields yet.
-Do not build notifications.
+Do not build email notifications.
+Do not send completed form to submitter yet.
+Do not build PDF export.
+Do not build PDF import.
+Do not build templates.
+Do not build office file uploads.
+Do not build office signatures.
+Do not build Super Admin edit actions.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 9 is complete when:
+Milestone 10 is complete when:
 
-* UserRole enum exists.
-* User has role field with USER default.
-* Prisma migration exists for add_user_roles.
-* A safe script or documented method exists to promote a user to SUPER_ADMIN.
-* /admin route exists.
-* /admin/users route exists.
-* /admin/forms route exists.
-* Logged-out users cannot access /admin.
-* Normal users cannot access /admin.
-* SUPER_ADMIN user can access /admin.
-* Admin dashboard shows platform stats.
-* Admin users page shows users with counts and Drive connected status.
-* Admin forms page shows forms with owner and submission counts.
-* No uploaded file links are exposed to Super Admin.
-* No OAuth tokens are exposed.
-* No sensitive submission answers are exposed by default.
+* Builder supports Office use only checkbox per field.
+* Field visibility is saved as PUBLIC or OFFICE.
+* Older fields without visibility still work as PUBLIC.
+* Public form hides office-only fields.
+* Public validation ignores office-only fields.
+* Public submission does not save office-only values in public data.
+* FormSubmission has officeData, officeCompletedAt, officeCompletedById fields.
+* Prisma migration exists for office use fields.
+* Submission detail shows Office Use Only section.
+* Form owner can fill and save office fields.
+* Saved officeData persists after refresh.
+* Office fields are separate from public submission data.
+* Owner-only security is enforced.
+* Super Admin does not get office edit access in this milestone.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev --name add_user_roles creates migration.
 * npm run build passes.

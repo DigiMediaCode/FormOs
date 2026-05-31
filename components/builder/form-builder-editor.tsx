@@ -41,6 +41,7 @@ function createField(type: FormFieldType, order: number): FormBuilderField {
     options: type === "select" ? ["Option 1", "Option 2"] : [],
     content: "",
     settings: {},
+    visibility: "PUBLIC",
   };
 }
 
@@ -153,9 +154,16 @@ export function FormBuilderEditor({
             <article className="rounded-md border border-slate-200 bg-white p-5" key={field.id}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
-                    Field {index + 1}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
+                      Field {index + 1}
+                    </p>
+                    {field.visibility === "OFFICE" ? (
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+                        Office use only
+                      </span>
+                    ) : null}
+                  </div>
                   <h3 className="mt-1 text-lg font-semibold text-slate-950">
                     {fieldTypeLabel(field.type)}
                   </h3>
@@ -212,6 +220,25 @@ export function FormBuilderEditor({
                     />
                     <span className="text-sm text-slate-700">
                       {isDisplayOnly ? "Display-only field" : "Require this field"}
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+                  Visibility
+                  <span className="flex h-11 items-center gap-2 rounded-md border border-slate-300 px-3">
+                    <input
+                      checked={field.visibility === "OFFICE"}
+                      className="h-4 w-4"
+                      onChange={(event) =>
+                        updateField(field.id, {
+                          visibility: event.target.checked ? "OFFICE" : "PUBLIC",
+                        })
+                      }
+                      type="checkbox"
+                    />
+                    <span className="text-sm text-slate-700">
+                      Office use only
                     </span>
                   </span>
                 </label>
@@ -338,7 +365,14 @@ export function FormBuilderEditor({
 
               return (
                 <label className="flex flex-col gap-2 text-sm font-medium text-slate-800" key={field.id}>
-                  {field.label || fieldTypeLabel(field.type)}
+                  <span className="flex items-center gap-2">
+                    {field.label || fieldTypeLabel(field.type)}
+                    {field.visibility === "OFFICE" ? (
+                      <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+                        Office
+                      </span>
+                    ) : null}
+                  </span>
                   {field.required ? <span className="text-xs text-red-700">Required</span> : null}
                   {field.type === "textarea" || field.type === "address" ? (
                     <textarea

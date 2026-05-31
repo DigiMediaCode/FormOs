@@ -3,7 +3,7 @@ import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
-import type { FormBuilderField } from "@/lib/forms/fields";
+import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 
 type PublicFormPageProps = {
   params: Promise<{
@@ -197,7 +197,8 @@ export default async function PublicFormPage({
 
   const submitAction = submitPublicForm.bind(null, form.id);
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";
-  const hasUploadFields = form.fields.some((field) => field.type === "image_upload");
+  const publicFields = form.fields.filter(isPublicField);
+  const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -229,8 +230,8 @@ export default async function PublicFormPage({
         ) : null}
 
         <form action={submitAction} className="mt-8 flex flex-col gap-6 rounded-md border border-slate-200 bg-white p-6">
-          {form.fields.length > 0 ? (
-            form.fields.map((field) => renderField(field, form.uploadsAvailable))
+          {publicFields.length > 0 ? (
+            publicFields.map((field) => renderField(field, form.uploadsAvailable))
           ) : (
             <p className="text-sm leading-6 text-slate-700">
               This form does not have fields yet.

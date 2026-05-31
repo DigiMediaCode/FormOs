@@ -3,7 +3,12 @@
 import { FormStatus, Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { DISPLAY_ONLY_FIELD_TYPES, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
+import {
+  DISPLAY_ONLY_FIELD_TYPES,
+  isPublicField,
+  normalizeFormFields,
+  type FormBuilderField,
+} from "@/lib/forms/fields";
 import {
   ensureFormFolder,
   ensureSubmissionFolder,
@@ -257,6 +262,10 @@ export async function submitPublicForm(formId: string, formData: FormData) {
   });
 
   for (const field of formSnapshot.fields) {
+    if (!isPublicField(field)) {
+      continue;
+    }
+
     if (isSignatureField(field)) {
       const value = String(formData.get(field.id) ?? "").trim();
 
