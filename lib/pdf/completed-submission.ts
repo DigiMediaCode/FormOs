@@ -2,9 +2,7 @@ import "server-only";
 
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import {
-  DISPLAY_ONLY_FIELD_TYPES,
   isOfficeField,
-  isPublicField,
   normalizeFormFields,
   type FormBuilderField,
 } from "@/lib/forms/fields";
@@ -32,44 +30,36 @@ type PdfContext = {
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
-const MARGIN = 48;
-const TEXT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const FONT_SIZE = 10;
-const LINE_HEIGHT = 14;
+const MARGIN_X = 54;
+const TOP_MARGIN = 56;
+const BOTTOM_MARGIN = 72;
+const TEXT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const MAX_SIGNATURE_DATA_URL_LENGTH = 750_000;
+const FOOTER_TEXT = "Form Created using FormOS";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function formatDateTime(date: Date | null) {
-  if (!date) {
-    return "Not completed";
-  }
-
-  return new Intl.DateTimeFormat("en-AU", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Australia/Sydney",
-  }).format(date);
-}
-
-function formatFileSize(size: number) {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function safeText(value: unknown) {
   return String(value ?? "")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }
 
 function snapshotFields(value: unknown) {
@@ -78,30 +68,44 @@ function snapshotFields(value: unknown) {
 }
 
 function fieldLabel(field: FormBuilderField) {
-  return field.label || field.content || field.id;
+  return safeText(field.label || field.content || field.id);
+}
+
+function fileNameFor(title: string, submissionId: string) {
+  const safeTitle =
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "completed-form";
+
+  return `${safeTitle}-${submissionId.slice(0, 8)}.pdf`;
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
-  const words = safeText(text).split(/\s+/).filter(Boolean);
+  const paragraphs = String(text || "").split(/\n+/);
   const lines: string[] = [];
-  let current = "";
 
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
+  for (const paragraph of paragraphs) {
+    const words = safeText(paragraph).split(/\s+/).filter(Boolean);
+    let current = "";
 
-    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
-      current = next;
-    } else {
-      if (current) {
-        lines.push(current);
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word;
+
+      if (font.widthOfTextAtSize(next, size) <= maxWidth) {
+        current = next;
+      } else {
+        if (current) {
+          lines.push(current);
+        }
+        current = word;
       }
-
-      current = word;
     }
-  }
 
-  if (current) {
-    lines.push(current);
+    if (current) {
+      lines.push(current);
+    }
   }
 
   return lines.length > 0 ? lines : [""];
@@ -109,13 +113,33 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
 
 function addPage(context: PdfContext) {
   context.page = context.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  context.y = PAGE_HEIGHT - MARGIN;
+  context.y = PAGE_HEIGHT - TOP_MARGIN;
 }
 
 function ensureSpace(context: PdfContext, height: number) {
-  if (context.y - height < MARGIN) {
+  if (context.y - height < BOTTOM_MARGIN) {
     addPage(context);
   }
+}
+
+function drawCenteredText(
+  context: PdfContext,
+  text: string,
+  options: {
+    y?: number;
+    size: number;
+    font: PDFFont;
+    color?: ReturnType<typeof rgb>;
+  },
+) {
+  const width = options.font.widthOfTextAtSize(text, options.size);
+  context.page.drawText(text, {
+    x: (PAGE_WIDTH - width) / 2,
+    y: options.y ?? context.y,
+    size: options.size,
+    font: options.font,
+    color: options.color ?? rgb(0.05, 0.09, 0.16),
+  });
 }
 
 function drawText(
@@ -130,11 +154,11 @@ function drawText(
     lineHeight?: number;
   } = {},
 ) {
-  const x = options.x ?? MARGIN;
-  const size = options.size ?? FONT_SIZE;
+  const x = options.x ?? MARGIN_X;
+  const size = options.size ?? 10.5;
   const font = options.font ?? context.regular;
   const maxWidth = options.maxWidth ?? TEXT_WIDTH;
-  const lineHeight = options.lineHeight ?? LINE_HEIGHT;
+  const lineHeight = options.lineHeight ?? 15;
   const lines = wrapText(text, font, size, maxWidth);
 
   ensureSpace(context, lines.length * lineHeight);
@@ -145,36 +169,110 @@ function drawText(
       y: context.y,
       size,
       font,
-      color: options.color ?? rgb(0.12, 0.16, 0.23),
+      color: options.color ?? rgb(0.16, 0.19, 0.25),
     });
     context.y -= lineHeight;
   }
 }
 
-function sectionTitle(context: PdfContext, text: string) {
-  context.y -= 10;
-  ensureSpace(context, 30);
-  drawText(context, text, {
-    size: 14,
-    font: context.bold,
-    color: rgb(0.02, 0.37, 0.36),
-    lineHeight: 18,
+function drawRule(context: PdfContext) {
+  ensureSpace(context, 12);
+  context.page.drawLine({
+    start: { x: MARGIN_X, y: context.y },
+    end: { x: PAGE_WIDTH - MARGIN_X, y: context.y },
+    thickness: 0.7,
+    color: rgb(0.82, 0.86, 0.91),
   });
-  context.y -= 2;
+  context.y -= 16;
 }
 
-function keyValue(context: PdfContext, label: string, value: string) {
-  drawText(context, label, {
-    size: 9,
+function drawTitle(context: PdfContext, title: string) {
+  const lines = wrapText(title, context.bold, 24, TEXT_WIDTH);
+
+  ensureSpace(context, lines.length * 30 + 28);
+
+  for (const line of lines) {
+    drawCenteredText(context, line, {
+      size: 24,
+      font: context.bold,
+      color: rgb(0.02, 0.37, 0.36),
+    });
+    context.y -= 30;
+  }
+
+  context.y -= 8;
+  drawRule(context);
+}
+
+function drawSectionHeading(context: PdfContext, text: string) {
+  context.y -= 6;
+  ensureSpace(context, 34);
+  drawText(context, text, {
+    size: 15,
+    font: context.bold,
+    color: rgb(0.02, 0.37, 0.36),
+    lineHeight: 20,
+  });
+  context.y -= 4;
+}
+
+function drawDisplayText(context: PdfContext, text: string) {
+  if (!safeText(text)) {
+    return;
+  }
+
+  drawText(context, text, {
+    size: 10.5,
+    color: rgb(0.29, 0.33, 0.39),
+    lineHeight: 15,
+  });
+  context.y -= 5;
+}
+
+function drawFieldValue(context: PdfContext, label: string, value: string) {
+  const cleanLabel = safeText(label);
+  const cleanValue = safeText(value) || "No answer";
+  const labelWidth = Math.min(context.bold.widthOfTextAtSize(cleanLabel, 10.5), 185);
+  const valueX = MARGIN_X + 205;
+  const valueWidth = PAGE_WIDTH - valueX - MARGIN_X;
+  const valueLines = wrapText(cleanValue, context.regular, 10.5, valueWidth);
+  const rowHeight = Math.max(24, valueLines.length * 15 + 8);
+
+  ensureSpace(context, rowHeight);
+
+  context.page.drawRectangle({
+    x: MARGIN_X,
+    y: context.y - rowHeight + 4,
+    width: TEXT_WIDTH,
+    height: rowHeight,
+    color: rgb(0.98, 0.99, 1),
+    borderColor: rgb(0.88, 0.91, 0.95),
+    borderWidth: 0.4,
+  });
+
+  context.page.drawText(cleanLabel, {
+    x: MARGIN_X + 12,
+    y: context.y - 12,
+    size: 10.5,
     font: context.bold,
     color: rgb(0.05, 0.09, 0.16),
+    maxWidth: labelWidth,
   });
-  drawText(context, value || "No answer", {
-    x: MARGIN + 14,
-    size: 10,
-    maxWidth: TEXT_WIDTH - 14,
-  });
-  context.y -= 3;
+
+  let valueY = context.y - 12;
+
+  for (const line of valueLines) {
+    context.page.drawText(line, {
+      x: valueX,
+      y: valueY,
+      size: 10.5,
+      font: context.regular,
+      color: rgb(0.16, 0.19, 0.25),
+    });
+    valueY -= 15;
+  }
+
+  context.y -= rowHeight + 5;
 }
 
 function answerFor(field: FormBuilderField, data: Record<string, unknown>) {
@@ -208,86 +306,60 @@ async function drawSignature(
   const base64 = dataUrl.split(",")[1];
 
   if (!base64) {
-    keyValue(context, label, "No signature provided");
+    drawFieldValue(context, label, "No signature provided");
     return;
   }
 
   try {
     const image = await context.doc.embedPng(Buffer.from(base64, "base64"));
-    const maxWidth = 240;
-    const maxHeight = 90;
+    const maxWidth = 260;
+    const maxHeight = 92;
     const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
     const width = image.width * scale;
     const height = image.height * scale;
+    const boxHeight = height + 44;
 
-    ensureSpace(context, height + 32);
-    drawText(context, label, {
-      size: 9,
+    ensureSpace(context, boxHeight);
+
+    context.page.drawRectangle({
+      x: MARGIN_X,
+      y: context.y - boxHeight + 4,
+      width: TEXT_WIDTH,
+      height: boxHeight,
+      color: rgb(0.98, 0.99, 1),
+      borderColor: rgb(0.88, 0.91, 0.95),
+      borderWidth: 0.4,
+    });
+    context.page.drawText(safeText(label), {
+      x: MARGIN_X + 12,
+      y: context.y - 14,
+      size: 10.5,
       font: context.bold,
       color: rgb(0.05, 0.09, 0.16),
     });
     context.page.drawImage(image, {
-      x: MARGIN + 14,
-      y: context.y - height,
+      x: MARGIN_X + 12,
+      y: context.y - height - 32,
       width,
       height,
     });
-    context.y -= height + 12;
+    context.y -= boxHeight + 6;
   } catch {
-    keyValue(context, label, "Signature image could not be rendered");
+    drawFieldValue(context, label, "Signature image could not be rendered");
   }
 }
 
-function fileMetadataLines(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter(isRecord)
-    .map((file) => {
-      const provider =
-        file.provider === "dropbox"
-          ? "Dropbox"
-          : file.provider === "google_drive"
-            ? "Google Drive"
-            : "Storage provider";
-      const lines = [
-        `File: ${safeText(file.fileName) || "Unnamed file"}`,
-        `Type: ${safeText(file.mimeType) || "Unknown type"}`,
-        `Size: ${typeof file.size === "number" ? formatFileSize(file.size) : "Unknown size"}`,
-        `Provider: ${provider}`,
-      ];
-
-      if (typeof file.uploadedAt === "string" && file.uploadedAt) {
-        lines.push(`Uploaded: ${file.uploadedAt}`);
-      }
-
-      if (file.provider === "dropbox" && typeof file.path === "string") {
-        lines.push(`Path: ${file.path}`);
-      }
-
-      if (file.provider === "google_drive" && typeof file.submissionFolderName === "string") {
-        lines.push(`Folder: ${file.submissionFolderName}`);
-      }
-
-      if (file.provider === "google_drive" && typeof file.parentFolderName === "string") {
-        lines.push(`Parent folder: ${file.parentFolderName}`);
-      }
-
-      return lines.join("\n");
+function drawFooter(context: PdfContext) {
+  for (const page of context.doc.getPages()) {
+    const width = context.regular.widthOfTextAtSize(FOOTER_TEXT, 9);
+    page.drawText(FOOTER_TEXT, {
+      x: (PAGE_WIDTH - width) / 2,
+      y: 32,
+      size: 9,
+      font: context.regular,
+      color: rgb(0.45, 0.5, 0.58),
     });
-}
-
-function fileNameFor(title: string, submissionId: string) {
-  const safeTitle =
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "completed-submission";
-
-  return `${safeTitle}-${submissionId.slice(0, 8)}.pdf`;
+  }
 }
 
 export async function generateCompletedSubmissionPdf(
@@ -301,99 +373,55 @@ export async function generateCompletedSubmissionPdf(
     page: doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
     regular,
     bold,
-    y: PAGE_HEIGHT - MARGIN,
+    y: PAGE_HEIGHT - TOP_MARGIN,
   };
   const fields = snapshotFields(input.formSnapshot);
   const publicData = isRecord(input.data) ? input.data : {};
   const officeData = isRecord(input.officeData) ? input.officeData : {};
   const signatures = isRecord(input.signatures) ? input.signatures : {};
-  const files = isRecord(input.files) ? input.files : {};
 
-  drawText(context, input.formTitle, {
-    size: 20,
-    font: bold,
-    color: rgb(0.02, 0.37, 0.36),
-    lineHeight: 24,
-  });
-  context.y -= 6;
-  keyValue(context, "Submission ID", input.submissionId);
-  keyValue(context, "Form version", `v${input.formVersion}`);
-  keyValue(context, "Submitted", formatDateTime(input.submittedAt));
-  keyValue(context, "Completed", formatDateTime(input.completedAt));
+  drawTitle(context, input.formTitle);
 
-  sectionTitle(context, "Public Submitted Answers");
-  for (const field of fields.filter(
-    (field) =>
-      isPublicField(field) &&
-      !DISPLAY_ONLY_FIELD_TYPES.includes(field.type) &&
-      field.type !== "signature" &&
-      field.type !== "initials" &&
-      field.type !== "image_upload",
-  )) {
-    keyValue(context, fieldLabel(field), answerFor(field, publicData));
-  }
-
-  sectionTitle(context, "Office Use Only Answers");
-  const officeFields = fields.filter(isOfficeField);
-
-  if (officeFields.length === 0) {
-    drawText(context, "No office-use fields were included in this form.");
-  } else {
-    for (const field of officeFields) {
-      if (DISPLAY_ONLY_FIELD_TYPES.includes(field.type)) {
-        continue;
-      }
-
-      keyValue(context, fieldLabel(field), answerFor(field, officeData));
+  for (const field of fields) {
+    if (field.type === "image_upload") {
+      continue;
     }
-  }
 
-  sectionTitle(context, "Signatures and Initials");
-  const signatureFields = fields.filter(
-    (field) =>
-      isPublicField(field) &&
-      (field.type === "signature" || field.type === "initials"),
-  );
+    if (field.type === "section_heading") {
+      drawSectionHeading(context, field.content || field.label);
+      continue;
+    }
 
-  if (signatureFields.length === 0) {
-    drawText(context, "No signature or initials fields were captured.");
-  } else {
-    for (const field of signatureFields) {
+    if (field.type === "static_text") {
+      drawDisplayText(context, field.content || field.label);
+      continue;
+    }
+
+    if (field.type === "html") {
+      drawDisplayText(context, stripHtml(field.content));
+      continue;
+    }
+
+    if (field.type === "signature" || field.type === "initials") {
       const value = signatures[field.id];
 
       if (isValidImageDataUrl(value)) {
         await drawSignature(context, fieldLabel(field), value);
       } else {
-        keyValue(context, fieldLabel(field), "No signature provided");
+        drawFieldValue(context, fieldLabel(field), "No signature provided");
       }
+
+      continue;
     }
+
+    drawFieldValue(
+      context,
+      fieldLabel(field),
+      answerFor(field, isOfficeField(field) ? officeData : publicData),
+    );
   }
 
-  sectionTitle(context, "Uploaded File Metadata");
-  const uploadFields = fields.filter(
-    (field) => isPublicField(field) && field.type === "image_upload",
-  );
-
-  if (uploadFields.length === 0) {
-    drawText(context, "No upload fields were included in this form.");
-  } else {
-    for (const field of uploadFields) {
-      const metadata = fileMetadataLines(files[field.id]);
-
-      if (metadata.length === 0) {
-        keyValue(context, fieldLabel(field), "No file uploaded");
-      } else {
-        for (const file of metadata) {
-          keyValue(context, fieldLabel(field), file);
-        }
-      }
-    }
-  }
-
-  sectionTitle(context, "Footer");
-  drawText(context, "Generated by FormOS.");
-  drawText(context, `Generated at: ${new Date().toISOString()}`);
-  drawText(context, "This PDF was generated from the submitted form snapshot.");
+  drawFooter(context);
 
   const bytes = await doc.save();
 
