@@ -34,6 +34,14 @@ function mailAddress(email: string) {
   };
 }
 
+function attachmentFor(input: NonNullable<SendEmailInput["attachments"]>[number]) {
+  return {
+    body: input.content.toString("base64url"),
+    filename: input.fileName,
+    is_inline: false,
+  };
+}
+
 export async function sendLarkEmail(
   input: SendEmailInput,
 ): Promise<SendEmailResult> {
@@ -79,6 +87,7 @@ export async function sendLarkEmail(
         head_from: mailAddress(config.senderEmail),
         body_plain_text: input.text,
         body_html: input.html,
+        attachments: input.attachments?.map(attachmentFor),
       }),
     },
   );

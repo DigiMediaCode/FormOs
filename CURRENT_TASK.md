@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 11.1: Dropbox Storage Provider
+# CURRENT TASK — FormOS Milestone 13: Completed Submission PDF + Email to Owner and Submitter
 
 ## Project Context
 
@@ -6,332 +6,314 @@ FormOS is a standalone SaaS-style form builder project.
 
 Completed:
 
-* Core form builder workflow
-* Public submissions
+* Core auth/signup/login
+* Forms CRUD
+* Form builder
+* Public form submissions
+* Submission viewer
+* Signature and initials fields
+* Reuse first signature
 * Google Drive uploads
-* Google Drive folder selection and organized upload folders
+* Dropbox uploads
+* Storage provider selection
+* Organized upload folders
 * Office Use Only fields
 * Super Admin foundation
 * Lark email notifications
-* Live Hostinger deployment
-* Prisma Migrate deployment workflow
+* Vehicle Hire Agreement template
 
 Current state:
 
-* FormOS supports Google Drive as upload storage.
-* Some real users may use Dropbox instead of Google Drive.
+* FormOS is deployed live on Hostinger.
+* Supabase is connected.
+* Prisma Migrate deployment workflow is active.
+* Public submissions work.
+* Office Use Only fields work.
+* Lark email notifications work.
+* Uploaded files are stored in the form owner’s selected Google Drive or Dropbox storage.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add Dropbox as an alternative upload storage provider.
+When a form owner completes office-use fields and marks a submission as completed, FormOS should generate a completed submission PDF and email it to:
 
-A FormOS user should be able to connect either Google Drive or Dropbox and choose which provider should be used for public form file uploads.
+1. The form owner
+2. The public submitter, if submitter email can be detected
 
-Public submitters should not choose the provider.
+The PDF should include:
 
-The form owner chooses their active upload provider.
+* public submitted fields
+* office-use fields
+* signatures and initials
+* uploaded file metadata
+* basic submission metadata
 
-## Product Behaviour
+The PDF should NOT embed uploaded photos/documents in this milestone.
 
-A logged-in form owner can:
+## Important Change
 
-1. Go to Settings / Integrations.
-2. Connect Google Drive.
-3. Connect Dropbox.
-4. See connected/disconnected status for both.
-5. Choose active upload storage provider:
+Do not attach uploaded photos/images inside the PDF.
 
-   * Google Drive
-   * Dropbox
-6. Configure upload location:
+Do not fetch uploaded file binaries from Google Drive or Dropbox for PDF embedding.
 
-   * Google Drive folder ID/URL as already implemented.
-   * Dropbox parent folder path, such as /FormOS Uploads or /CabCare Driver Forms.
-7. Public form uploads go to the selected active provider.
+Do not merge uploaded PDFs into the completed PDF.
 
-## Important Rule
+Uploaded files should remain in the owner’s connected storage provider.
 
-Only one active upload provider should be used per user at a time.
+The completed PDF should only show uploaded file metadata, such as:
 
-If activeProvider = GOOGLE_DRIVE:
+* file name
+* MIME type
+* file size
+* provider
+* upload folder/path if safe
+* uploaded date/time
 
-* uploads use Google Drive logic.
+Do not include Google Drive links or Dropbox share links in the email.
 
-If activeProvider = DROPBOX:
+## Product Workflow
 
-* uploads use Dropbox logic.
+1. Public user submits a form.
+2. Form owner opens the submission.
+3. Form owner fills Office Use Only fields.
+4. Form owner clicks Mark Office Completed.
+5. FormOS generates a completed submission PDF.
+6. FormOS emails the completed PDF to the form owner.
+7. FormOS emails the completed PDF to the submitter if a submitter email is detected.
+8. If no submitter email is found, only the owner receives the PDF and the system logs a safe warning.
 
-If no provider is active:
+## PDF Contents
 
-* prefer connected provider if exactly one exists.
-* if none connected, image uploads are unavailable.
-* if both connected but no active provider, show owner warning and block uploads until one is selected.
+The generated PDF should include:
 
-## Dropbox OAuth
+### 1. Header
 
-Create one Dropbox app for FormOS.
+* form title
+* submission ID
+* form version
+* submitted date/time
+* completed date/time if available
 
-Each FormOS user connects their own Dropbox account using OAuth.
+### 2. Public Submitted Answers
 
-Add environment variables:
+* use labels from formSnapshot.fields
+* show answers from FormSubmission.data
+* do not show raw field IDs unless no label exists
 
-DROPBOX_APP_KEY=
-DROPBOX_APP_SECRET=
-DROPBOX_REDIRECT_URI=
+### 3. Office Use Only Answers
 
-Do not commit real secrets.
+* use labels from formSnapshot.fields
+* show answers from FormSubmission.officeData
+* clearly mark this section as Office Use Only
 
-## Dropbox OAuth Routes
+### 4. Signatures and Initials
 
-Create:
+* show signature/initials labels
+* render saved signature/initials images
 
-* /api/integrations/dropbox/connect
-* /api/integrations/dropbox/callback
-* /api/integrations/dropbox/disconnect
+### 5. Uploaded Documents Metadata
 
-Use OAuth state tied to current logged-in user/session, similar to Google Drive.
+Show metadata only.
 
-## Dropbox Integration Storage
+For each uploaded file, show:
 
-Use existing UserIntegration model.
+* field label
+* file name
+* MIME type
+* size
+* provider: Google Drive or Dropbox
+* uploaded date/time if available
+* folder/path information if safe
 
-Add IntegrationProvider enum value:
+Do not show:
 
-DROPBOX
+* Google Drive file links
+* Dropbox links
+* OAuth tokens
+* storage tokens
+* raw private storage URLs
 
-Store Dropbox tokens in UserIntegration:
+### 6. Footer / Metadata
 
-* accessToken
-* refreshToken if available
-* expiresAt
-* scope
-* metadata
+* generated by FormOS
+* generated timestamp
+* note:
+  "This PDF was generated from the submitted form snapshot."
 
-Use centralized token helpers.
+## PDF Generation Library
 
-Do not expose tokens.
+Use a suitable Node-compatible PDF generation library.
 
-Do not log tokens.
+Acceptable options:
 
-## Active Upload Provider
+* pdf-lib
+* PDFKit
+* @react-pdf/renderer
 
-Add support for active upload provider.
+Pick the simplest reliable option for server-side generation on Hostinger.
 
-Preferred clean option:
+PDF should be clean and readable, not necessarily beautiful.
 
-Add Prisma model:
+## Email Delivery
 
-UserUploadSettings {
-id
-userId
-activeProvider
-createdAt
-updatedAt
-}
+Use existing Lark email provider.
 
-enum StorageProvider {
-GOOGLE_DRIVE
-DROPBOX
-}
+Update email helper if needed to support PDF attachments.
 
-If there is already a user settings model, reuse it.
+When office completion happens:
 
-Create Prisma migration:
+* generate completed PDF
+* send PDF to form owner
+* detect submitter email
+* send PDF to submitter if email exists
 
-npx prisma migrate dev --name add_dropbox_storage_provider
+## Owner Email
 
-Do not use prisma db push.
+Send to the form owner email from the User model.
 
-## Dropbox Folder Configuration
+Subject:
 
-On /dashboard/settings/integrations, if Dropbox is connected, show:
+Completed submission: {Form Title}
 
-* Dropbox parent folder path input
-* Save Dropbox folder path button
-* current configured Dropbox folder path
-* Clear Dropbox folder path button
+Body:
 
-Default Dropbox folder path:
+Your completed submission PDF is attached.
 
-/FormOS Uploads
+Include:
 
-Store in UserIntegration.metadata:
+* form title
+* completed date/time
+* submission ID
 
-{
-"uploadFolder": {
-"path": "/FormOS Uploads",
-"configuredAt": "ISO date"
-}
-}
+Do not include Drive/Dropbox file links.
 
-Validate:
+## Submitter Email
 
-* must start with /
-* should not contain dangerous path traversal like ..
-* should be reasonable length
-* normalize repeated slashes
+Use helper:
 
-## Dropbox Upload Folder Structure
+extractSubmitterEmail(fields, data)
 
-When active provider is Dropbox, uploaded files should be stored like:
+Rules:
 
-{configuredDropboxParentPath}/{Form Title}/{Submitter Name - Submission ID}/{fileName}
+* use formSnapshot.fields
+* use public submitted data
+* prefer field type email
+* if no email field exists, fallback to text fields with labels containing:
 
-Example:
+  * email
+  * e-mail
+  * your email
+  * contact email
+* validate detected value looks like an email
+* if no valid email exists, skip submitter email safely
 
-/CabCare Driver Forms/Vehicle Hire Agreement/Ali Khan - cm8x123/licence-front.jpg
+Subject:
 
-Fallback submitter folder:
+Your completed form: {Form Title}
 
-/CabCare Driver Forms/Vehicle Hire Agreement/submission-cm8x123/licence-front.jpg
+Body:
 
-Use existing form title and submitter name extraction logic where possible.
+Your completed form is attached as a PDF.
 
-## Dropbox Upload Helper
+Include:
 
-Create helpers under:
+* form title
+* completed date/time
 
-lib/integrations/dropbox/
+Do not include Drive/Dropbox file links.
 
-Suggested helpers:
+Do not attach uploaded documents separately.
 
-* getDropboxOAuthUrl
-* exchangeDropboxCode
-* getDropboxClientForUser
-* saveDropboxIntegration
-* disconnectDropbox
-* saveDropboxUploadFolder
-* uploadFileToDropbox
-* normalizeDropboxPath
-* ensureDropboxFolderPath if needed
+Only attach the generated completed PDF.
 
-Upload should use Dropbox API.
+## Office Completion Trigger
 
-For MVP, folder creation can be done by calling create_folder_v2 for each needed path if not existing.
+Use existing Office Use Only completion flow.
 
-File upload should upload the file bytes to the final path.
+When owner marks completed:
 
-Return safe metadata only.
+* save officeData if needed
+* set officeCompletedAt if not already set
+* set officeCompletedById
+* generate PDF
+* email PDF to owner
+* email PDF to submitter if email exists
 
-## Uploaded File Metadata
+Do not send repeatedly if already completed.
 
-When Dropbox is used, FormSubmission.files should store metadata like:
+If officeCompletedAt already exists, do not automatically resend the PDF.
 
-{
-"provider": "dropbox",
-"dropboxFileId": "id:...",
-"fileName": "licence-front.jpg",
-"mimeType": "image/jpeg",
-"size": 123456,
-"path": "/CabCare Driver Forms/Vehicle Hire Agreement/Ali Khan - cm8x123/licence-front.jpg",
-"parentPath": "/CabCare Driver Forms",
-"formFolderPath": "/CabCare Driver Forms/Vehicle Hire Agreement",
-"submissionFolderPath": "/CabCare Driver Forms/Vehicle Hire Agreement/Ali Khan - cm8x123",
-"uploadedAt": "ISO date"
-}
+## Owner Download Option
 
-Do not store file binary in database.
+If simple, add a button on submission detail:
 
-Do not store file permanently on FormOS server.
+Download Completed PDF
 
-## Settings UI
+This button should generate the PDF on demand and download it.
 
-Update /dashboard/settings/integrations to show:
+Only form owner can download.
 
-Google Drive card:
+Super Admin should not download completed PDFs in this milestone.
 
-* connected/disconnected
-* folder config
-* active provider status
-* set as active button
+## Storage
 
-Dropbox card:
+For this milestone:
 
-* connected/disconnected
-* connect/disconnect
-* folder path config
-* active provider status
-* set as active button
+* do not permanently store generated PDFs
+* generate PDF on demand
+* attach to email
+* optionally allow owner download
 
-If both providers are connected but none active, show warning:
-
-Choose an active upload storage provider before using image upload fields.
-
-## Public Form Upload Logic
-
-Update upload logic to route based on active provider.
-
-* Google Drive active → existing Google Drive upload
-* Dropbox active → Dropbox upload
-* none active → upload unavailable
-
-Existing public image upload warnings should reflect active provider status.
-
-Public submitter should see:
-
-Uploaded files are sent to the form owner's connected storage provider. FormOS does not permanently store your uploaded files on its server.
-
-If Dropbox active, optionally say Dropbox.
-
-If Google active, optionally say Google Drive.
-
-## Submission Viewer
-
-Update submission detail page to show uploaded file metadata for both providers.
-
-For Google Drive:
-
-* existing Drive link if available
-
-For Dropbox:
-
-* show file name, MIME type, size, Dropbox path
-* Do not expose token
-* If a share/view link is not created, do not show link
-* Do not make Dropbox file public automatically in this milestone
+Later, we can store completed PDFs in Google Drive/Dropbox.
 
 ## Security Requirements
 
-* Do not expose Dropbox tokens.
-* Do not expose Google tokens.
-* Do not log tokens.
-* Do not log file contents.
-* Public submitter cannot choose provider/path.
-* Only logged-in owner can connect/disconnect/configure provider.
-* Only owner can set active provider.
-* Store only safe metadata.
-* Friendly errors only.
+* only form owner can generate/download completed PDF
+* do not expose storage tokens
+* do not expose uploaded files to Super Admin
+* do not expose other users’ submissions
+* do not log sensitive answers
+* do not log uploaded file contents
+* do not include Drive/Dropbox links in emails
+* do not attach uploaded photos/documents
+* only attach the generated completed PDF
 
 ## Out of Scope
 
-Do not build Dropbox folder picker.
-Do not create public Dropbox share links.
-Do not make Dropbox files public.
-Do not build PDF export.
-Do not build PDF import.
-Do not build template marketplace.
+Do not build public completed view page.
+Do not store generated PDF permanently.
+Do not embed uploaded photos/images into the PDF.
+Do not fetch uploaded file binaries from Google Drive or Dropbox.
+Do not merge uploaded PDF files into generated PDF.
+Do not build PDF template designer.
+Do not build audit logs.
+Do not build Super Admin PDF access.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 11.1 is complete when:
+Milestone 13 is complete when:
 
-* DROPBOX exists in IntegrationProvider enum.
-* Dropbox OAuth connect/callback/disconnect routes exist.
-* User can connect Dropbox.
-* User can disconnect Dropbox.
-* User can configure Dropbox parent folder path.
-* User can set active upload provider to Google Drive or Dropbox.
-* Public image uploads use active provider.
-* Dropbox uploads store files in organized folder path:
-  parent/form-title/submitter-or-submission-id/file
-* FormSubmission.files stores safe Dropbox metadata only.
-* Google Drive upload still works.
-* Public form upload warnings handle both providers.
-* Submission detail displays Google or Dropbox metadata correctly.
-* Tokens are not exposed.
+* Owner can mark office work completed.
+* Completion triggers PDF generation.
+* PDF includes public submitted answers.
+* PDF includes office-use answers.
+* PDF includes signatures/initials.
+* PDF includes uploaded file metadata only.
+* PDF does not embed uploaded photos/images.
+* PDF does not include Google Drive or Dropbox links.
+* Completed PDF is emailed to form owner.
+* Completed PDF is emailed to submitter if submitter email is detected.
+* No submitter email found does not break completion.
+* Email includes PDF attachment.
+* Email does not include uploaded file links.
+* Email does not include Drive/Dropbox links.
+* Generated PDF is not permanently stored on FormOS.
+* Owner can optionally download completed PDF if implemented.
+* Super Admin cannot download completed PDFs in this milestone.
+* Existing submission flow still works.
+* Existing Lark notifications still work.
+* Existing Google Drive and Dropbox uploads still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* Prisma migration exists if schema changed.
 * npm run build passes.

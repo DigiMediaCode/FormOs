@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
-import { sendFormCompletedNotification } from "@/lib/notifications/form-notifications";
+import { sendCompletedSubmissionPdfNotifications } from "@/lib/notifications/form-notifications";
+import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import { prisma } from "@/lib/prisma";
 
 const OFFICE_SUPPORTED_FIELD_TYPES = [
@@ -45,6 +46,10 @@ function readOfficeValue(field: FormBuilderField, formData: FormData) {
 
 function normalizeExistingOfficeData(value: unknown) {
   return isRecord(value) ? value : {};
+}
+
+function logOfficeWarning(message: string, details?: Record<string, unknown>) {
+  console.warn("[formos:office]", message, details ?? {});
 }
 
 export async function saveOfficeFields(
@@ -110,12 +115,22 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
     },
     select: {
       id: true,
+      formVersion: true,
       formSnapshot: true,
       data: true,
+      files: true,
+      signatures: true,
+      officeData: true,
       officeCompletedAt: true,
+      createdAt: true,
       form: {
         select: {
           title: true,
+          owner: {
+            select: {
+              email: true,
+            },
+          },
         },
       },
     },
@@ -133,7 +148,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
 
   const completedAt = new Date();
 
-  await prisma.formSubmission.update({
+  const completedSubmission = await prisma.formSubmission.update({
     where: {
       id: submission.id,
     },
@@ -141,14 +156,53 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       officeCompletedAt: completedAt,
       officeCompletedById: user.id,
     },
+    select: {
+      id: true,
+      formVersion: true,
+      formSnapshot: true,
+      data: true,
+      files: true,
+      signatures: true,
+      officeData: true,
+      createdAt: true,
+      officeCompletedAt: true,
+    },
   });
 
-  await sendFormCompletedNotification({
-    formTitle: submission.form.title,
-    completedAt,
-    formSnapshot: submission.formSnapshot,
-    data: submission.data,
-  });
+  try {
+    const pdf = await generateCompletedSubmissionPdf({
+      formTitle: submission.form.title,
+      submissionId: completedSubmission.id,
+      formVersion: completedSubmission.formVersion,
+      formSnapshot: completedSubmission.formSnapshot,
+      data: completedSubmission.data,
+      officeData: completedSubmission.officeData,
+      signatures: completedSubmission.signatures,
+      files: completedSubmission.files,
+      submittedAt: completedSubmission.createdAt,
+      completedAt: completedSubmission.officeCompletedAt,
+    });
+
+    await sendCompletedSubmissionPdfNotifications({
+      ownerEmail: submission.form.owner.email,
+      formTitle: submission.form.title,
+      submissionId: completedSubmission.id,
+      completedAt,
+      formSnapshot: completedSubmission.formSnapshot,
+      data: completedSubmission.data,
+      pdf: {
+        fileName: pdf.fileName,
+        mimeType: pdf.mimeType,
+        content: pdf.buffer,
+      },
+    });
+  } catch (error) {
+    logOfficeWarning("Completed PDF generation or email failed safely.", {
+      formId,
+      submissionId,
+      error: error instanceof Error ? error.message : "Unknown PDF/email error",
+    });
+  }
 
   revalidatePath(detailPath);
   redirect(`${detailPath}?success=Office work marked completed.`);

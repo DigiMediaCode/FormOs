@@ -2,11 +2,18 @@ import "server-only";
 
 import { sendLarkEmail } from "@/lib/email/providers/lark";
 
+export type SendEmailAttachment = {
+  fileName: string;
+  mimeType: string;
+  content: Buffer;
+};
+
 export type SendEmailInput = {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  attachments?: SendEmailAttachment[];
 };
 
 export type SendEmailResult = {

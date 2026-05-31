@@ -1,0 +1,76 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
+import { prisma } from "@/lib/prisma";
+
+type CompletedPdfRouteProps = {
+  params: Promise<{
+    formId: string;
+    submissionId: string;
+  }>;
+};
+
+export async function GET(
+  request: NextRequest,
+  { params }: CompletedPdfRouteProps,
+) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const { formId, submissionId } = await params;
+  const submission = await prisma.formSubmission.findFirst({
+    where: {
+      id: submissionId,
+      formId,
+      ownerId: user.id,
+    },
+    select: {
+      id: true,
+      formVersion: true,
+      formSnapshot: true,
+      data: true,
+      files: true,
+      signatures: true,
+      officeData: true,
+      officeCompletedAt: true,
+      createdAt: true,
+      form: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!submission) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
+  if (!submission.officeCompletedAt) {
+    return new NextResponse("Submission is not completed yet.", { status: 400 });
+  }
+
+  const pdf = await generateCompletedSubmissionPdf({
+    formTitle: submission.form.title,
+    submissionId: submission.id,
+    formVersion: submission.formVersion,
+    formSnapshot: submission.formSnapshot,
+    data: submission.data,
+    officeData: submission.officeData,
+    signatures: submission.signatures,
+    files: submission.files,
+    submittedAt: submission.createdAt,
+    completedAt: submission.officeCompletedAt,
+  });
+
+  return new NextResponse(pdf.buffer, {
+    headers: {
+      "Content-Type": pdf.mimeType,
+      "Content-Disposition": `attachment; filename="${pdf.fileName}"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}
