@@ -1,5 +1,6 @@
 import { FormMode, FormStatus } from "@prisma/client";
 import Link from "next/link";
+import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
 import {
   archiveForm,
   getUserFormById,
@@ -7,6 +8,8 @@ import {
   unpublishForm,
   updateForm,
 } from "@/lib/forms/actions";
+import { normalizeFormFields } from "@/lib/forms/fields";
+import { hasGoogleDriveIntegration } from "@/lib/integrations/google-drive/client";
 
 type FormDetailPageProps = {
   params: Promise<{
@@ -36,6 +39,9 @@ export default async function FormDetailPage({
   const publicPath = `/f/${form.id}`;
   const isPublished = form.status === FormStatus.PUBLISHED;
   const isArchived = form.status === FormStatus.ARCHIVED;
+  const fields = normalizeFormFields(form.fields);
+  const hasUploadFields = fields.some((field) => field.type === "image_upload");
+  const googleDriveConnected = await hasGoogleDriveIntegration(form.ownerId);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -69,6 +75,10 @@ export default async function FormDetailPage({
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </p>
+        ) : null}
+
+        {hasUploadFields && !googleDriveConnected ? (
+          <GoogleDriveUploadWarning />
         ) : null}
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">

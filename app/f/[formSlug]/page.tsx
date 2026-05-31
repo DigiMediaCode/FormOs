@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
@@ -122,7 +123,10 @@ function renderField(field: FormBuilderField, uploadsAvailable: boolean) {
             {field.required ? <span className="ml-1 text-red-700">*</span> : null}
           </p>
           <p className="mt-2 text-sm leading-6 text-amber-900">
-            Uploads are unavailable for this form because Google Drive is not connected.
+            File uploads are currently unavailable because the form owner has not connected Google Drive.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-amber-900">
+            Uploaded files are sent to the form owner&apos;s connected Google Drive. FormOS does not permanently store your uploaded files on its server.
           </p>
         </section>
       );
@@ -141,7 +145,10 @@ function renderField(field: FormBuilderField, uploadsAvailable: boolean) {
           type="file"
         />
         <span className="text-xs font-normal leading-5 text-slate-600">
-          JPG, PNG, WebP, and PDF files up to 10MB will be saved to the form owner&apos;s connected Google Drive.
+          JPG, PNG, WebP, and PDF files up to 10MB are accepted.
+        </span>
+        <span className="text-xs font-normal leading-5 text-slate-600">
+          Uploaded files are sent to the form owner&apos;s connected Google Drive. FormOS does not permanently store your uploaded files on its server.
         </span>
       </label>
     );
@@ -190,6 +197,7 @@ export default async function PublicFormPage({
 
   const submitAction = submitPublicForm.bind(null, form.id);
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";
+  const hasUploadFields = form.fields.some((field) => field.type === "image_upload");
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -229,12 +237,10 @@ export default async function PublicFormPage({
             </p>
           )}
 
-          <button
-            className="w-fit rounded-md bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            type="submit"
-          >
-            {submitButtonText}
-          </button>
+          <PublicFormSubmitControls
+            hasUploadFields={hasUploadFields}
+            submitButtonText={submitButtonText}
+          />
         </form>
       </section>
     </main>

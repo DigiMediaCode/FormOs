@@ -92,6 +92,7 @@ export async function getUserForms() {
     },
     select: {
       id: true,
+      ownerId: true,
       title: true,
       slug: true,
       mode: true,
@@ -112,6 +113,7 @@ export async function getUserFormById(formId: string) {
     },
     select: {
       id: true,
+      ownerId: true,
       title: true,
       slug: true,
       description: true,

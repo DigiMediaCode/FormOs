@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { FormBuilderEditor } from "@/components/builder/form-builder-editor";
+import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
 import { getUserFormById, updateFormFields } from "@/lib/forms/actions";
 import { normalizeFormFields } from "@/lib/forms/fields";
+import { hasGoogleDriveIntegration } from "@/lib/integrations/google-drive/client";
 
 type BuilderPageProps = {
   params: Promise<{
@@ -22,6 +24,8 @@ export default async function BuilderPage({
   const form = await getUserFormById(formId);
   const fields = normalizeFormFields(form.fields);
   const saveAction = updateFormFields.bind(null, form.id);
+  const hasUploadFields = fields.some((field) => field.type === "image_upload");
+  const googleDriveConnected = await hasGoogleDriveIntegration(form.ownerId);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -60,6 +64,10 @@ export default async function BuilderPage({
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </p>
+        ) : null}
+
+        {hasUploadFields && !googleDriveConnected ? (
+          <GoogleDriveUploadWarning />
         ) : null}
 
         <FormBuilderEditor
