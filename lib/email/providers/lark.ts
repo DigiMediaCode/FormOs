@@ -29,6 +29,7 @@ function getLarkConfig() {
   const appId = process.env.LARK_APP_ID;
   const appSecret = process.env.LARK_APP_SECRET;
   const senderEmail = process.env.LARK_SENDER_EMAIL;
+  const userAccessToken = process.env.LARK_USER_ACCESS_TOKEN;
 
   if (!appId || !appSecret || !senderEmail) {
     return null;
@@ -38,6 +39,7 @@ function getLarkConfig() {
     appId,
     appSecret,
     senderEmail,
+    userAccessToken,
   };
 }
 
@@ -80,7 +82,7 @@ async function getTenantAccessToken(config: {
 
 function mailAddress(email: string) {
   return {
-    email,
+    mail_address: email,
   };
 }
 
@@ -98,14 +100,24 @@ export async function sendLarkEmail(
     };
   }
 
-  const tenantToken = await getTenantAccessToken(config);
+  const accessToken =
+    config.userAccessToken || (await getTenantAccessToken(config));
 
-  if (!tenantToken) {
+  if (!accessToken) {
     return {
       ok: false,
       provider: "lark",
-      error: "Unable to get Lark tenant token.",
+      error: "Unable to get Lark access token.",
     };
+  }
+
+  if (!config.userAccessToken) {
+    logLarkWarning(
+      "Using tenant token for Lark Mail send. Lark Mail send usually requires a user_access_token for the sender mailbox.",
+      {
+        senderEmail: config.senderEmail,
+      },
+    );
   }
 
   const response = await fetch(
@@ -113,7 +125,7 @@ export async function sendLarkEmail(
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${tenantToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify({
