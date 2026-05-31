@@ -4,7 +4,7 @@ export function GoogleDriveUploadWarning() {
   return (
     <section className="rounded-md border border-amber-200 bg-amber-50 p-4">
       <p className="text-sm font-medium text-amber-950">
-        This form contains image upload fields, but Google Drive is not connected. Public users will not be able to upload files until Google Drive is set up.
+        This form contains image upload fields, but no upload storage provider is active. Public users will not be able to upload files until Google Drive or Dropbox is connected and active.
       </p>
       <Link
         className="mt-3 inline-flex text-sm font-medium text-amber-950 underline-offset-4 hover:underline"

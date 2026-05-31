@@ -4,6 +4,8 @@ import { SignaturePadField } from "@/components/forms/signature-pad-field";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
+import { uploadProviderLabel } from "@/lib/integrations/upload-settings";
+import { StorageProvider } from "@prisma/client";
 
 type PublicFormPageProps = {
   params: Promise<{
@@ -78,6 +80,7 @@ function renderField(
   uploadsAvailable: boolean,
   options: {
     firstSignatureFieldId: string | null;
+    uploadProvider: StorageProvider | null;
   },
 ) {
   if (field.type === "section_heading") {
@@ -126,6 +129,8 @@ function renderField(
   }
 
   if (field.type === "image_upload") {
+    const providerLabel = uploadProviderLabel(options.uploadProvider);
+
     if (!uploadsAvailable) {
       return (
         <section className="rounded-md border border-amber-200 bg-amber-50 p-4" key={field.id}>
@@ -134,10 +139,10 @@ function renderField(
             {field.required ? <span className="ml-1 text-red-700">*</span> : null}
           </p>
           <p className="mt-2 text-sm leading-6 text-amber-900">
-            File uploads are currently unavailable because the form owner has not connected Google Drive.
+            File uploads are currently unavailable because the form owner has not connected or selected an upload storage provider.
           </p>
           <p className="mt-2 text-xs leading-5 text-amber-900">
-            Uploaded files are sent to the form owner&apos;s connected Google Drive. FormOS does not permanently store your uploaded files on its server.
+            Uploaded files are sent to the form owner&apos;s connected storage provider. FormOS does not permanently store your uploaded files on its server.
           </p>
         </section>
       );
@@ -159,7 +164,7 @@ function renderField(
           JPG, PNG, WebP, and PDF files up to 10MB are accepted.
         </span>
         <span className="text-xs font-normal leading-5 text-slate-600">
-          Uploaded files are sent to the form owner&apos;s connected Google Drive. FormOS does not permanently store your uploaded files on its server.
+          Uploaded files are sent to the form owner&apos;s connected {providerLabel}. FormOS does not permanently store your uploaded files on its server.
         </span>
       </label>
     );
@@ -247,6 +252,7 @@ export default async function PublicFormPage({
             publicFields.map((field) =>
               renderField(field, form.uploadsAvailable, {
                 firstSignatureFieldId,
+                uploadProvider: form.uploadProvider,
               }),
             )
           ) : (

@@ -9,7 +9,7 @@ import {
   updateForm,
 } from "@/lib/forms/actions";
 import { normalizeFormFields } from "@/lib/forms/fields";
-import { hasGoogleDriveIntegration } from "@/lib/integrations/google-drive/client";
+import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 
 type FormDetailPageProps = {
   params: Promise<{
@@ -41,7 +41,7 @@ export default async function FormDetailPage({
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
-  const googleDriveConnected = await hasGoogleDriveIntegration(form.ownerId);
+  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -77,7 +77,7 @@ export default async function FormDetailPage({
           </p>
         ) : null}
 
-        {hasUploadFields && !googleDriveConnected ? (
+        {hasUploadFields && !uploadProvider.uploadsAvailable ? (
           <GoogleDriveUploadWarning />
         ) : null}
 

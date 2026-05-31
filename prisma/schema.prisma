@@ -28,6 +28,12 @@ enum SubmissionStatus {
 enum IntegrationProvider {
   GOOGLE_DRIVE
   LARK_MAIL
+  DROPBOX
+}
+
+enum StorageProvider {
+  GOOGLE_DRIVE
+  DROPBOX
 }
 
 enum UserRole {
@@ -43,6 +49,7 @@ model User {
   role         UserRole          @default(USER)
   forms        Form[]
   integrations UserIntegration[]
+  uploadSettings UserUploadSettings?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }
@@ -62,6 +69,16 @@ model UserIntegration {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
+}
+
+model UserUploadSettings {
+  id             String           @id @default(cuid())
+  userId         String           @unique
+  activeProvider StorageProvider?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Form {

@@ -1,6 +1,6 @@
 "use server";
 
-import { FormStatus, Prisma } from "@prisma/client";
+import { FormStatus, Prisma, StorageProvider } from "@prisma/client";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -15,10 +15,16 @@ import {
   extractSubmitterName,
   getGoogleDriveClientForUser,
   getUploadParentFolderForUser,
-  hasGoogleDriveIntegration,
   uploadFileToDrive,
   type GoogleDriveFileMetadata,
 } from "@/lib/integrations/google-drive/client";
+import {
+  getDropboxClientForUser,
+  getDropboxUploadParentPath,
+  uploadFileToDropbox,
+  type DropboxFileMetadata,
+} from "@/lib/integrations/dropbox/client";
+import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifications";
 import { prisma } from "@/lib/prisma";
 
@@ -64,6 +70,7 @@ type PublicFormSnapshot = {
 
 type PublicFormView = PublicFormSnapshot & {
   uploadsAvailable: boolean;
+  uploadProvider: StorageProvider | null;
 };
 
 type UploadRequest = {
@@ -222,10 +229,12 @@ export async function getPublishedFormForPublicView(formId: string) {
   }
 
   const snapshot = buildSnapshot(form);
+  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
 
   return {
     ...snapshot,
-    uploadsAvailable: await hasGoogleDriveIntegration(form.ownerId),
+    uploadsAvailable: uploadProvider.uploadsAvailable,
+    uploadProvider: uploadProvider.activeProvider,
   } satisfies PublicFormView;
 }
 
@@ -260,11 +269,14 @@ export async function submitPublicForm(formId: string, formData: FormData) {
   const submittedData: Record<string, string | boolean> = {};
   const submittedSignatures: Record<string, string> = {};
   const uploadRequests: UploadRequest[] = [];
-  const uploadsAvailable = await hasGoogleDriveIntegration(form.ownerId);
+  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
+  const uploadsAvailable = uploadProvider.uploadsAvailable;
 
   logUploadDiagnostic("Public form upload availability checked.", {
     formId: form.id,
     uploadFieldsEnabled: uploadsAvailable,
+    activeProvider: uploadProvider.activeProvider,
+    connectedProviders: uploadProvider.connectedProviders,
   });
 
   for (const field of formSnapshot.fields) {
@@ -312,7 +324,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       if (!uploadsAvailable) {
         errorRedirect(
           form.id,
-          `${field.label || "File upload"} cannot be uploaded because Google Drive is not connected.`,
+          `${field.label || "File upload"} cannot be uploaded because no upload storage provider is active.`,
         );
       }
 
@@ -330,12 +342,13 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(form.id, validationError);
       }
 
-      logUploadDiagnostic("Accepted upload for Google Drive transfer.", {
+      logUploadDiagnostic("Accepted upload for storage provider transfer.", {
         fieldId: field.id,
         fieldLabel: field.label || "Uploaded file",
         fileName: value.name,
         mimeType: value.type,
         size: value.size,
+        activeProvider: uploadProvider.activeProvider,
       });
 
       uploadRequests.push({
@@ -390,96 +403,181 @@ export async function submitPublicForm(formId: string, formData: FormData) {
   });
 
   if (uploadRequests.length > 0) {
-    const driveClient = await getGoogleDriveClientForUser(form.ownerId);
+    if (uploadProvider.activeProvider === StorageProvider.GOOGLE_DRIVE) {
+      const driveClient = await getGoogleDriveClientForUser(form.ownerId);
 
-    if (!driveClient) {
-      await prisma.formSubmission.delete({
-        where: {
-          id: submission.id,
-        },
-      });
-      errorRedirect(
-        form.id,
-        "Uploads are unavailable because Google Drive is not connected.",
-      );
-    }
-
-    try {
-      logUploadDiagnostic("Preparing Google Drive folders for submission uploads.", {
-        formId: form.id,
-        submissionId: submission.id,
-        uploadCount: uploadRequests.length,
-      });
-
-      const parentFolder = await getUploadParentFolderForUser(
-        driveClient,
-        form.ownerId,
-      );
-      const formFolder = await ensureFormFolder(
-        driveClient,
-        form.title,
-        parentFolder.id,
-      );
-      const submissionFolder = await ensureSubmissionFolder(
-        driveClient,
-        submissionFolderName(formSnapshot.fields, submittedData, submission.id),
-        formFolder.id,
-      );
-      const uploadedFiles: Record<string, GoogleDriveFileMetadata[]> = {};
-
-      logUploadDiagnostic("Google Drive upload folders ready.", {
-        formId: form.id,
-        submissionId: submission.id,
-        parentFolderId: parentFolder.id,
-        parentFolderName: parentFolder.name,
-        formFolderId: formFolder.id,
-        formFolderName: formFolder.name,
-        submissionFolderId: submissionFolder.id,
-        submissionFolderName: submissionFolder.name,
-      });
-
-      for (const uploadRequest of uploadRequests) {
-        logUploadDiagnostic("Starting Google Drive file upload.", {
-          formId: form.id,
-          submissionId: submission.id,
-          fieldId: uploadRequest.fieldId,
-          fieldLabel: uploadRequest.label,
-          fileName: uploadRequest.file.name,
-          mimeType: uploadRequest.file.type,
-          size: uploadRequest.file.size,
-          targetFolderId: submissionFolder.id,
+      if (!driveClient) {
+        await prisma.formSubmission.delete({
+          where: {
+            id: submission.id,
+          },
         });
-
-        const uploadedFile = await uploadFileToDrive(driveClient, {
-          file: uploadRequest.file,
-          fileName: uploadRequest.file.name,
-          mimeType: uploadRequest.file.type,
-          parentFolder,
-          formFolder,
-          submissionFolder,
-        });
-
-        uploadedFiles[uploadRequest.fieldId] = [
-          ...(uploadedFiles[uploadRequest.fieldId] ?? []),
-          uploadedFile,
-        ];
+        errorRedirect(
+          form.id,
+          "Uploads are unavailable because Google Drive is not connected.",
+        );
       }
 
-      await prisma.formSubmission.update({
-        where: {
-          id: submission.id,
-        },
-        data: {
-          files: uploadedFiles as unknown as Prisma.InputJsonValue,
-        },
-      });
-    } catch (error) {
-      logUploadError("Google Drive upload failed; deleting partial submission.", {
-        formId: form.id,
-        submissionId: submission.id,
-        uploadCount: uploadRequests.length,
-        errorMessage: error instanceof Error ? error.message : "Unknown upload error",
-      });
+      try {
+        logUploadDiagnostic("Preparing Google Drive folders for submission uploads.", {
+          formId: form.id,
+          submissionId: submission.id,
+          uploadCount: uploadRequests.length,
+        });
+
+        const parentFolder = await getUploadParentFolderForUser(
+          driveClient,
+          form.ownerId,
+        );
+        const formFolder = await ensureFormFolder(
+          driveClient,
+          form.title,
+          parentFolder.id,
+        );
+        const submissionFolder = await ensureSubmissionFolder(
+          driveClient,
+          submissionFolderName(formSnapshot.fields, submittedData, submission.id),
+          formFolder.id,
+        );
+        const uploadedFiles: Record<string, GoogleDriveFileMetadata[]> = {};
+
+        logUploadDiagnostic("Google Drive upload folders ready.", {
+          formId: form.id,
+          submissionId: submission.id,
+          parentFolderId: parentFolder.id,
+          parentFolderName: parentFolder.name,
+          formFolderId: formFolder.id,
+          formFolderName: formFolder.name,
+          submissionFolderId: submissionFolder.id,
+          submissionFolderName: submissionFolder.name,
+        });
+
+        for (const uploadRequest of uploadRequests) {
+          logUploadDiagnostic("Starting Google Drive file upload.", {
+            formId: form.id,
+            submissionId: submission.id,
+            fieldId: uploadRequest.fieldId,
+            fieldLabel: uploadRequest.label,
+            fileName: uploadRequest.file.name,
+            mimeType: uploadRequest.file.type,
+            size: uploadRequest.file.size,
+            targetFolderId: submissionFolder.id,
+          });
+
+          const uploadedFile = await uploadFileToDrive(driveClient, {
+            file: uploadRequest.file,
+            fileName: uploadRequest.file.name,
+            mimeType: uploadRequest.file.type,
+            parentFolder,
+            formFolder,
+            submissionFolder,
+          });
+
+          uploadedFiles[uploadRequest.fieldId] = [
+            ...(uploadedFiles[uploadRequest.fieldId] ?? []),
+            uploadedFile,
+          ];
+        }
+
+        await prisma.formSubmission.update({
+          where: {
+            id: submission.id,
+          },
+          data: {
+            files: uploadedFiles as unknown as Prisma.InputJsonValue,
+          },
+        });
+      } catch (error) {
+        logUploadError("Google Drive upload failed; deleting partial submission.", {
+          formId: form.id,
+          submissionId: submission.id,
+          uploadCount: uploadRequests.length,
+          errorMessage: error instanceof Error ? error.message : "Unknown upload error",
+        });
+        await prisma.formSubmission.delete({
+          where: {
+            id: submission.id,
+          },
+        });
+        errorRedirect(
+          form.id,
+          "File upload failed. Please contact the form owner.",
+        );
+      }
+    } else if (uploadProvider.activeProvider === StorageProvider.DROPBOX) {
+      const dropboxClient = await getDropboxClientForUser(form.ownerId);
+
+      if (!dropboxClient) {
+        await prisma.formSubmission.delete({
+          where: {
+            id: submission.id,
+          },
+        });
+        errorRedirect(
+          form.id,
+          "Uploads are unavailable because Dropbox is not connected.",
+        );
+      }
+
+      try {
+        const parentPath = await getDropboxUploadParentPath(form.ownerId);
+        const uploadedFiles: Record<string, DropboxFileMetadata[]> = {};
+
+        for (const uploadRequest of uploadRequests) {
+          logUploadDiagnostic("Starting Dropbox file upload.", {
+            formId: form.id,
+            submissionId: submission.id,
+            fieldId: uploadRequest.fieldId,
+            fieldLabel: uploadRequest.label,
+            fileName: uploadRequest.file.name,
+            mimeType: uploadRequest.file.type,
+            size: uploadRequest.file.size,
+            parentPath,
+          });
+
+          const uploadedFile = await uploadFileToDropbox(dropboxClient, {
+            file: uploadRequest.file,
+            fileName: uploadRequest.file.name,
+            mimeType: uploadRequest.file.type,
+            parentPath,
+            formTitle: form.title,
+            fields: formSnapshot.fields,
+            data: submittedData,
+            submissionId: submission.id,
+          });
+
+          uploadedFiles[uploadRequest.fieldId] = [
+            ...(uploadedFiles[uploadRequest.fieldId] ?? []),
+            uploadedFile,
+          ];
+        }
+
+        await prisma.formSubmission.update({
+          where: {
+            id: submission.id,
+          },
+          data: {
+            files: uploadedFiles as unknown as Prisma.InputJsonValue,
+          },
+        });
+      } catch (error) {
+        logUploadError("Dropbox upload failed; deleting partial submission.", {
+          formId: form.id,
+          submissionId: submission.id,
+          uploadCount: uploadRequests.length,
+          errorMessage: error instanceof Error ? error.message : "Unknown upload error",
+        });
+        await prisma.formSubmission.delete({
+          where: {
+            id: submission.id,
+          },
+        });
+        errorRedirect(
+          form.id,
+          "File upload failed. Please contact the form owner.",
+        );
+      }
+    } else {
       await prisma.formSubmission.delete({
         where: {
           id: submission.id,
@@ -487,7 +585,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       });
       errorRedirect(
         form.id,
-        "File upload failed. Please contact the form owner.",
+        "Uploads are unavailable because no upload storage provider is active.",
       );
     }
   }

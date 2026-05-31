@@ -1,11 +1,12 @@
 import "server-only";
 
 import { Buffer } from "node:buffer";
-import { IntegrationProvider, Prisma } from "@prisma/client";
+import { IntegrationProvider, Prisma, StorageProvider } from "@prisma/client";
 import {
   decryptIntegrationToken,
   encryptIntegrationToken,
 } from "@/lib/integrations/tokens";
+import { clearActiveUploadProviderIfMatches } from "@/lib/integrations/upload-settings";
 import type { FormBuilderField } from "@/lib/forms/fields";
 import { prisma } from "@/lib/prisma";
 
@@ -978,4 +979,5 @@ export async function disconnectGoogleDrive(userId: string) {
       provider: IntegrationProvider.GOOGLE_DRIVE,
     },
   });
+  await clearActiveUploadProviderIfMatches(userId, StorageProvider.GOOGLE_DRIVE);
 }

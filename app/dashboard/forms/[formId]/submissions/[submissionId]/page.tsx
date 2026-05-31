@@ -235,28 +235,46 @@ export default async function SubmissionDetailPage({
                 ) : answer.files ? (
                   <div className="flex flex-col gap-3">
                     {answer.files.map((file) => (
-                      <div className="rounded-md border border-slate-200 bg-slate-50 p-4" key={file.driveFileId}>
+                      <div
+                        className="rounded-md border border-slate-200 bg-slate-50 p-4"
+                        key={file.provider === "google_drive" ? file.driveFileId : file.dropboxFileId}
+                      >
                         <p className="text-sm font-medium text-slate-950">
                           {file.fileName}
                         </p>
                         <p className="mt-1 text-sm text-slate-700">
                           {file.mimeType} - {formatFileSize(file.size)}
                         </p>
-                        {file.submissionFolderName ? (
-                          <p className="mt-1 text-sm text-slate-700">
-                            Folder: {file.submissionFolderName}
-                          </p>
-                        ) : null}
-                        {file.webViewLink ? (
-                          <Link
-                            className="mt-3 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"
-                            href={file.webViewLink}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            Open in Google Drive
-                          </Link>
-                        ) : null}
+                        {file.provider === "google_drive" ? (
+                          <>
+                            {file.submissionFolderName ? (
+                              <p className="mt-1 text-sm text-slate-700">
+                                Folder: {file.submissionFolderName}
+                              </p>
+                            ) : null}
+                            {file.webViewLink ? (
+                              <Link
+                                className="mt-3 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"
+                                href={file.webViewLink}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
+                                Open in Google Drive
+                              </Link>
+                            ) : null}
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-1 break-all text-sm text-slate-700">
+                              Dropbox path: {file.path}
+                            </p>
+                            {file.submissionFolderPath ? (
+                              <p className="mt-1 break-all text-sm text-slate-700">
+                                Folder: {file.submissionFolderPath}
+                              </p>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

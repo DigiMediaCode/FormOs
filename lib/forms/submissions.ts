@@ -31,7 +31,7 @@ export type SubmissionAnswer = {
   files?: SubmissionFileMetadata[];
 };
 
-export type SubmissionFileMetadata = {
+export type GoogleDriveSubmissionFileMetadata = {
   provider: "google_drive";
   driveFileId: string;
   fileName: string;
@@ -47,6 +47,23 @@ export type SubmissionFileMetadata = {
   submissionFolderId?: string;
   submissionFolderName?: string;
 };
+
+export type DropboxSubmissionFileMetadata = {
+  provider: "dropbox";
+  dropboxFileId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  path: string;
+  parentPath: string;
+  formFolderPath: string;
+  submissionFolderPath: string;
+  uploadedAt: string;
+};
+
+export type SubmissionFileMetadata =
+  | GoogleDriveSubmissionFileMetadata
+  | DropboxSubmissionFileMetadata;
 
 export type OfficeFieldAnswer = {
   field: FormBuilderField;
@@ -148,13 +165,12 @@ function normalizeFileMetadata(value: unknown): SubmissionFileMetadata | null {
 
   const provider = value.provider;
   const driveFileId = value.driveFileId;
+  const dropboxFileId = value.dropboxFileId;
   const fileName = value.fileName;
   const mimeType = value.mimeType;
   const size = value.size;
 
   if (
-    provider !== "google_drive" ||
-    typeof driveFileId !== "string" ||
     typeof fileName !== "string" ||
     typeof mimeType !== "string" ||
     typeof size !== "number"
@@ -162,35 +178,59 @@ function normalizeFileMetadata(value: unknown): SubmissionFileMetadata | null {
     return null;
   }
 
-  return {
-    provider,
-    driveFileId,
-    fileName,
-    mimeType,
-    size,
-    webViewLink:
-      typeof value.webViewLink === "string" ? value.webViewLink : null,
-    webContentLink:
-      typeof value.webContentLink === "string" ? value.webContentLink : null,
-    uploadedAt:
-      typeof value.uploadedAt === "string" ? value.uploadedAt : "",
-    parentFolderId:
-      typeof value.parentFolderId === "string" ? value.parentFolderId : undefined,
-    parentFolderName:
-      typeof value.parentFolderName === "string" ? value.parentFolderName : undefined,
-    formFolderId:
-      typeof value.formFolderId === "string" ? value.formFolderId : undefined,
-    formFolderName:
-      typeof value.formFolderName === "string" ? value.formFolderName : undefined,
-    submissionFolderId:
-      typeof value.submissionFolderId === "string"
-        ? value.submissionFolderId
-        : undefined,
-    submissionFolderName:
-      typeof value.submissionFolderName === "string"
-        ? value.submissionFolderName
-        : undefined,
-  };
+  if (provider === "google_drive" && typeof driveFileId === "string") {
+    return {
+      provider,
+      driveFileId,
+      fileName,
+      mimeType,
+      size,
+      webViewLink:
+        typeof value.webViewLink === "string" ? value.webViewLink : null,
+      webContentLink:
+        typeof value.webContentLink === "string" ? value.webContentLink : null,
+      uploadedAt:
+        typeof value.uploadedAt === "string" ? value.uploadedAt : "",
+      parentFolderId:
+        typeof value.parentFolderId === "string" ? value.parentFolderId : undefined,
+      parentFolderName:
+        typeof value.parentFolderName === "string" ? value.parentFolderName : undefined,
+      formFolderId:
+        typeof value.formFolderId === "string" ? value.formFolderId : undefined,
+      formFolderName:
+        typeof value.formFolderName === "string" ? value.formFolderName : undefined,
+      submissionFolderId:
+        typeof value.submissionFolderId === "string"
+          ? value.submissionFolderId
+          : undefined,
+      submissionFolderName:
+        typeof value.submissionFolderName === "string"
+          ? value.submissionFolderName
+          : undefined,
+    };
+  }
+
+  if (provider === "dropbox" && typeof dropboxFileId === "string") {
+    return {
+      provider,
+      dropboxFileId,
+      fileName,
+      mimeType,
+      size,
+      path: typeof value.path === "string" ? value.path : "",
+      parentPath: typeof value.parentPath === "string" ? value.parentPath : "",
+      formFolderPath:
+        typeof value.formFolderPath === "string" ? value.formFolderPath : "",
+      submissionFolderPath:
+        typeof value.submissionFolderPath === "string"
+          ? value.submissionFolderPath
+          : "",
+      uploadedAt:
+        typeof value.uploadedAt === "string" ? value.uploadedAt : "",
+    };
+  }
+
+  return null;
 }
 
 function normalizeFileMetadataList(value: unknown): SubmissionFileMetadata[] {

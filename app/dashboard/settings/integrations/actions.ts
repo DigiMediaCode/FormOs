@@ -6,6 +6,12 @@ import {
   clearGoogleDriveUploadFolder,
   saveGoogleDriveUploadFolder,
 } from "@/lib/integrations/google-drive/client";
+import {
+  clearDropboxUploadFolder,
+  saveDropboxUploadFolder,
+} from "@/lib/integrations/dropbox/client";
+import { setActiveUploadProvider } from "@/lib/integrations/upload-settings";
+import { StorageProvider } from "@prisma/client";
 
 function redirectToIntegrations(messageType: "error" | "success", message: string): never {
   redirect(
@@ -56,4 +62,59 @@ export async function clearGoogleDriveUploadFolderAction() {
   }
 
   redirectToIntegrations("success", "Google Drive upload folder cleared.");
+}
+
+export async function saveDropboxUploadFolderAction(formData: FormData) {
+  const user = await requireUser();
+  const folderPath = String(formData.get("folderPath") ?? "").trim();
+
+  if (!folderPath) {
+    redirectToIntegrations("error", "Enter a Dropbox folder path.");
+  }
+
+  try {
+    await saveDropboxUploadFolder(user.id, folderPath);
+  } catch (error) {
+    redirectToIntegrations(
+      "error",
+      error instanceof Error ? error.message : "Unable to save that Dropbox folder path.",
+    );
+  }
+
+  redirectToIntegrations("success", "Dropbox upload folder saved.");
+}
+
+export async function clearDropboxUploadFolderAction() {
+  const user = await requireUser();
+
+  try {
+    await clearDropboxUploadFolder(user.id);
+  } catch (error) {
+    redirectToIntegrations(
+      "error",
+      error instanceof Error ? error.message : "Unable to clear the Dropbox upload folder.",
+    );
+  }
+
+  redirectToIntegrations("success", "Dropbox upload folder cleared.");
+}
+
+export async function setActiveUploadProviderAction(formData: FormData) {
+  const user = await requireUser();
+  const provider = String(formData.get("provider") ?? "");
+
+  if (provider !== StorageProvider.GOOGLE_DRIVE && provider !== StorageProvider.DROPBOX) {
+    redirectToIntegrations("error", "Choose a valid upload storage provider.");
+  }
+
+  try {
+    await setActiveUploadProvider(user.id, provider as StorageProvider);
+  } catch (error) {
+    redirectToIntegrations(
+      "error",
+      error instanceof Error ? error.message : "Unable to set active upload provider.",
+    );
+  }
+
+  redirectToIntegrations("success", "Active upload provider updated.");
 }
