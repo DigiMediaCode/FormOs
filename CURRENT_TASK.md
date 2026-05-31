@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 13.1: Clean Final PDF Layout
+# CURRENT TASK — FormOS Milestone 13.2: PDF Branding and Visual Polish
 
 ## Project Context
 
@@ -8,175 +8,239 @@ Current state:
 
 * Completed submission PDF generation works.
 * PDF is emailed to both form owner and submitter.
-* Lark email attachment support works.
-* Office Use Only fields work.
-* Signatures/initials work.
-* Google Drive and Dropbox uploads work.
+* Clean PDF layout already exists.
+* PDF currently contains the correct content but still looks plain/basic.
 * Do not touch CommerceOS.
 
-## Problem
+## Goal
 
-The generated completed PDF contains too much technical/internal information.
+Improve the design and UI of the completed PDF.
 
-Current PDF includes items like:
+The PDF should feel more polished and professional by improving:
+
+* typography
+* font sizes
+* spacing
+* layout hierarchy
+* visual readability
+* branding
+
+Also add the owner/company logo at the top-left corner of the PDF.
+
+## Important Direction
+
+Do not change the core PDF content structure unnecessarily.
+
+This milestone is about visual polish, not changing the business logic.
+
+Keep the PDF simple, clean, and readable.
+
+Do not add back technical metadata such as:
 
 * submission ID
 * form version
 * submitted date
-* headings like "Public Submitted Answers"
 * uploaded file metadata
-* extra footer metadata
+* public/office section headings
 
-This is not suitable for a clean customer-facing completed form/agreement.
+## Branding Requirement
 
-## Goal
+Add a logo at the top-left of the PDF.
 
-Simplify the completed PDF layout.
+Implementation direction:
 
-The PDF should look like a clean completed form, not a technical report.
+* Support a logo image file from a known project path, such as:
 
-## Required PDF Layout
+  * `public/pdf-logo.png`
+  * or another clearly defined path used by the PDF generator
+* If logo file exists, render it in the top-left of the first page.
+* If logo file is missing, PDF generation should still work without breaking.
 
-### Header
+For now, a single configured logo file is enough.
 
-At the top of the first page:
+Do not build full per-user branding management yet.
 
-* Form title
-* Center aligned
-* Large/bold text
+## Header Layout
 
-Do not show:
+The first page header should be improved.
 
-* Submission ID
-* Form version
-* Submitted date
-* Completed date
-* Generated timestamp
+Required layout:
 
-### Body
+* Logo on top-left
+* Form title centered or visually centered in the header area
+* Clean spacing under the header
+* Optional horizontal divider line below header if it improves readability
 
-Show submitted fields in the natural form order.
+Header should look professional, not crowded.
 
-Use labels from `formSnapshot.fields`.
+## Typography
 
-Render public fields and office-use fields together in the same form flow.
+Use nicer fonts if supported by the chosen PDF library.
 
-Do not add a heading called:
+Preferred direction:
 
-* Public Submitted Answers
-* Office Use Only Answers
+* clean sans-serif font
+* visually distinct heading font weight
+* readable body font
+* reasonable font sizes
 
-If office fields are present, show them as normal fields using their labels.
+Suggested typography style:
 
-Do not expose the internal idea of public/office sections in the final PDF.
+* Form title: larger and bold
+* Section headings: medium-large and bold
+* Field labels: medium weight
+* Field values: regular readable size
+* Footer: smaller subtle size
 
-### Field Rendering
+If custom fonts are possible cleanly, use them.
+If not, use the best built-in font available with a clean style.
 
-For normal fields:
+## Spacing and Layout
 
-* Label: Answer
+Improve spacing throughout the PDF.
+
+Requirements:
+
+* proper top/bottom margins
+* consistent spacing between fields
+* more breathing room between groups/sections
+* enough white space around signatures
+* consistent line height
+* avoid cramped text
+* page breaks should be handled cleanly
+
+If a section is too close to the page bottom, move it to the next page cleanly.
+
+## Field Rendering Style
+
+Keep the body simple and polished.
+
+Recommended format:
+
+* Label
+* Value beneath or beside it in a neat layout
+
+If suitable, use one of these:
+
+Option A:
+Label on one line, value on next line
+
+Option B:
+Label on left, value on right
+
+Choose whichever is simpler and cleaner in the current PDF engine.
+
+For long fields like textarea/address/html text:
+
+* allow multi-line rendering
+* preserve spacing
+* avoid overlap
 
 For checkbox fields:
 
-* Label: Yes / No
+* show clear Yes / No
 
-For select fields:
+For signature/initials:
 
-* Show selected option label if available.
-* Fallback to selected value.
+* show label
+* render signature image below with clean spacing
+* optionally draw a light border or signature line area if helpful
 
-For signatures/initials:
+## Section Heading Styling
 
-* Show field label
-* Render signature/initials image below the label
+If `section_heading` fields are present, style them better.
 
-For display-only content fields:
+Requirements:
 
-* section_heading may be shown as a heading
-* static_text/html may be shown if currently supported safely
-* keep it clean and readable
+* slightly larger font
+* bold
+* spacing above and below
+* visually distinct from normal labels
 
-### Uploaded Files
+Do not over-design.
 
-Do not include uploaded file metadata.
+## Static/HTML Content Styling
 
-Do not include:
+If static text / html content is already rendered in the PDF:
 
-* file names
-* MIME types
-* file sizes
-* Google Drive metadata
-* Dropbox metadata
-* Google Drive links
-* Dropbox paths
-* uploaded file section
+* keep it readable
+* use smaller paragraph spacing
+* avoid giant blocks of dense text
+* preserve clear paragraph breaks
 
-Uploaded files should stay in the owner’s connected storage provider.
+No fancy HTML rendering is required.
 
-### Footer
+## Footer
 
-Each page footer should contain only:
+Keep footer simple.
+
+Footer text must remain:
 
 Form Created using FormOS
 
-Footer should be centered.
+But improve presentation:
 
-Do not include:
+* centered
+* smaller font size
+* subtle style
+* positioned consistently on each page
 
-* generated timestamp
-* submission ID
-* technical metadata
-* storage information
+Do not add other metadata in footer.
 
-## Email Behaviour
+## Technical / Implementation Guidance
 
-Keep existing email behaviour:
+Likely file area:
 
-* Completed PDF goes to form owner.
-* Completed PDF goes to submitter if submitter email is detected.
-* Do not attach uploaded documents.
-* Do not include Drive/Dropbox links.
+* `lib/pdf/`
+* existing `generateCompletedSubmissionPdf` helper
 
-Only the PDF layout/content should change.
+Improve PDF generation logic only.
 
-## Security / Privacy
+Do not change:
 
-* Do not expose storage links.
-* Do not expose OAuth tokens.
-* Do not expose uploaded file metadata.
-* Do not include internal technical identifiers unless explicitly requested later.
-* Do not give Super Admin PDF access.
+* Office Use Only logic
+* email sending logic
+* Lark provider logic
+* Google Drive logic
+* Dropbox logic
+* submission flow
+* database schema unless absolutely necessary
+
+## Fallback Behaviour
+
+If logo file is not found:
+
+* PDF should still generate normally
+* skip logo gracefully
+* do not crash PDF generation
 
 ## Out of Scope
 
-Do not build PDF template designer.
-Do not build public completed view.
+Do not build per-user branding settings.
+Do not build multiple logo management.
+Do not build theme designer.
+Do not redesign the whole form builder.
 Do not add uploaded photos to PDF.
-Do not add uploaded file metadata.
-Do not change email provider.
-Do not change Office Use Only workflow.
-Do not change Google Drive or Dropbox upload logic.
+Do not add uploaded file metadata back.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 13.1 is complete when:
+Milestone 13.2 is complete when:
 
-* PDF title is centered at the top.
-* PDF does not show submission ID.
-* PDF does not show form version.
-* PDF does not show submitted date.
-* PDF does not show heading "Public Submitted Answers".
-* PDF does not show heading "Office Use Only Answers".
-* PDF shows public field answers.
-* PDF shows office field answers.
-* PDF shows signatures/initials.
-* PDF does not show uploaded file metadata.
-* PDF footer only says "Form Created using FormOS".
-* Footer text is centered.
-* Completed PDF is still emailed to owner and submitter.
-* Existing PDF generation still works.
-* Existing office completion flow still works.
+* PDF design is visually improved.
+* PDF uses cleaner typography.
+* Font sizes are more reasonable.
+* Spacing is improved across the document.
+* Header layout is improved.
+* Logo appears on the top-left when the logo file exists.
+* PDF still works if logo file is missing.
+* Form title remains prominent and clean.
+* Signatures are displayed with better spacing.
+* Footer still only says "Form Created using FormOS".
+* Footer is centered and visually cleaner.
+* Existing email delivery to owner and submitter still works.
+* Existing clean content rules still remain intact.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

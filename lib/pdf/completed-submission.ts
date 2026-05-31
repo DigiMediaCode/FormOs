@@ -1,6 +1,8 @@
 import "server-only";
 
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import {
   isOfficeField,
   normalizeFormFields,
@@ -26,16 +28,28 @@ type PdfContext = {
   regular: PDFFont;
   bold: PDFFont;
   y: number;
+  pageStarted: boolean;
+  logo: PDFImage | null;
 };
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
-const MARGIN_X = 54;
-const TOP_MARGIN = 56;
+const MARGIN_X = 50;
+const TOP_MARGIN = 52;
 const BOTTOM_MARGIN = 72;
 const TEXT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const MAX_SIGNATURE_DATA_URL_LENGTH = 750_000;
 const FOOTER_TEXT = "Form Created using FormOS";
+const LOGO_PATH = path.join(process.cwd(), "public", "pdf-logo.png");
+const COLORS = {
+  ink: rgb(0.06, 0.1, 0.16),
+  muted: rgb(0.4, 0.45, 0.52),
+  teal: rgb(0.02, 0.37, 0.36),
+  tealSoft: rgb(0.9, 0.97, 0.96),
+  line: rgb(0.83, 0.87, 0.91),
+  fieldBg: rgb(0.985, 0.99, 0.995),
+  white: rgb(1, 1, 1),
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -111,35 +125,25 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines.length > 0 ? lines : [""];
 }
 
+async function loadLogo(doc: PDFDocument) {
+  try {
+    const logoBytes = await readFile(LOGO_PATH);
+    return await doc.embedPng(logoBytes);
+  } catch {
+    return null;
+  }
+}
+
 function addPage(context: PdfContext) {
   context.page = context.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   context.y = PAGE_HEIGHT - TOP_MARGIN;
+  context.pageStarted = false;
 }
 
 function ensureSpace(context: PdfContext, height: number) {
   if (context.y - height < BOTTOM_MARGIN) {
     addPage(context);
   }
-}
-
-function drawCenteredText(
-  context: PdfContext,
-  text: string,
-  options: {
-    y?: number;
-    size: number;
-    font: PDFFont;
-    color?: ReturnType<typeof rgb>;
-  },
-) {
-  const width = options.font.widthOfTextAtSize(text, options.size);
-  context.page.drawText(text, {
-    x: (PAGE_WIDTH - width) / 2,
-    y: options.y ?? context.y,
-    size: options.size,
-    font: options.font,
-    color: options.color ?? rgb(0.05, 0.09, 0.16),
-  });
 }
 
 function drawText(
@@ -169,51 +173,97 @@ function drawText(
       y: context.y,
       size,
       font,
-      color: options.color ?? rgb(0.16, 0.19, 0.25),
+      color: options.color ?? COLORS.ink,
     });
     context.y -= lineHeight;
   }
 }
 
-function drawRule(context: PdfContext) {
-  ensureSpace(context, 12);
-  context.page.drawLine({
-    start: { x: MARGIN_X, y: context.y },
-    end: { x: PAGE_WIDTH - MARGIN_X, y: context.y },
-    thickness: 0.7,
-    color: rgb(0.82, 0.86, 0.91),
+function drawHeader(context: PdfContext, title: string) {
+  const headerTop = context.y;
+  const headerHeight = 100;
+  const titleX = MARGIN_X + 112;
+  const titleWidth = PAGE_WIDTH - titleX - MARGIN_X;
+  const titleLines = wrapText(title, context.bold, 25, titleWidth);
+
+  ensureSpace(context, headerHeight + Math.max(0, titleLines.length - 2) * 28);
+
+  context.page.drawRectangle({
+    x: MARGIN_X,
+    y: headerTop - headerHeight + 8,
+    width: TEXT_WIDTH,
+    height: headerHeight,
+    color: COLORS.tealSoft,
+    borderColor: COLORS.line,
+    borderWidth: 0.6,
   });
-  context.y -= 16;
-}
 
-function drawTitle(context: PdfContext, title: string) {
-  const lines = wrapText(title, context.bold, 24, TEXT_WIDTH);
+  if (context.logo) {
+    const maxWidth = 74;
+    const maxHeight = 52;
+    const scale = Math.min(maxWidth / context.logo.width, maxHeight / context.logo.height, 1);
+    const width = context.logo.width * scale;
+    const height = context.logo.height * scale;
 
-  ensureSpace(context, lines.length * 30 + 28);
-
-  for (const line of lines) {
-    drawCenteredText(context, line, {
-      size: 24,
-      font: context.bold,
-      color: rgb(0.02, 0.37, 0.36),
+    context.page.drawImage(context.logo, {
+      x: MARGIN_X + 20,
+      y: headerTop - 58,
+      width,
+      height,
     });
-    context.y -= 30;
+  } else {
+    context.page.drawRectangle({
+      x: MARGIN_X + 20,
+      y: headerTop - 64,
+      width: 60,
+      height: 44,
+      color: COLORS.white,
+      borderColor: COLORS.line,
+      borderWidth: 0.6,
+    });
+    context.page.drawText("FormOS", {
+      x: MARGIN_X + 29,
+      y: headerTop - 47,
+      size: 10,
+      font: context.bold,
+      color: COLORS.teal,
+    });
   }
 
-  context.y -= 8;
-  drawRule(context);
+  let titleY = headerTop - 34;
+
+  for (const line of titleLines) {
+    context.page.drawText(line, {
+      x: titleX,
+      y: titleY,
+      size: 25,
+      font: context.bold,
+      color: COLORS.teal,
+    });
+    titleY -= 29;
+  }
+
+  context.y = headerTop - headerHeight - 18;
 }
 
 function drawSectionHeading(context: PdfContext, text: string) {
-  context.y -= 6;
-  ensureSpace(context, 34);
+  context.y -= context.pageStarted ? 12 : 0;
+  ensureSpace(context, 42);
+  context.pageStarted = true;
+
   drawText(context, text, {
-    size: 15,
+    size: 16,
     font: context.bold,
-    color: rgb(0.02, 0.37, 0.36),
-    lineHeight: 20,
+    color: COLORS.teal,
+    lineHeight: 22,
   });
-  context.y -= 4;
+  context.page.drawLine({
+    start: { x: MARGIN_X, y: context.y + 6 },
+    end: { x: MARGIN_X + 92, y: context.y + 6 },
+    thickness: 1.2,
+    color: COLORS.teal,
+  });
+  context.y -= 10;
 }
 
 function drawDisplayText(context: PdfContext, text: string) {
@@ -221,58 +271,59 @@ function drawDisplayText(context: PdfContext, text: string) {
     return;
   }
 
+  context.pageStarted = true;
   drawText(context, text, {
-    size: 10.5,
-    color: rgb(0.29, 0.33, 0.39),
-    lineHeight: 15,
+    size: 10.2,
+    color: COLORS.muted,
+    lineHeight: 15.5,
   });
-  context.y -= 5;
+  context.y -= 8;
 }
 
 function drawFieldValue(context: PdfContext, label: string, value: string) {
   const cleanLabel = safeText(label);
   const cleanValue = safeText(value) || "No answer";
-  const labelWidth = Math.min(context.bold.widthOfTextAtSize(cleanLabel, 10.5), 185);
-  const valueX = MARGIN_X + 205;
+  const valueX = MARGIN_X + 198;
   const valueWidth = PAGE_WIDTH - valueX - MARGIN_X;
-  const valueLines = wrapText(cleanValue, context.regular, 10.5, valueWidth);
-  const rowHeight = Math.max(24, valueLines.length * 15 + 8);
+  const valueLines = wrapText(cleanValue, context.regular, 10.4, valueWidth);
+  const rowHeight = Math.max(34, valueLines.length * 15.5 + 15);
 
   ensureSpace(context, rowHeight);
+  context.pageStarted = true;
 
   context.page.drawRectangle({
     x: MARGIN_X,
-    y: context.y - rowHeight + 4,
+    y: context.y - rowHeight,
     width: TEXT_WIDTH,
     height: rowHeight,
-    color: rgb(0.98, 0.99, 1),
-    borderColor: rgb(0.88, 0.91, 0.95),
+    color: COLORS.fieldBg,
+    borderColor: COLORS.line,
     borderWidth: 0.4,
   });
 
   context.page.drawText(cleanLabel, {
-    x: MARGIN_X + 12,
-    y: context.y - 12,
-    size: 10.5,
+    x: MARGIN_X + 14,
+    y: context.y - 20,
+    size: 10,
     font: context.bold,
-    color: rgb(0.05, 0.09, 0.16),
-    maxWidth: labelWidth,
+    color: COLORS.ink,
+    maxWidth: 176,
   });
 
-  let valueY = context.y - 12;
+  let valueY = context.y - 20;
 
   for (const line of valueLines) {
     context.page.drawText(line, {
       x: valueX,
       y: valueY,
-      size: 10.5,
+      size: 10.4,
       font: context.regular,
-      color: rgb(0.16, 0.19, 0.25),
+      color: COLORS.ink,
     });
-    valueY -= 15;
+    valueY -= 15.5;
   }
 
-  context.y -= rowHeight + 5;
+  context.y -= rowHeight + 7;
 }
 
 function answerFor(field: FormBuilderField, data: Record<string, unknown>) {
@@ -313,37 +364,44 @@ async function drawSignature(
   try {
     const image = await context.doc.embedPng(Buffer.from(base64, "base64"));
     const maxWidth = 260;
-    const maxHeight = 92;
+    const maxHeight = 96;
     const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
     const width = image.width * scale;
     const height = image.height * scale;
-    const boxHeight = height + 44;
+    const boxHeight = height + 58;
 
     ensureSpace(context, boxHeight);
+    context.pageStarted = true;
 
     context.page.drawRectangle({
       x: MARGIN_X,
-      y: context.y - boxHeight + 4,
+      y: context.y - boxHeight,
       width: TEXT_WIDTH,
       height: boxHeight,
-      color: rgb(0.98, 0.99, 1),
-      borderColor: rgb(0.88, 0.91, 0.95),
+      color: COLORS.fieldBg,
+      borderColor: COLORS.line,
       borderWidth: 0.4,
     });
     context.page.drawText(safeText(label), {
-      x: MARGIN_X + 12,
-      y: context.y - 14,
-      size: 10.5,
+      x: MARGIN_X + 14,
+      y: context.y - 20,
+      size: 10,
       font: context.bold,
-      color: rgb(0.05, 0.09, 0.16),
+      color: COLORS.ink,
     });
     context.page.drawImage(image, {
-      x: MARGIN_X + 12,
-      y: context.y - height - 32,
+      x: MARGIN_X + 14,
+      y: context.y - height - 34,
       width,
       height,
     });
-    context.y -= boxHeight + 6;
+    context.page.drawLine({
+      start: { x: MARGIN_X + 14, y: context.y - height - 40 },
+      end: { x: MARGIN_X + 310, y: context.y - height - 40 },
+      thickness: 0.7,
+      color: rgb(0.72, 0.76, 0.82),
+    });
+    context.y -= boxHeight + 9;
   } catch {
     drawFieldValue(context, label, "Signature image could not be rendered");
   }
@@ -351,13 +409,13 @@ async function drawSignature(
 
 function drawFooter(context: PdfContext) {
   for (const page of context.doc.getPages()) {
-    const width = context.regular.widthOfTextAtSize(FOOTER_TEXT, 9);
+    const width = context.regular.widthOfTextAtSize(FOOTER_TEXT, 8.5);
     page.drawText(FOOTER_TEXT, {
       x: (PAGE_WIDTH - width) / 2,
       y: 32,
-      size: 9,
+      size: 8.5,
       font: context.regular,
-      color: rgb(0.45, 0.5, 0.58),
+      color: COLORS.muted,
     });
   }
 }
@@ -374,13 +432,15 @@ export async function generateCompletedSubmissionPdf(
     regular,
     bold,
     y: PAGE_HEIGHT - TOP_MARGIN,
+    pageStarted: false,
+    logo: await loadLogo(doc),
   };
   const fields = snapshotFields(input.formSnapshot);
   const publicData = isRecord(input.data) ? input.data : {};
   const officeData = isRecord(input.officeData) ? input.officeData : {};
   const signatures = isRecord(input.signatures) ? input.signatures : {};
 
-  drawTitle(context, input.formTitle);
+  drawHeader(context, input.formTitle);
 
   for (const field of fields) {
     if (field.type === "image_upload") {
