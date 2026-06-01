@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/(auth)/actions";
 import { DashboardNav } from "@/components/ui/dashboard-nav";
+import { PlatformBrand } from "@/components/ui/platform-brand";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
@@ -48,8 +49,10 @@ export default async function DashboardLayout({
 
 function LinkLogo() {
   return (
-    <a className="text-lg font-semibold text-slate-950" href="/dashboard">
-      FormOS
-    </a>
+    <PlatformBrand
+      href="/dashboard"
+      imageClassName="h-auto max-w-[110px] object-contain"
+      textClassName="text-lg font-semibold text-slate-950"
+    />
   );
 }

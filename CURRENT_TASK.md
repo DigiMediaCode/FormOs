@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 17.1: Branding, SEO Settings, and Public Form Logo Fix
+# CURRENT TASK — FormOS Milestone 18: Landing Page + Global Branding Application
 
 ## Project Context
 
@@ -9,252 +9,291 @@ Current state:
 * FormOS MVP foundation is live and working.
 * Auth/signup/login works.
 * Forms CRUD works.
-* Builder works and has improved UI.
-* Public forms work and have improved UI.
-* Public form logo exists but placement needs fixing.
+* Builder works.
+* Public forms work.
+* Public form logo and branding settings exist.
+* Super Admin settings exist for logo, favicon, meta title, meta description, and site name.
+* QR code feature is already live.
 * Google Drive and Dropbox uploads work.
-* Storage provider selection works.
 * Office Use Only fields work.
 * Finalize Submission works.
 * Completed PDF generation and email delivery work.
 * Activity timeline / light audit works.
 * Vehicle Hire Agreement template works.
-* Super Admin foundation exists.
 * Do not touch CommerceOS.
+
+## Problem
+
+The platform branding settings exist, but the logo/favicon/site branding are not consistently visible across the public site, dashboard, admin, auth pages, and landing page.
+
+The current website landing page is too basic and does not make FormOS look like a modern SaaS product.
+
+Before subscriptions/packages, FormOS needs a professional landing page where visitors can understand the product and register/sign up.
 
 ## Goal
 
-Add basic platform branding and SEO settings editable from Super Admin.
+Create a modern, attractive landing page for FormOS and apply global branding settings consistently across the app.
 
-Also fix the public form logo placement.
+The landing page should help users understand FormOS quickly and encourage them to sign up.
 
-## Problem 1 — Public Form Logo Position
+## Main Route
 
-The public form logo is currently showing inside the form title/description section.
+Update:
 
-It should be placed above everything on the public form page.
+* /
 
-Desired public form header order:
+This should become the public marketing landing page.
 
-1. Logo centered at the very top
-2. Form title
-3. Form description
-4. Form fields
+## Landing Page Requirements
 
-The logo should be slightly bigger than the current size.
+Create a modern SaaS landing page with these sections:
 
-If the logo exists, do not show the small text "FORMOS" near it.
+### 1. Header / Navigation
 
-If no logo exists, fallback to simple FormOS text branding is acceptable.
+Show:
 
-## Problem 2 — Missing Platform Settings
+* platform logo from Super Admin settings if available
+* site name if logo is missing
+* navigation links:
 
-Super Admin needs basic platform settings.
+  * Features
+  * Use Cases
+  * How It Works
+  * Login
+  * Get Started
 
-Add Super Admin settings page where the platform owner can manage:
+Buttons:
 
-* website logo
-* favicon
-* meta title
-* meta description
-* site name
+* Login → /login
+* Get Started → /signup
 
-These settings should affect the public-facing app where practical.
+If user is already logged in, show:
 
-## Required Admin Route
+* Dashboard → /dashboard
 
-Create:
+### 2. Hero Section
 
-* /admin/settings
+Create a strong hero section.
 
-Add link in Super Admin navigation:
+Suggested headline:
 
-* Settings → /admin/settings
+Build forms, agreements, and signed workflows in minutes.
 
-Only SUPER_ADMIN can access this page.
+Suggested subheadline:
 
-Normal users must not access it.
+FormOS helps businesses create online forms, collect signatures, receive file uploads, complete office-use fields, and send finished PDFs automatically.
 
-Logged-out users should redirect to login.
+Primary button:
 
-## Platform Settings Model
+Get Started Free → /signup
 
-Add a Prisma model for global platform settings.
+Secondary button:
 
-Suggested model:
+Login → /login
 
-model PlatformSetting {
-id        String   @id @default(cuid())
-key       String   @unique
-value     Json?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-}
+Optional small trust text:
 
-Alternative is acceptable if project already has a settings pattern.
+No code required. Works with Google Drive and Dropbox.
 
-Create migration:
+### 3. Feature Cards
 
-npx prisma migrate dev --name add_platform_settings
+Show key features:
 
-Do not use prisma db push.
+* Form Builder
+* eSignatures and Initials
+* File Uploads to Google Drive or Dropbox
+* Office Use Only Fields
+* Completed PDF Delivery
+* QR Code Form Sharing
+* Activity Timeline
+* Templates
 
-## Settings To Support
+Keep text short and clean.
 
-Support these keys:
+### 4. Use Cases
+
+Show use cases:
+
+* Vehicle hire agreements
+* Client intake forms
+* Consent forms
+* Service agreements
+* Onboarding forms
+* Document collection forms
+
+### 5. How It Works
+
+Show 3 or 4 steps:
+
+1. Create your form
+2. Share link or QR code
+3. Collect signatures and documents
+4. Complete office fields and send PDF
+
+### 6. Call To Action
+
+Final CTA section:
+
+Ready to create your first form?
+
+Button:
+
+Create Free Account → /signup
+
+### 7. Footer
+
+Footer should show:
+
+* logo or site name
+* short description
+* copyright
+* links:
+
+  * Login
+  * Signup
+
+## Visual Style
+
+Use a modern SaaS look.
+
+Direction:
+
+* clean white/light background
+* soft gradient or subtle background accents
+* large hero typography
+* rounded cards
+* subtle shadows
+* good spacing
+* modern buttons
+* responsive design
+* mobile-friendly layout
+
+Do not use a heavy UI library.
+
+Use Tailwind only.
+
+## Global Branding Application
+
+Use platform settings from Super Admin:
 
 * siteName
-* metaTitle
-* metaDescription
 * logoUrl
 * faviconUrl
+* metaTitle
+* metaDescription
 
-For this milestone, logoUrl and faviconUrl can be simple URL/path text inputs.
+Apply branding where practical:
 
-Do not build file upload manager yet unless already simple.
+### Landing Page
 
-Acceptable values:
+* logo in header
+* siteName fallback
+* meta title/description
 
-logoUrl:
+### Auth Pages
 
-* /pdf-logo.png
-* /formos-logo.png
-* https://example.com/logo.png
+* login page should show logo/site name
+* signup page should show logo/site name
+* favicon should apply globally if practical
 
-faviconUrl:
+### Dashboard
 
-* /favicon.ico
-* /favicon.png
-* https://example.com/favicon.png
+* dashboard header/sidebar should use logo/site name where practical
+* if logo exists, show it instead of hardcoded FormOS text where appropriate
+* avoid duplicate logo + "FORMOS" text if logo exists
 
-## Super Admin Settings UI
+### Admin
 
-/admin/settings should include a simple form with:
+* admin layout/header should use logo/site name where practical
+* do not confuse admin branding with public form owner branding
 
-* Site Name
-* Meta Title
-* Meta Description
-* Logo URL / Path
-* Favicon URL / Path
-* Save Settings button
+### Public Forms
 
-Show current values.
+* logo should appear above everything
+* title should appear below logo
+* if logo exists, do not show small "FORMOS" text next to it
 
-Show success/error messages.
+## Favicon
 
-Use existing pending button UX.
+Use faviconUrl from platform settings if practical.
 
-Keep UI simple and clean.
+If dynamic favicon is difficult in the current Next.js setup:
 
-## Applying Settings
+* keep static favicon fallback
+* document limitation
+* do not break build
 
-Use platform settings where practical:
+## SEO Metadata
 
-### Public Form Page
-
-Use logoUrl from platform settings.
-
-If logoUrl exists:
-
-* show logo centered at top of public form page
-* make it slightly bigger
-* suggested max width: 130px to 170px
-* height auto
-* do not show "FORMOS" text near it
-
-If logoUrl is missing:
-
-* show fallback FormOS branding text if needed
-
-### App Metadata / SEO
-
-Use metaTitle and metaDescription for app metadata where practical.
-
-If Next.js metadata is static and dynamic implementation is too intrusive, apply basic metadata helper where clean.
-
-Do not over-engineer dynamic SEO in this milestone.
+Use metaTitle and metaDescription from platform settings where practical.
 
 At minimum:
 
-* update layout metadata to use sensible defaults
-* create helper to read platform settings for future use if dynamic metadata is not practical everywhere
+* landing page should use configured metadata
+* fallback to sensible defaults if settings are missing
 
-### Favicon
-
-Use faviconUrl if practical.
-
-If dynamic favicon is too awkward in current Next.js setup, document it and keep static fallback.
-
-Do not break build trying to over-engineer dynamic favicon.
-
-## Settings Helpers
-
-Create helpers such as:
-
-* getPlatformSettings
-* updatePlatformSettings
-* getPlatformSettingValue
-
-Suggested location:
-
-lib/platform/settings.ts
-
-## Default Settings
-
-If no settings exist, use defaults:
+Defaults:
 
 siteName: FormOS
 metaTitle: FormOS — Online Form Builder
-metaDescription: Create online forms, agreements, and submissions with FormOS.
-logoUrl: /pdf-logo.png if it exists, otherwise empty
-faviconUrl: /favicon.ico if it exists, otherwise empty
+metaDescription: Create online forms, agreements, signatures, file uploads, and completed PDFs with FormOS.
+
+## Technical Notes
+
+Suggested helpers:
+
+* getPlatformSettings
+* getPlatformBranding
+* getPlatformMetadata
+
+Reuse existing platform settings helpers if already created.
+
+Do not duplicate settings logic.
 
 ## Security
 
-* Only SUPER_ADMIN can edit platform settings.
-* Do not allow normal users to edit global settings.
-* Sanitize/validate URL/path inputs.
-* Do not allow javascript: URLs.
+* Public landing page can read safe platform settings only.
 * Do not expose secrets.
-* Do not touch user storage provider credentials.
+* Do not expose OAuth tokens.
+* Do not expose storage credentials.
+* Do not expose Super Admin-only data.
 
 ## Out of Scope
 
-Do not build user-level branding.
-Do not build per-form branding.
-Do not build logo upload manager.
-Do not build media library.
-Do not build custom domains.
-Do not build subscription settings.
+Do not build pricing/packages yet.
 Do not build billing.
+Do not build subscription limits.
+Do not build custom domain support.
+Do not build user-level branding.
+Do not build per-form branding settings.
 Do not change Google Drive or Dropbox logic.
-Do not change PDF generation except if it already uses platform logo cleanly.
+Do not change PDF generation.
+Do not change Office Use Only logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 17.1 is complete when:
+Milestone 18 is complete when:
 
-* Public form logo appears above everything.
-* Public form logo is centered.
-* Public form logo is slightly bigger.
-* Public form title appears below the logo.
-* Public form description appears below the title.
+* / is a modern landing page.
+* Landing page has header, hero, features, use cases, how-it-works, CTA, and footer.
+* Landing page has Login and Get Started buttons.
+* Logged-in users can access Dashboard from landing page.
+* Platform logo appears on landing page if configured.
+* Site name appears if logo is missing.
+* Auth pages show platform logo/site name.
+* Dashboard/admin branding uses platform logo/site name where practical.
+* Public forms show logo above everything.
 * Small "FORMOS" text is hidden when logo exists.
-* /admin/settings exists.
-* Only SUPER_ADMIN can access /admin/settings.
-* Super Admin can edit site name.
-* Super Admin can edit logo URL/path.
-* Super Admin can edit favicon URL/path.
-* Super Admin can edit meta title.
-* Super Admin can edit meta description.
-* Platform settings are persisted in database.
-* Public form page uses platform logo setting where available.
-* SEO metadata uses platform settings where practical.
+* Meta title and meta description use platform settings where practical.
+* Favicon uses platform setting where practical or gracefully falls back.
+* Page is responsive/mobile-friendly.
+* Existing auth still works.
+* Existing forms/dashboard/admin still work.
 * Existing public form submission still works.
-* Existing dashboard/admin pages still work.
-* Existing QR code feature still works if already implemented.
+* Existing QR code feature still works.
+* Existing Google Drive/Dropbox upload flow still works.
+* Existing PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* Prisma migration exists if schema changed.
 * npm run build passes.

@@ -46,7 +46,8 @@ function defaultFaviconUrl() {
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   siteName: "FormOS",
   metaTitle: "FormOS — Online Form Builder",
-  metaDescription: "Create online forms, agreements, and submissions with FormOS.",
+  metaDescription:
+    "Create online forms, agreements, signatures, file uploads, and completed PDFs with FormOS.",
   logoUrl: defaultLogoUrl(),
   faviconUrl: defaultFaviconUrl(),
 };

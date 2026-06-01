@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PlatformBrand } from "@/components/ui/platform-brand";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 
 export default async function AdminLayout({
@@ -14,9 +15,11 @@ export default async function AdminLayout({
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-              FormOS
-            </p>
+            <PlatformBrand
+              href="/admin"
+              imageClassName="h-auto max-w-[110px] object-contain"
+              textClassName="text-lg font-semibold text-slate-950"
+            />
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">
               Super Admin
             </h1>

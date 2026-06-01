@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { loginAction } from "@/app/(auth)/actions";
+import { PlatformBrand } from "@/components/ui/platform-brand";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { getPlatformSettings } from "@/lib/platform/settings";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -11,16 +13,19 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error, success } = await searchParams;
+  const settings = await getPlatformSettings();
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <section className="w-full max-w-md">
-        <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-          FormOS
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
+      <section className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <PlatformBrand
+          href="/"
+          imageClassName="h-auto max-w-[130px] object-contain"
+          textClassName="text-lg font-semibold text-slate-950"
+        />
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Log in</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Continue to your FormOS dashboard.
+          Continue to your {settings.siteName} dashboard.
         </p>
 
         {success ? (
