@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 13.4: Global Button Pending States and Action Messages
+# CURRENT TASK — FormOS Milestone 14: Submission Activity Timeline / Audit Trail
 
 ## Project Context
 
@@ -6,256 +6,233 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Public form submit button disables on click.
-* Other buttons/actions do not consistently disable after click.
-* Users may double-click actions and cause duplicate requests.
-* FormOS is live and already has many server actions.
+* FormOS is deployed live on Hostinger.
+* Supabase is connected.
+* Prisma Migrate deployment workflow is active.
+* Forms CRUD works.
+* Builder works.
+* Public submissions work.
+* Google Drive uploads work.
+* Dropbox uploads work.
+* Office Use Only fields work.
+* Finalize Submission works.
+* Completed PDF generation works.
+* Completed PDF is emailed to owner and submitter.
+* Super Admin foundation exists.
 * Do not touch CommerceOS.
-
-## Problem
-
-Only the public form submit button has proper pending/loading state.
-
-Other buttons can be clicked multiple times, including actions like:
-
-* login
-* signup
-* create form
-* update form
-* publish/unpublish
-* archive
-* save builder
-* save integrations
-* disconnect integrations
-* set active provider
-* save office fields
-* mark office completed
-* download PDF
-* template creation
-
-This can cause duplicate records, duplicate notifications, duplicate PDF emails, duplicated folders/files, or confusing UI.
 
 ## Goal
 
-Add consistent pending/loading UX for action buttons across FormOS.
+Add a submission activity timeline / audit trail.
 
-When a user clicks an action button:
+Form owners should be able to see a clear timeline of important events for each submission.
 
-* button should disable immediately
-* button text should change to a meaningful loading message
-* related buttons in the same action area should be disabled where needed
-* a corresponding status message should appear at the top of the page/section
-* double-clicks should be prevented
-* if action fails, button should become usable again and error should show
-* if action succeeds, user should see clear success or be redirected normally
+This is especially important for agreement-style forms where signatures, files, office completion, and PDF delivery matter.
 
-## Global UX Direction
+## Required Events To Track
 
-Use a reusable client component or helper pattern where practical.
+Track these events where applicable:
 
-Do not copy messy pending-state code everywhere if it can be avoided.
+* submission_created
+* file_uploaded
+* signature_captured
+* office_fields_saved
+* submission_finalized
+* pdf_generated
+* pdf_emailed_to_owner
+* pdf_emailed_to_submitter
+* pdf_email_failed
+* owner_viewed_submission
 
-Suggested options:
+Do not overbuild. These can be simple event records.
 
-* reusable SubmitButton component using useFormStatus
-* reusable PendingButton component for client actions
-* action status banner component
-* form-level pending state where needed
+## Prisma Model
 
-Use the simplest reliable approach for the current codebase.
+Add a model such as:
 
-## Top Message Requirement
+SubmissionEvent {
+id           String   @id @default(cuid())
+submissionId String
+formId       String
+ownerId      String
+type         String
+message      String?
+metadata     Json?
+createdAt    DateTime @default(now())
 
-When an action starts, show a message near the top of the current page or relevant section.
+submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
-Examples:
+@@index([submissionId])
+@@index([formId])
+@@index([ownerId])
+@@index([type])
+}
 
-Login:
+If enum is cleaner, use an enum for event type, but string is acceptable for MVP flexibility.
 
-* Signing you in...
+Create migration:
 
-Signup:
+npx prisma migrate dev --name add_submission_events
 
-* Creating your account...
+Do not use prisma db push.
 
-Create form:
+## Event Helper
 
-* Creating form...
+Create helper such as:
 
-Save form details:
+createSubmissionEvent
 
-* Saving form details...
+Suggested location:
 
-Publish:
+lib/forms/submission-events.ts
 
-* Publishing form...
+It should:
 
-Unpublish:
+* create event record safely
+* not throw in a way that breaks main business flow unless absolutely critical
+* accept submissionId, formId, ownerId, type, message, metadata
+* avoid logging sensitive data
+* not store OAuth tokens
+* not store uploaded file contents
+* not store full submission answers
 
-* Unpublishing form...
+## Where To Add Events
 
-Archive:
+Add event creation to existing flows:
 
-* Archiving form...
+### Public Submission
 
-Save builder:
+When submission is created:
 
-* Saving form fields...
+* type: submission_created
+* message: Submission received
 
-Create template:
+If signatures exist:
 
-* Creating template...
+* type: signature_captured
+* message: Signature fields captured
+* metadata can include count only
 
-Save integration settings:
+If files uploaded:
 
-* Saving integration settings...
+* type: file_uploaded
+* message: Files uploaded
+* metadata can include provider and count only
 
-Connect integration:
+Do not store file links or full paths in event metadata unless already safe and necessary.
 
-* Redirecting to provider...
+### Submission Detail View
 
-Disconnect integration:
+When owner opens submission detail:
 
-* Disconnecting integration...
+* type: owner_viewed_submission
+* message: Owner viewed submission
 
-Set active provider:
+Avoid creating excessive duplicate events if page is refreshed repeatedly.
 
-* Updating active storage provider...
+If simple, only log first view or throttle by checking recent event.
 
-Save office fields:
+If not simple, skip this event for now.
 
-* Saving office fields...
+### Office Use
 
-Mark office completed:
+When office fields are saved:
 
-* Completing submission and sending PDF...
+* type: office_fields_saved
+* message: Office fields saved
 
-Download PDF:
+When submission is finalized:
 
-* Generating PDF...
+* type: submission_finalized
+* message: Submission finalized
 
-## Areas To Update
+When PDF is generated:
 
-Update pending/disabled UX for at least these areas:
+* type: pdf_generated
+* message: Completed PDF generated
 
-### Auth
+When PDF email is sent to owner:
 
-* /login
-* /signup
-* logout button if practical
+* type: pdf_emailed_to_owner
+* message: Completed PDF emailed to owner
 
-### Forms
+When PDF email is sent to submitter:
 
-* /dashboard/forms/new
-* /dashboard/forms/[formId]
-* /dashboard/forms/[formId]/builder
-* template creation button
+* type: pdf_emailed_to_submitter
+* message: Completed PDF emailed to submitter
 
-### Public Form
+When PDF email fails:
 
-* keep existing submit pending behaviour
-* ensure all public action buttons in the form are handled properly
-* signature clear/use-first-signature buttons should not break while submitting
+* type: pdf_email_failed
+* message: Completed PDF email failed
+* metadata may include recipientType only, not full provider error if sensitive
 
-### Integrations
+## UI Update
 
-* /dashboard/settings/integrations
-* connect Google Drive
-* disconnect Google Drive
-* save Google Drive folder
-* connect Dropbox
-* disconnect Dropbox
-* save Dropbox folder
-* set active provider
+Update submission detail page:
 
-### Submissions / Office Use
+/dashboard/forms/[formId]/submissions/[submissionId]
 
-* save office fields
-* mark office completed
-* download completed PDF
+Add a section:
 
-### Super Admin
+Activity Timeline
 
-If Super Admin has action buttons, add pending states.
-If Super Admin is view-only, no action needed.
+Show events in reverse chronological order or chronological order.
 
-## Double Submission Prevention
+Each timeline item should show:
 
-Prevent double-clicks for server actions.
+* event message
+* event type label if useful
+* date/time
+* small safe metadata summary if useful
 
-For form submissions:
+Keep UI simple.
 
-* use pending state from useFormStatus where possible
-* disable submit buttons while pending
+## Security
 
-For client-triggered actions:
+Only the form owner can view submission events.
 
-* use local isPending state
-* ignore subsequent clicks while pending
+Super Admin should not view detailed submission events in this milestone.
 
-For server-side critical actions, keep backend idempotency where practical.
+Do not expose:
 
-Especially important:
-
-* mark office completed should not resend PDF repeatedly
-* create template should not create duplicate forms on double-click
-* archive/publish/unpublish should not double-run
-
-## Styling
-
-Use existing Tailwind styling.
-
-Disabled buttons should look visibly disabled:
-
-* opacity reduced
-* cursor-not-allowed
-* no hover effect if possible
-
-Status message should be simple:
-
-* success/info/error style if already available
-* otherwise use basic bordered alert box
-
-## Security / Safety
-
-Do not expose secrets.
-
-Do not log sensitive data.
-
-Do not change business logic unless needed to prevent duplicates.
-
-Do not weaken server-side validation.
+* uploaded file links
+* Google Drive links
+* Dropbox links
+* OAuth tokens
+* Lark tokens
+* full sensitive answers
+* file contents
 
 ## Out of Scope
 
-Do not redesign the whole UI.
-Do not add toast library unless absolutely necessary.
-Do not build a full notification system.
-Do not change database schema unless absolutely necessary.
+Do not build Super Admin audit logs.
+Do not build export audit log.
+Do not build legal-grade immutable audit trail.
+Do not build IP/device fingerprinting beyond existing metadata.
+Do not add public completed view.
+Do not change PDF layout.
 Do not change email provider.
-Do not change Google Drive/Dropbox logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-This milestone is complete when:
+Milestone 14 is complete when:
 
-* Login button disables and shows pending text.
-* Signup button disables and shows pending text.
-* Create form button disables and shows pending text.
-* Save/update form buttons disable and show pending text.
-* Publish/unpublish/archive buttons disable and show pending text.
-* Builder save button disables and shows pending text.
-* Template creation button disables and shows pending text.
-* Integration action buttons disable and show pending text.
-* Office save/complete buttons disable and show pending text.
-* Download PDF button disables and shows pending text if applicable.
-* Top/section status messages appear for major actions.
-* Double-clicks are prevented for important actions.
-* Existing form submission flow still works.
-* Existing Google Drive/Dropbox uploads still work.
-* Existing PDF email flow still works.
-* Existing auth still works.
+* SubmissionEvent model exists.
+* Prisma migration exists.
+* Submission creation creates an event.
+* File upload creates a safe event when files exist.
+* Signature capture creates a safe event when signatures exist.
+* Office fields saved creates an event.
+* Finalize Submission creates events for finalization, PDF generation, and email delivery.
+* Email failure creates a safe failure event without breaking completion.
+* Submission detail page shows Activity Timeline.
+* Only form owner can view timeline.
+* No file links/tokens/secrets are exposed in events.
+* Existing public submission flow still works.
+* Existing Google Drive and Dropbox uploads still work.
+* Existing Finalize Submission/PDF email flow still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

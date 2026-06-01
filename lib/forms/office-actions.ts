@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
+import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { sendCompletedSubmissionPdfNotifications } from "@/lib/notifications/form-notifications";
 import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import { prisma } from "@/lib/prisma";
@@ -99,6 +100,14 @@ export async function saveOfficeFields(
     },
   });
 
+  await createSubmissionEvent({
+    submissionId: submission.id,
+    formId,
+    ownerId: user.id,
+    type: "office_fields_saved",
+    message: "Office fields saved",
+  });
+
   const detailPath = `/dashboard/forms/${formId}/submissions/${submissionId}`;
 
   revalidatePath(detailPath);
@@ -169,6 +178,14 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
     },
   });
 
+  await createSubmissionEvent({
+    submissionId: completedSubmission.id,
+    formId,
+    ownerId: user.id,
+    type: "submission_finalized",
+    message: "Submission finalized",
+  });
+
   try {
     const pdf = await generateCompletedSubmissionPdf({
       formTitle: submission.form.title,
@@ -183,7 +200,15 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       completedAt: completedSubmission.officeCompletedAt,
     });
 
-    await sendCompletedSubmissionPdfNotifications({
+    await createSubmissionEvent({
+      submissionId: completedSubmission.id,
+      formId,
+      ownerId: user.id,
+      type: "pdf_generated",
+      message: "Completed PDF generated",
+    });
+
+    const emailResult = await sendCompletedSubmissionPdfNotifications({
       ownerEmail: submission.form.owner.email,
       formTitle: submission.form.title,
       submissionId: completedSubmission.id,
@@ -196,7 +221,65 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
         content: pdf.buffer,
       },
     });
+
+    if (emailResult.ownerEmailSent) {
+      await createSubmissionEvent({
+        submissionId: completedSubmission.id,
+        formId,
+        ownerId: user.id,
+        type: "pdf_emailed_to_owner",
+        message: "Completed PDF emailed to owner",
+      });
+    }
+
+    if (emailResult.ownerEmailFailed) {
+      await createSubmissionEvent({
+        submissionId: completedSubmission.id,
+        formId,
+        ownerId: user.id,
+        type: "pdf_email_failed",
+        message: "Completed PDF email failed",
+        metadata: {
+          recipientType: "owner",
+        },
+      });
+    }
+
+    if (emailResult.submitterEmailSent) {
+      await createSubmissionEvent({
+        submissionId: completedSubmission.id,
+        formId,
+        ownerId: user.id,
+        type: "pdf_emailed_to_submitter",
+        message: "Completed PDF emailed to submitter",
+      });
+    }
+
+    if (emailResult.submitterEmailFailed) {
+      await createSubmissionEvent({
+        submissionId: completedSubmission.id,
+        formId,
+        ownerId: user.id,
+        type: "pdf_email_failed",
+        message: "Completed PDF email failed",
+        metadata: {
+          recipientType: "submitter",
+        },
+      });
+    }
   } catch (error) {
+    await createSubmissionEvent({
+      submissionId: completedSubmission.id,
+      formId,
+      ownerId: user.id,
+      type: "pdf_email_failed",
+      message: "Completed PDF email failed",
+      metadata: {
+        recipientType: "all",
+        errorLabel: "pdf_generation_or_email",
+      },
+    });
+
     logOfficeWarning("Completed PDF generation or email failed safely.", {
       formId,
       submissionId,

@@ -85,6 +85,14 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
   data: unknown;
   pdf: SendEmailAttachment;
 }) {
+  const result = {
+    ownerEmailSent: false,
+    ownerEmailFailed: false,
+    submitterEmailSent: false,
+    submitterEmailFailed: false,
+    submitterEmailSkipped: false,
+  };
+
   try {
     await sendEmail({
       to: input.ownerEmail,
@@ -98,7 +106,9 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
       ].join("\n"),
       attachments: [input.pdf],
     });
+    result.ownerEmailSent = true;
   } catch (error) {
+    result.ownerEmailFailed = true;
     logNotificationWarning("Completed PDF owner email failed safely.", {
       submissionId: input.submissionId,
       error: error instanceof Error ? error.message : "Unknown notification error",
@@ -114,10 +124,11 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
     const submitterEmail = extractSubmitterEmail(fields, input.data);
 
     if (!submitterEmail) {
+      result.submitterEmailSkipped = true;
       logNotificationWarning("Completed PDF submitter email skipped because submitter email was not found.", {
         submissionId: input.submissionId,
       });
-      return;
+      return result;
     }
 
     await sendEmail({
@@ -131,10 +142,14 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
       ].join("\n"),
       attachments: [input.pdf],
     });
+    result.submitterEmailSent = true;
   } catch (error) {
+    result.submitterEmailFailed = true;
     logNotificationWarning("Completed PDF submitter email failed safely.", {
       submissionId: input.submissionId,
       error: error instanceof Error ? error.message : "Unknown notification error",
     });
   }
+
+  return result;
 }

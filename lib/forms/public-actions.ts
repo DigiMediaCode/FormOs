@@ -27,6 +27,7 @@ import {
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifications";
 import { prisma } from "@/lib/prisma";
+import { createSubmissionEvent } from "@/lib/forms/submission-events";
 
 const SIGNATURE_FIELD_TYPES = ["signature", "initials"];
 const UPLOAD_FIELD_TYPES = ["image_upload"];
@@ -402,6 +403,29 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     },
   });
 
+  await createSubmissionEvent({
+    submissionId: submission.id,
+    formId: form.id,
+    ownerId: form.ownerId,
+    type: "submission_created",
+    message: "Submission received",
+  });
+
+  const signatureCount = Object.keys(submittedSignatures).length;
+
+  if (signatureCount > 0) {
+    await createSubmissionEvent({
+      submissionId: submission.id,
+      formId: form.id,
+      ownerId: form.ownerId,
+      type: "signature_captured",
+      message: "Signature fields captured",
+      metadata: {
+        count: signatureCount,
+      },
+    });
+  }
+
   if (uploadRequests.length > 0) {
     if (uploadProvider.activeProvider === StorageProvider.GOOGLE_DRIVE) {
       const driveClient = await getGoogleDriveClientForUser(form.ownerId);
@@ -487,6 +511,18 @@ export async function submitPublicForm(formId: string, formData: FormData) {
             files: uploadedFiles as unknown as Prisma.InputJsonValue,
           },
         });
+
+        await createSubmissionEvent({
+          submissionId: submission.id,
+          formId: form.id,
+          ownerId: form.ownerId,
+          type: "file_uploaded",
+          message: "Files uploaded",
+          metadata: {
+            provider: "google_drive",
+            count: uploadRequests.length,
+          },
+        });
       } catch (error) {
         logUploadError("Google Drive upload failed; deleting partial submission.", {
           formId: form.id,
@@ -558,6 +594,18 @@ export async function submitPublicForm(formId: string, formData: FormData) {
           },
           data: {
             files: uploadedFiles as unknown as Prisma.InputJsonValue,
+          },
+        });
+
+        await createSubmissionEvent({
+          submissionId: submission.id,
+          formId: form.id,
+          ownerId: form.ownerId,
+          type: "file_uploaded",
+          message: "Files uploaded",
+          metadata: {
+            provider: "dropbox",
+            count: uploadRequests.length,
           },
         });
       } catch (error) {

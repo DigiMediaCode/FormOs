@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { markOfficeCompleted, saveOfficeFields } from "@/lib/forms/office-actions";
+import { getSubmissionEvents } from "@/lib/forms/submission-events";
 import { getFormSubmissionById } from "@/lib/forms/submissions";
 import type { FormBuilderField } from "@/lib/forms/fields";
 
@@ -29,6 +30,34 @@ function metadataValue(value: unknown) {
   }
 
   return "Not available";
+}
+
+function eventTypeLabel(type: string) {
+  return type
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function eventMetadataSummary(metadata: unknown) {
+  if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const entries = Object.entries(metadata).filter(
+    ([, value]) =>
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean",
+  );
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return entries
+    .map(([key, value]) => `${eventTypeLabel(key)}: ${String(value)}`)
+    .join(" | ");
 }
 
 function formatFileSize(size: number) {
@@ -115,6 +144,7 @@ export default async function SubmissionDetailPage({
   const { formId, submissionId } = await params;
   const { error, success } = await searchParams;
   const { form, submission } = await getFormSubmissionById(formId, submissionId);
+  const events = await getSubmissionEvents(formId, submissionId);
   const saveOfficeAction = saveOfficeFields.bind(null, form.id, submission.id);
 
   return (
@@ -370,6 +400,46 @@ export default async function SubmissionDetailPage({
               </dd>
             </div>
           </dl>
+        </section>
+
+        <section className="rounded-md border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-semibold text-slate-950">
+            Activity Timeline
+          </h2>
+          {events.length === 0 ? (
+            <p className="mt-5 text-sm leading-6 text-slate-700">
+              No activity has been recorded for this submission yet.
+            </p>
+          ) : (
+            <ol className="mt-5 divide-y divide-slate-200">
+              {events.map((event) => {
+                const metadataSummary = eventMetadataSummary(event.metadata);
+
+                return (
+                  <li className="py-4 first:pt-0 last:pb-0" key={event.id}>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-950">
+                          {event.message || eventTypeLabel(event.type)}
+                        </p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                          {eventTypeLabel(event.type)}
+                        </p>
+                        {metadataSummary ? (
+                          <p className="mt-2 text-sm text-slate-700">
+                            {metadataSummary}
+                          </p>
+                        ) : null}
+                      </div>
+                      <time className="text-sm text-slate-600" dateTime={event.createdAt.toISOString()}>
+                        {formatDateTime(event.createdAt)}
+                      </time>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </section>
       </div>
     </main>
