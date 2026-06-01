@@ -1,7 +1,9 @@
 import { FormMode, FormStatus } from "@prisma/client";
 import Link from "next/link";
 import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
+import { PublicFormQrCard } from "@/components/forms/public-form-qr-card";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { getAppUrl } from "@/lib/app-url";
 import {
   archiveForm,
   getUserFormById,
@@ -38,6 +40,7 @@ export default async function FormDetailPage({
   const { error, success } = await searchParams;
   const form = await getUserFormById(formId);
   const publicPath = `/f/${form.id}`;
+  const publicFormUrl = `${getAppUrl()}${publicPath}`;
   const isPublished = form.status === FormStatus.PUBLISHED;
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
@@ -81,6 +84,13 @@ export default async function FormDetailPage({
         {hasUploadFields && !uploadProvider.uploadsAvailable ? (
           <GoogleDriveUploadWarning />
         ) : null}
+
+        <PublicFormQrCard
+          formId={form.id}
+          formSlug={form.slug}
+          publicFormUrl={publicFormUrl}
+          status={form.status}
+        />
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
