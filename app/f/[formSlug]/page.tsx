@@ -1,7 +1,4 @@
 import { StorageProvider } from "@prisma/client";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
@@ -9,6 +6,10 @@ import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 import { uploadProviderLabel } from "@/lib/integrations/upload-settings";
+import {
+  getPlatformSettings,
+  getRenderablePlatformLogoUrl,
+} from "@/lib/platform/settings";
 
 type PublicFormPageProps = {
   params: Promise<{
@@ -22,8 +23,6 @@ type PublicFormPageProps = {
 
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100";
-const publicLogoPath = join(process.cwd(), "public", "formos-logo.png");
-const hasPublicLogo = existsSync(publicLogoPath);
 
 function RequiredMarker({ required }: { required: boolean }) {
   return required ? (
@@ -280,7 +279,11 @@ export default async function PublicFormPage({
 }: PublicFormPageProps) {
   const { formSlug } = await params;
   const { error, success } = await searchParams;
-  const form = await getPublishedFormForPublicView(formSlug);
+  const [form, platformSettings] = await Promise.all([
+    getPublishedFormForPublicView(formSlug),
+    getPlatformSettings(),
+  ]);
+  const logoUrl = getRenderablePlatformLogoUrl(platformSettings);
 
   if (!form) {
     return (
@@ -311,21 +314,23 @@ export default async function PublicFormPage({
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
       <section className="mx-auto max-w-3xl">
+        <div className="mb-6 flex justify-center">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={platformSettings.siteName}
+              className="h-auto max-w-[150px] object-contain sm:max-w-[170px]"
+              src={logoUrl}
+            />
+          ) : (
+            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+              {platformSettings.siteName}
+            </p>
+          )}
+        </div>
+
         <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-6 py-8 text-center sm:px-8">
-            {hasPublicLogo ? (
-              <Image
-                alt="FormOS"
-                className="mx-auto mb-5 h-auto w-auto max-w-[110px]"
-                height={80}
-                priority
-                src="/formos-logo.png"
-                width={130}
-              />
-            ) : null}
-            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-              FormOS
-            </p>
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
               {form.title}
             </h1>

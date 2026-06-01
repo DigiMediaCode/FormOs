@@ -32,6 +32,9 @@ export default async function AdminLayout({
             <Link className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50" href="/admin/forms">
               Forms
             </Link>
+            <Link className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50" href="/admin/settings">
+              Settings
+            </Link>
             <Link className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50" href="/dashboard">
               Back to App Dashboard
             </Link>
