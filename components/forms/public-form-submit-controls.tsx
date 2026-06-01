@@ -14,14 +14,14 @@ export function PublicFormSubmitControls({
   const { pending } = useFormStatus();
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {pending && hasUploadFields ? (
-        <p className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <p className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm leading-6 text-teal-900">
           Please wait. Your files are uploading.
         </p>
       ) : null}
       <button
-        className="w-fit rounded-md bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+        className="w-full rounded-lg bg-slate-950 px-5 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 sm:w-fit sm:min-w-44"
         disabled={pending}
         type="submit"
       >

@@ -1,11 +1,14 @@
-import Link from "next/link";
+import { StorageProvider } from "@prisma/client";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import Image from "next/image";
+import type { ReactNode } from "react";
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
+import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
-import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 import { uploadProviderLabel } from "@/lib/integrations/upload-settings";
-import { StorageProvider } from "@prisma/client";
 
 type PublicFormPageProps = {
   params: Promise<{
@@ -17,14 +20,50 @@ type PublicFormPageProps = {
   }>;
 };
 
-function renderInput(field: FormBuilderField) {
-  const baseInputClass =
-    "rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100";
+const inputClass =
+  "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100";
+const publicLogoPath = join(process.cwd(), "public", "formos-logo.png");
+const hasPublicLogo = existsSync(publicLogoPath);
 
+function RequiredMarker({ required }: { required: boolean }) {
+  return required ? (
+    <span className="ml-1 text-teal-700" aria-label="required">
+      *
+    </span>
+  ) : null;
+}
+
+function FieldLabel({ field }: { field: FormBuilderField }) {
+  return (
+    <label className="text-sm font-semibold text-slate-900" htmlFor={field.id}>
+      {field.label}
+      <RequiredMarker required={field.required} />
+    </label>
+  );
+}
+
+function FieldShell({
+  children,
+  field,
+}: {
+  children: ReactNode;
+  field: FormBuilderField;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-3">
+        <FieldLabel field={field} />
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function renderInput(field: FormBuilderField) {
   if (field.type === "textarea" || field.type === "address") {
     return (
       <textarea
-        className={`${baseInputClass} min-h-28`}
+        className={`${inputClass} min-h-32 resize-y`}
         id={field.id}
         name={field.id}
         placeholder={field.placeholder}
@@ -34,7 +73,7 @@ function renderInput(field: FormBuilderField) {
 
   if (field.type === "select") {
     return (
-      <select className={baseInputClass} id={field.id} name={field.id}>
+      <select className={inputClass} id={field.id} name={field.id}>
         <option value="">{field.placeholder || "Choose an option"}</option>
         {field.options.map((option) => (
           <option key={option} value={option}>
@@ -47,9 +86,20 @@ function renderInput(field: FormBuilderField) {
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700">
-        <input className="h-4 w-4" id={field.id} name={field.id} type="checkbox" />
-        {field.placeholder || field.label}
+      <label
+        className="flex min-h-14 items-start gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-100"
+        htmlFor={field.id}
+      >
+        <input
+          className="mt-1 h-5 w-5 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+          id={field.id}
+          name={field.id}
+          type="checkbox"
+        />
+        <span className="leading-6">
+          {field.placeholder || field.label}
+          <RequiredMarker required={field.required} />
+        </span>
       </label>
     );
   }
@@ -65,13 +115,23 @@ function renderInput(field: FormBuilderField) {
 
   return (
     <input
-      className={baseInputClass}
+      className={inputClass}
       id={field.id}
       name={field.id}
       placeholder={field.placeholder}
       step={field.type === "currency" ? "0.01" : undefined}
       type={inputTypeByFieldType[field.type as keyof typeof inputTypeByFieldType] ?? "text"}
     />
+  );
+}
+
+function UploadDisclaimer({ provider }: { provider: StorageProvider | null }) {
+  return (
+    <p className="text-sm leading-6 text-slate-600">
+      Uploaded files are sent to the form owner&apos;s connected{" "}
+      {uploadProviderLabel(provider)}. FormOS does not permanently store your
+      uploaded files on its server.
+    </p>
   );
 }
 
@@ -85,26 +145,30 @@ function renderField(
 ) {
   if (field.type === "section_heading") {
     return (
-      <section className="border-b border-slate-200 pb-3" key={field.id}>
-        <h2 className="text-2xl font-semibold text-slate-950">
-          {field.content || field.label}
-        </h2>
+      <section className="pt-4" key={field.id}>
+        <div className="border-b border-slate-200 pb-4">
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+            {field.content || field.label}
+          </h2>
+        </div>
       </section>
     );
   }
 
   if (field.type === "static_text") {
     return (
-      <p className="text-sm leading-6 text-slate-700" key={field.id}>
-        {field.content || field.label}
-      </p>
+      <section className="rounded-xl border border-slate-200 bg-slate-50 p-5" key={field.id}>
+        <p className="whitespace-pre-wrap text-base leading-7 text-slate-700">
+          {field.content || field.label}
+        </p>
+      </section>
     );
   }
 
   if (field.type === "html") {
     return (
       <section
-        className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-700"
+        className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-5 text-base leading-7 text-slate-700 [&_li]:my-1 [&_p]:my-3 [&_table]:text-sm"
         dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.content) }}
         key={field.id}
       />
@@ -116,68 +180,97 @@ function renderField(
       field.type === "signature" && field.id === options.firstSignatureFieldId;
 
     return (
-      <SignaturePadField
-        fieldId={field.id}
-        firstSignatureFieldId={options.firstSignatureFieldId}
-        isFirstSignature={isFirstSignature}
-        key={field.id}
-        label={field.label}
-        required={field.required}
-        variant={field.type}
-      />
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={field.id}>
+        <SignaturePadField
+          fieldId={field.id}
+          firstSignatureFieldId={options.firstSignatureFieldId}
+          isFirstSignature={isFirstSignature}
+          label={field.label}
+          required={field.required}
+          variant={field.type}
+        />
+      </section>
     );
   }
 
   if (field.type === "image_upload") {
-    const providerLabel = uploadProviderLabel(options.uploadProvider);
-
     if (!uploadsAvailable) {
       return (
-        <section className="rounded-md border border-amber-200 bg-amber-50 p-4" key={field.id}>
-          <p className="text-sm font-medium text-slate-950">
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 shadow-sm" key={field.id}>
+          <p className="text-sm font-semibold text-slate-950">
             {field.label}
-            {field.required ? <span className="ml-1 text-red-700">*</span> : null}
+            <RequiredMarker required={field.required} />
           </p>
-          <p className="mt-2 text-sm leading-6 text-amber-900">
-            File uploads are currently unavailable because the form owner has not connected or selected an upload storage provider.
+          <p className="mt-3 text-sm leading-6 text-amber-900">
+            File uploads are currently unavailable because the form owner has not
+            connected or selected an upload storage provider.
           </p>
-          <p className="mt-2 text-xs leading-5 text-amber-900">
-            Uploaded files are sent to the form owner&apos;s connected storage provider. FormOS does not permanently store your uploaded files on its server.
-          </p>
+          <div className="mt-3">
+            <UploadDisclaimer provider={options.uploadProvider} />
+          </div>
         </section>
       );
     }
 
     return (
-      <label className="flex flex-col gap-2 text-sm font-medium text-slate-800" key={field.id}>
-        <span>
-          {field.label}
-          {field.required ? <span className="ml-1 text-red-700">*</span> : null}
-        </span>
-        <input
-          accept="image/jpeg,image/png,image/webp,application/pdf"
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
-          name={field.id}
-          type="file"
-        />
-        <span className="text-xs font-normal leading-5 text-slate-600">
-          JPG, PNG, WebP, and PDF files up to 10MB are accepted.
-        </span>
-        <span className="text-xs font-normal leading-5 text-slate-600">
-          Uploaded files are sent to the form owner&apos;s connected {providerLabel}. FormOS does not permanently store your uploaded files on its server.
-        </span>
-      </label>
+      <FieldShell field={field} key={field.id}>
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+          <input
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            className="w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-950 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+            name={field.id}
+            type="file"
+          />
+        </div>
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm leading-6 text-slate-700">
+            Allowed file types: JPG, PNG, WebP, and PDF. Maximum size: 10MB.
+          </p>
+          <UploadDisclaimer provider={options.uploadProvider} />
+        </div>
+      </FieldShell>
+    );
+  }
+
+  if (field.type === "checkbox") {
+    return (
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" key={field.id}>
+        {renderInput(field)}
+      </section>
     );
   }
 
   return (
-    <label className="flex flex-col gap-2 text-sm font-medium text-slate-800" key={field.id}>
-      <span>
-        {field.label}
-        {field.required ? <span className="ml-1 text-red-700">*</span> : null}
-      </span>
+    <FieldShell field={field} key={field.id}>
       {renderInput(field)}
-    </label>
+    </FieldShell>
+  );
+}
+
+function Message({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "success" | "error";
+}) {
+  const classes =
+    tone === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : "border-red-200 bg-red-50 text-red-900";
+
+  return (
+    <p className={`rounded-xl border px-5 py-4 text-sm leading-6 shadow-sm ${classes}`}>
+      {children}
+    </p>
+  );
+}
+
+function PoweredByFooter() {
+  return (
+    <footer className="py-8 text-center text-xs font-medium uppercase tracking-wide text-slate-400">
+      Powered by FormOS
+    </footer>
   );
 }
 
@@ -191,22 +284,19 @@ export default async function PublicFormPage({
 
   if (!form) {
     return (
-      <main className="min-h-screen px-6 py-10">
-        <section className="mx-auto max-w-2xl rounded-md border border-slate-200 bg-white p-8">
+      <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6">
+        <section className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
             FormOS
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-            Form unavailable
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
+            This form is currently unavailable.
           </h1>
-          <p className="mt-4 text-sm leading-6 text-slate-700">
-            This form is not available right now. It may be unpublished, archived,
-            or no longer exist.
+          <p className="mt-4 text-sm leading-6 text-slate-600">
+            Please contact the form owner if you believe this is unexpected.
           </p>
-          <Link className="mt-6 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800" href="/">
-            Back to FormOS
-          </Link>
         </section>
+        <PoweredByFooter />
       </main>
     );
   }
@@ -219,35 +309,40 @@ export default async function PublicFormPage({
     publicFields.find((field) => field.type === "signature")?.id ?? null;
 
   return (
-    <main className="min-h-screen px-6 py-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
       <section className="mx-auto max-w-3xl">
-        <div className="border-b border-slate-200 pb-6">
-          <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-            FormOS
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-            {form.title}
-          </h1>
-          {form.description ? (
-            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-700">
-              {form.description}
+        <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-6 py-8 text-center sm:px-8">
+            {hasPublicLogo ? (
+              <Image
+                alt="FormOS"
+                className="mx-auto mb-5 h-auto w-auto max-w-[110px]"
+                height={80}
+                priority
+                src="/formos-logo.png"
+                width={130}
+              />
+            ) : null}
+            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+              FormOS
             </p>
-          ) : null}
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+              {form.title}
+            </h1>
+            {form.description ? (
+              <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-700">
+                {form.description}
+              </p>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="mt-6 flex flex-col gap-4">
+          {success ? <Message tone="success">{success}</Message> : null}
+          {error ? <Message tone="error">{error}</Message> : null}
         </div>
 
-        {success ? (
-          <p className="mt-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            {success}
-          </p>
-        ) : null}
-
-        {error ? (
-          <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-
-        <form action={submitAction} className="mt-8 flex flex-col gap-6 rounded-md border border-slate-200 bg-white p-6">
+        <form action={submitAction} className="mt-6 flex flex-col gap-5">
           {publicFields.length > 0 ? (
             publicFields.map((field) =>
               renderField(field, form.uploadsAvailable, {
@@ -256,17 +351,22 @@ export default async function PublicFormPage({
               }),
             )
           ) : (
-            <p className="text-sm leading-6 text-slate-700">
-              This form does not have fields yet.
-            </p>
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm leading-6 text-slate-700">
+                This form does not have fields yet.
+              </p>
+            </section>
           )}
 
-          <PublicFormSubmitControls
-            hasUploadFields={hasUploadFields}
-            submitButtonText={submitButtonText}
-          />
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <PublicFormSubmitControls
+              hasUploadFields={hasUploadFields}
+              submitButtonText={submitButtonText}
+            />
+          </section>
         </form>
       </section>
+      <PoweredByFooter />
     </main>
   );
 }

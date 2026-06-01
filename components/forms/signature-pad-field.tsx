@@ -207,16 +207,21 @@ export function SignaturePadField({
   }
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="text-sm font-medium text-slate-800" htmlFor={fieldId}>
-          {label}
-          {required ? <span className="ml-1 text-red-700">*</span> : null}
-        </label>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <label className="text-sm font-semibold text-slate-900" htmlFor={fieldId}>
+            {label}
+            {required ? <span className="ml-1 text-teal-700">*</span> : null}
+          </label>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            Draw your {variant === "initials" ? "initials" : "signature"} below.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {canReuseFirstSignature ? (
             <button
-              className="rounded-md border border-teal-700 bg-white px-3 py-1.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:hover:bg-white"
+              className="rounded-md border border-teal-700 bg-white px-3 py-2 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:opacity-70 disabled:hover:bg-white"
               disabled={!firstSignatureValue}
               onClick={reuseFirstSignature}
               type="button"
@@ -225,7 +230,7 @@ export function SignaturePadField({
             </button>
           ) : null}
           <button
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
             onClick={clearCanvas}
             type="button"
           >
@@ -233,23 +238,24 @@ export function SignaturePadField({
           </button>
         </div>
       </div>
-      <canvas
-        className="w-full touch-none rounded-md border border-slate-300 bg-white"
-        id={fieldId}
-        onPointerCancel={stopDrawing}
-        onPointerDown={startDrawing}
-        onPointerLeave={stopDrawing}
-        onPointerMove={draw}
-        onPointerUp={stopDrawing}
-        ref={canvasRef}
-      />
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2">
+        <canvas
+          className="w-full touch-none rounded-lg border border-slate-200 bg-white shadow-inner"
+          id={fieldId}
+          onPointerCancel={stopDrawing}
+          onPointerDown={startDrawing}
+          onPointerLeave={stopDrawing}
+          onPointerMove={draw}
+          onPointerUp={stopDrawing}
+          ref={canvasRef}
+        />
+      </div>
       <input name={fieldId} type="hidden" value={value} />
-      <p className="text-xs text-slate-500">
-        Draw your {variant === "initials" ? "initials" : "signature"} in the box.
-        {canReuseFirstSignature && !firstSignatureValue
-          ? " Sign the first signature field first to reuse it here."
-          : ""}
-      </p>
+      {canReuseFirstSignature && !firstSignatureValue ? (
+        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+          Sign the first signature field first to reuse it here.
+        </p>
+      ) : null}
     </section>
   );
 }
