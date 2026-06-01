@@ -62,14 +62,26 @@ export function isOfficeField(field: FormBuilderField) {
 }
 
 export function fieldTypeLabel(type: FormFieldType) {
-  if (type === "html") {
-    return "HTML";
-  }
+  const labels: Record<FormFieldType, string> = {
+    text: "Text",
+    textarea: "Long Text",
+    date: "Date",
+    phone: "Phone",
+    email: "Email",
+    address: "Address",
+    number: "Number",
+    currency: "Currency",
+    select: "Dropdown",
+    checkbox: "Checkbox",
+    image_upload: "File Upload",
+    signature: "Signature",
+    initials: "Initials",
+    static_text: "Static Text",
+    section_heading: "Section Heading",
+    html: "HTML Content",
+  };
 
-  return type
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return labels[type];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -105,7 +117,7 @@ export function normalizeFormFields(value: unknown): FormBuilderField[] {
         type,
         label: String(field.label ?? ""),
         placeholder: String(field.placeholder ?? ""),
-        required: type === "html" ? false : Boolean(field.required),
+        required: DISPLAY_ONLY_FIELD_TYPES.includes(type) ? false : Boolean(field.required),
         order: Number.isFinite(Number(field.order)) ? Number(field.order) : index + 1,
         options: normalizeOptions(field.options),
         content: String(field.content ?? ""),
@@ -220,7 +232,7 @@ export function validateFormFields(value: unknown) {
       type,
       label,
       placeholder,
-      required: type === "html" ? false : required,
+      required: DISPLAY_ONLY_FIELD_TYPES.includes(type) ? false : required,
       order,
       options,
       content,

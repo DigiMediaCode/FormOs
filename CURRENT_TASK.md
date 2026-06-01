@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 14: Submission Activity Timeline / Audit Trail
+# CURRENT TASK — FormOS Milestone 15: Form Builder UI Polish + Field Settings Cleanup
 
 ## Project Context
 
@@ -6,233 +6,336 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS is deployed live on Hostinger.
-* Supabase is connected.
-* Prisma Migrate deployment workflow is active.
+* FormOS MVP foundation is live and working.
+* Auth/signup/login works.
 * Forms CRUD works.
-* Builder works.
-* Public submissions work.
-* Google Drive uploads work.
-* Dropbox uploads work.
+* Form builder works.
+* Public forms work.
+* Google Drive and Dropbox uploads work.
+* Storage provider selection works.
 * Office Use Only fields work.
 * Finalize Submission works.
-* Completed PDF generation works.
-* Completed PDF is emailed to owner and submitter.
-* Super Admin foundation exists.
+* Completed PDF generation and email delivery work.
+* Activity timeline / light audit works.
+* Vehicle Hire Agreement template works.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add a submission activity timeline / audit trail.
+Improve the Form Builder UI and field settings experience.
 
-Form owners should be able to see a clear timeline of important events for each submission.
+The current builder works, but now it needs to feel more modern, cleaner, and easier for real users to manage forms.
 
-This is especially important for agreement-style forms where signatures, files, office completion, and PDF delivery matter.
+This milestone is focused on builder usability and UI polish only.
 
-## Required Events To Track
+## Important Direction
 
-Track these events where applicable:
+Do not build drag-and-drop yet.
 
-* submission_created
-* file_uploaded
-* signature_captured
-* office_fields_saved
-* submission_finalized
-* pdf_generated
-* pdf_emailed_to_owner
-* pdf_emailed_to_submitter
-* pdf_email_failed
-* owner_viewed_submission
+Do not rebuild the whole app.
 
-Do not overbuild. These can be simple event records.
+Do not change database schema unless absolutely necessary.
 
-## Prisma Model
+Do not change public form submission logic.
 
-Add a model such as:
+Do not change Google Drive or Dropbox logic.
 
-SubmissionEvent {
-id           String   @id @default(cuid())
-submissionId String
-formId       String
-ownerId      String
-type         String
-message      String?
-metadata     Json?
-createdAt    DateTime @default(now())
+Do not change PDF/email/audit logic.
 
-submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+This milestone is mainly UI cleanup and safer field editing.
 
-@@index([submissionId])
-@@index([formId])
-@@index([ownerId])
-@@index([type])
-}
+## Builder Route
 
-If enum is cleaner, use an enum for event type, but string is acceptable for MVP flexibility.
+Focus on:
 
-Create migration:
+* /dashboard/forms/[formId]/builder
 
-npx prisma migrate dev --name add_submission_events
+Also update nearby navigation/buttons if needed.
 
-Do not use prisma db push.
+## Builder Layout Goals
 
-## Event Helper
+Improve the builder page layout.
 
-Create helper such as:
+Suggested direction:
 
-createSubmissionEvent
+* clean page header with form title, status, and version
+* clear Back to Form button
+* clear Save Fields button
+* left/main column for field list
+* right sidebar or top panel for Add Field controls
+* modern card-based field editor
+* better empty state if no fields exist
+* preview area should be clean and readable
 
-Suggested location:
+## Field Card Improvements
 
-lib/forms/submission-events.ts
+Each field card should clearly show:
 
-It should:
+* field label
+* field type badge
+* required status
+* office-use status if enabled
+* order controls
+* delete button
+* collapsed/expanded settings if easy
 
-* create event record safely
-* not throw in a way that breaks main business flow unless absolutely critical
-* accept submissionId, formId, ownerId, type, message, metadata
-* avoid logging sensitive data
-* not store OAuth tokens
-* not store uploaded file contents
-* not store full submission answers
+Use clear labels like:
 
-## Where To Add Events
+* Required
+* Office Use Only
+* Display Only
+* Upload Field
+* Signature Field
 
-Add event creation to existing flows:
+## Field Type Labels
 
-### Public Submission
+Show human-friendly field type names.
 
-When submission is created:
+Examples:
 
-* type: submission_created
-* message: Submission received
+* text → Text
+* textarea → Long Text
+* date → Date
+* phone → Phone
+* email → Email
+* address → Address
+* number → Number
+* currency → Currency
+* select → Dropdown
+* checkbox → Checkbox
+* image_upload → File Upload
+* signature → Signature
+* initials → Initials
+* static_text → Static Text
+* section_heading → Section Heading
+* html → HTML Content
 
-If signatures exist:
+## Add Field Controls
 
-* type: signature_captured
-* message: Signature fields captured
-* metadata can include count only
+Improve the Add Field area.
 
-If files uploaded:
+Group field types if practical:
 
-* type: file_uploaded
-* message: Files uploaded
-* metadata can include provider and count only
+Basic Fields:
 
-Do not store file links or full paths in event metadata unless already safe and necessary.
+* Text
+* Long Text
+* Email
+* Phone
+* Address
+* Date
+* Number
+* Currency
 
-### Submission Detail View
+Choice Fields:
 
-When owner opens submission detail:
+* Dropdown
+* Checkbox
 
-* type: owner_viewed_submission
-* message: Owner viewed submission
+Agreement Fields:
 
-Avoid creating excessive duplicate events if page is refreshed repeatedly.
+* Signature
+* Initials
+* Static Text
+* Section Heading
+* HTML Content
 
-If simple, only log first view or throttle by checking recent event.
+Upload Fields:
 
-If not simple, skip this event for now.
+* File Upload
 
-### Office Use
+Do not add new field types in this milestone.
 
-When office fields are saved:
+## Field Settings Cleanup
 
-* type: office_fields_saved
-* message: Office fields saved
+For each field type, show only relevant settings.
 
-When submission is finalized:
+Examples:
 
-* type: submission_finalized
-* message: Submission finalized
+Text/email/phone/address:
 
-When PDF is generated:
+* label
+* placeholder
+* required
+* office use only
 
-* type: pdf_generated
-* message: Completed PDF generated
+Textarea:
 
-When PDF email is sent to owner:
+* label
+* placeholder
+* required
+* office use only
 
-* type: pdf_emailed_to_owner
-* message: Completed PDF emailed to owner
+Select:
 
-When PDF email is sent to submitter:
+* label
+* required
+* office use only
+* options editor
 
-* type: pdf_emailed_to_submitter
-* message: Completed PDF emailed to submitter
+Checkbox:
 
-When PDF email fails:
+* label
+* required
+* office use only
 
-* type: pdf_email_failed
-* message: Completed PDF email failed
-* metadata may include recipientType only, not full provider error if sensitive
+Image Upload:
 
-## UI Update
+* label
+* required
+* office use only
+* helper/warning:
+  "Uploads require Google Drive or Dropbox to be connected."
 
-Update submission detail page:
+Signature/Initials:
 
-/dashboard/forms/[formId]/submissions/[submissionId]
+* label
+* required
+* office use only
+* helper:
+  "Used for signed agreements."
 
-Add a section:
+Section Heading:
 
-Activity Timeline
+* content/label
+* office use only
 
-Show events in reverse chronological order or chronological order.
+Static Text / HTML:
 
-Each timeline item should show:
+* content editor
+* office use only
+* display-only badge
 
-* event message
-* event type label if useful
-* date/time
-* small safe metadata summary if useful
+## Office Use Only UI
 
-Keep UI simple.
+Make Office Use Only clearer.
 
-## Security
+When enabled:
 
-Only the form owner can view submission events.
+* show badge: Office Use Only
+* maybe use subtle warning/info style
+* helper text:
+  "This field will not appear on the public form. It can be completed by the form owner after submission."
 
-Super Admin should not view detailed submission events in this milestone.
+## Required Field UI
 
-Do not expose:
+Make required toggle clearer.
 
-* uploaded file links
-* Google Drive links
-* Dropbox links
-* OAuth tokens
-* Lark tokens
-* full sensitive answers
-* file contents
+When enabled:
+
+* show badge: Required
+
+For display-only fields:
+
+* required toggle should be hidden or disabled if it does not apply
+* display-only fields should not be required
+
+Display-only fields:
+
+* static_text
+* section_heading
+* html
+
+## Select Options UI
+
+Improve select option editing.
+
+Requirements:
+
+* allow adding option rows
+* allow removing option rows
+* clearly show label/value if current system supports both
+* prevent empty option labels if practical
+* keep existing saved schema compatible
+
+Do not overbuild advanced option logic.
+
+## Preview Improvements
+
+Improve preview panel.
+
+Preview should show roughly how fields will appear publicly.
+
+For office-only fields:
+
+* either hide from preview by default OR show with an Office Use Only badge
+* if possible, add note:
+  "Office-only fields are hidden from public form."
+
+Preview does not need to be perfect.
+
+## Save UX
+
+Keep the pending button behaviour from previous milestone.
+
+Save button should:
+
+* disable while saving
+* show "Saving form fields..."
+* show success/error message if current pattern supports it
+
+Do not break existing pending state.
+
+## Google Drive / Dropbox Warning
+
+If form has image_upload fields and no active upload provider is configured:
+
+Show warning in builder:
+
+"This form contains file upload fields, but no active storage provider is configured. Public users will not be able to upload files until Google Drive or Dropbox is connected and selected."
+
+Link:
+
+Go to Settings / Integrations
+
+## Styling Direction
+
+Make it modern and clean using Tailwind.
+
+Desired feel:
+
+* light background
+* rounded cards
+* subtle borders
+* good spacing
+* clear buttons
+* readable labels
+* not cramped
+
+Do not introduce a heavy UI library.
 
 ## Out of Scope
 
-Do not build Super Admin audit logs.
-Do not build export audit log.
-Do not build legal-grade immutable audit trail.
-Do not build IP/device fingerprinting beyond existing metadata.
-Do not add public completed view.
-Do not change PDF layout.
-Do not change email provider.
+Do not add drag-and-drop.
+Do not add QR codes yet.
+Do not build subscription packages yet.
+Do not build billing.
+Do not add new field types.
+Do not change public form logic unless required for preview compatibility.
+Do not change PDF/email logic.
+Do not change storage provider logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 14 is complete when:
+Milestone 15 is complete when:
 
-* SubmissionEvent model exists.
-* Prisma migration exists.
-* Submission creation creates an event.
-* File upload creates a safe event when files exist.
-* Signature capture creates a safe event when signatures exist.
-* Office fields saved creates an event.
-* Finalize Submission creates events for finalization, PDF generation, and email delivery.
-* Email failure creates a safe failure event without breaking completion.
-* Submission detail page shows Activity Timeline.
-* Only form owner can view timeline.
-* No file links/tokens/secrets are exposed in events.
-* Existing public submission flow still works.
-* Existing Google Drive and Dropbox uploads still work.
-* Existing Finalize Submission/PDF email flow still works.
+* Builder page looks cleaner and more modern.
+* Field cards are easier to understand.
+* Field type labels are human-readable.
+* Add Field controls are better organized.
+* Office Use Only setting is clearer.
+* Required setting is clearer.
+* Display-only fields are marked clearly.
+* Select option editor is improved.
+* Preview is cleaner.
+* Save pending UX still works.
+* Upload provider warning appears when needed.
+* Existing forms can still be edited.
+* Existing Vehicle Hire Agreement template can still be edited.
+* Existing public form rendering still works.
+* Existing Office Use Only fields still work.
+* Existing Google Drive/Dropbox upload flow still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.
