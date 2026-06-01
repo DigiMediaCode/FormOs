@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { StorageProvider, UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { PendingLink } from "@/components/ui/pending-link";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { GOOGLE_DRIVE_SCOPE, getGoogleDriveIntegrationStatus } from "@/lib/integrations/google-drive/client";
 import { DROPBOX_SCOPE, getDropboxIntegrationStatus } from "@/lib/integrations/dropbox/client";
@@ -128,30 +130,33 @@ export default async function IntegrationsPage({
               <div className="flex flex-wrap gap-2 sm:justify-end">
                 <form action={setActiveUploadProviderAction}>
                   <input name="provider" type="hidden" value={StorageProvider.GOOGLE_DRIVE} />
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-teal-700 bg-white px-4 py-2.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={uploadStorage.activeProvider === StorageProvider.GOOGLE_DRIVE}
-                    type="submit"
+                    pendingText="Updating active storage provider..."
+                    showStatus={false}
                   >
                     Set as Active
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action="/api/integrations/google-drive/disconnect" method="post">
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                    type="submit"
+                    pendingText="Disconnecting Google Drive..."
+                    showStatus={false}
                   >
                     Disconnect
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             ) : (
-              <Link
+              <PendingLink
                 className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                 href="/api/integrations/google-drive/connect"
+                pendingText="Redirecting to Google Drive..."
               >
                 Connect
-              </Link>
+              </PendingLink>
             )}
           </div>
 
@@ -190,22 +195,22 @@ export default async function IntegrationsPage({
                       type="text"
                     />
                   </label>
-                  <button
+                  <SubmitButton
                     className="self-end rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                    type="submit"
+                    pendingText="Saving Google Drive folder..."
                   >
                     Save Upload Folder
-                  </button>
+                  </SubmitButton>
                 </form>
 
                 <form action={clearGoogleDriveUploadFolderAction} className="sm:self-end">
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!googleDrive.uploadFolder}
-                    type="submit"
+                    pendingText="Clearing Google Drive folder..."
                   >
                     Clear Upload Folder
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </div>
@@ -252,30 +257,33 @@ export default async function IntegrationsPage({
               <div className="flex flex-wrap gap-2 sm:justify-end">
                 <form action={setActiveUploadProviderAction}>
                   <input name="provider" type="hidden" value={StorageProvider.DROPBOX} />
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-teal-700 bg-white px-4 py-2.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={uploadStorage.activeProvider === StorageProvider.DROPBOX}
-                    type="submit"
+                    pendingText="Updating active storage provider..."
+                    showStatus={false}
                   >
                     Set as Active
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action="/api/integrations/dropbox/disconnect" method="post">
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                    type="submit"
+                    pendingText="Disconnecting Dropbox..."
+                    showStatus={false}
                   >
                     Disconnect
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             ) : (
-              <Link
+              <PendingLink
                 className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                 href="/api/integrations/dropbox/connect"
+                pendingText="Redirecting to Dropbox..."
               >
                 Connect
-              </Link>
+              </PendingLink>
             )}
           </div>
 
@@ -311,22 +319,22 @@ export default async function IntegrationsPage({
                       type="text"
                     />
                   </label>
-                  <button
+                  <SubmitButton
                     className="self-end rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                    type="submit"
+                    pendingText="Saving Dropbox folder..."
                   >
                     Save Dropbox Path
-                  </button>
+                  </SubmitButton>
                 </form>
 
                 <form action={clearDropboxUploadFolderAction} className="sm:self-end">
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!dropbox.uploadFolder}
-                    type="submit"
+                    pendingText="Clearing Dropbox folder..."
                   >
                     Clear Dropbox Path
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </div>
@@ -378,20 +386,22 @@ export default async function IntegrationsPage({
 
               {larkMail.connected ? (
                 <form action="/api/integrations/lark-mail/disconnect" method="post">
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                    type="submit"
+                    pendingText="Disconnecting Lark Mail..."
+                    showStatus={false}
                   >
                     Disconnect
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : (
-                <Link
+                <PendingLink
                   className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
                   href="/api/integrations/lark-mail/connect"
+                  pendingText="Redirecting to Lark Mail..."
                 >
                   Connect
-                </Link>
+                </PendingLink>
               )}
             </div>
           </section>

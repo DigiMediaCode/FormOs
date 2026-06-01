@@ -8,6 +8,7 @@ import {
   type FormFieldType,
   SUPPORTED_FIELD_TYPES,
 } from "@/lib/forms/fields";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 
 type FormBuilderEditorProps = {
@@ -414,12 +415,12 @@ export function FormBuilderEditor({
           </div>
         </section>
 
-        <button
+        <SubmitButton
           className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
-          type="submit"
+          pendingText="Saving form fields..."
         >
           Save schema
-        </button>
+        </SubmitButton>
       </aside>
     </form>
   );

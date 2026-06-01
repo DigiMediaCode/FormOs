@@ -1,122 +1,261 @@
-# CURRENT TASK — FormOS Milestone 13.3: Final PDF Header Layout Fix
+# CURRENT TASK — FormOS Milestone 13.4: Global Button Pending States and Action Messages
 
 ## Project Context
 
-FormOS completed PDF generation is working.
+FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* PDF is generated successfully.
-* PDF is emailed to both owner and submitter.
-* Logo appears in the PDF.
-* Footer works.
-* PDF content is mostly correct.
+* Public form submit button disables on click.
+* Other buttons/actions do not consistently disable after click.
+* Users may double-click actions and cause duplicate requests.
+* FormOS is live and already has many server actions.
 * Do not touch CommerceOS.
 
 ## Problem
 
-The PDF logo positioning and header layout are not correct.
+Only the public form submit button has proper pending/loading state.
 
-The desired layout is:
+Other buttons can be clicked multiple times, including actions like:
 
-1. Logo at the top-left corner.
-2. Form title underneath the logo/header area.
-3. Form title should be centered.
-4. Form title should be uppercase.
-5. Form data should start below the centered title.
-6. Use a clean sans-serif font family/style.
-7. Maintain clean spacing.
+* login
+* signup
+* create form
+* update form
+* publish/unpublish
+* archive
+* save builder
+* save integrations
+* disconnect integrations
+* set active provider
+* save office fields
+* mark office completed
+* download PDF
+* template creation
 
-## Required PDF Header Layout
+This can cause duplicate records, duplicate notifications, duplicate PDF emails, duplicated folders/files, or confusing UI.
 
-At the top of the first page:
+## Goal
 
-* Place logo at the top-left.
-* Keep logo size reasonable.
-* Logo should not overlap the title or form content.
-* Add spacing below logo/header area.
-* Show form title centered below the logo/header area.
-* Convert form title to uppercase.
-* Use larger bold sans-serif styling for the title.
-* Add spacing below the title before form data begins.
+Add consistent pending/loading UX for action buttons across FormOS.
 
-Suggested visual structure:
+When a user clicks an action button:
 
-[Logo top-left]
+* button should disable immediately
+* button text should change to a meaningful loading message
+* related buttons in the same action area should be disabled where needed
+* a corresponding status message should appear at the top of the page/section
+* double-clicks should be prevented
+* if action fails, button should become usable again and error should show
+* if action succeeds, user should see clear success or be redirected normally
 
-```
-                FORM TITLE IN UPPERCASE
-```
+## Global UX Direction
 
-Form data starts here...
+Use a reusable client component or helper pattern where practical.
 
-## Typography
+Do not copy messy pending-state code everywhere if it can be avoided.
 
-Use a clean sans-serif font.
+Suggested options:
 
-Preferred:
+* reusable SubmitButton component using useFormStatus
+* reusable PendingButton component for client actions
+* action status banner component
+* form-level pending state where needed
 
-* Helvetica / Helvetica-Bold if using built-in PDF fonts
-* Or another clean sans-serif font already supported by the current PDF library
+Use the simplest reliable approach for the current codebase.
 
-Do not add external font files unless absolutely necessary.
+## Top Message Requirement
 
-Suggested sizing:
+When an action starts, show a message near the top of the current page or relevant section.
 
-* Title: 18–22pt bold
-* Section headings: 12–14pt bold
-* Field labels: 10–11pt bold or medium
-* Field values: 10–11pt regular
-* Footer: 8–9pt regular
+Examples:
 
-## Spacing
+Login:
 
-Improve spacing:
+* Signing you in...
 
-* top margin should be clean
-* logo should have breathing room
-* title should not be too close to logo
-* form data should not start too close to title
-* fields should not feel cramped
-* signatures should have enough vertical space
+Signup:
 
-## Existing Rules To Keep
+* Creating your account...
 
-Do not add back:
+Create form:
 
-* submission ID
-* form version
-* submitted date
-* uploaded file metadata
-* public/office headings
-* storage links
+* Creating form...
 
-Footer should still only say:
+Save form details:
 
-Form Created using FormOS
+* Saving form details...
 
-Footer should remain centered.
+Publish:
+
+* Publishing form...
+
+Unpublish:
+
+* Unpublishing form...
+
+Archive:
+
+* Archiving form...
+
+Save builder:
+
+* Saving form fields...
+
+Create template:
+
+* Creating template...
+
+Save integration settings:
+
+* Saving integration settings...
+
+Connect integration:
+
+* Redirecting to provider...
+
+Disconnect integration:
+
+* Disconnecting integration...
+
+Set active provider:
+
+* Updating active storage provider...
+
+Save office fields:
+
+* Saving office fields...
+
+Mark office completed:
+
+* Completing submission and sending PDF...
+
+Download PDF:
+
+* Generating PDF...
+
+## Areas To Update
+
+Update pending/disabled UX for at least these areas:
+
+### Auth
+
+* /login
+* /signup
+* logout button if practical
+
+### Forms
+
+* /dashboard/forms/new
+* /dashboard/forms/[formId]
+* /dashboard/forms/[formId]/builder
+* template creation button
+
+### Public Form
+
+* keep existing submit pending behaviour
+* ensure all public action buttons in the form are handled properly
+* signature clear/use-first-signature buttons should not break while submitting
+
+### Integrations
+
+* /dashboard/settings/integrations
+* connect Google Drive
+* disconnect Google Drive
+* save Google Drive folder
+* connect Dropbox
+* disconnect Dropbox
+* save Dropbox folder
+* set active provider
+
+### Submissions / Office Use
+
+* save office fields
+* mark office completed
+* download completed PDF
+
+### Super Admin
+
+If Super Admin has action buttons, add pending states.
+If Super Admin is view-only, no action needed.
+
+## Double Submission Prevention
+
+Prevent double-clicks for server actions.
+
+For form submissions:
+
+* use pending state from useFormStatus where possible
+* disable submit buttons while pending
+
+For client-triggered actions:
+
+* use local isPending state
+* ignore subsequent clicks while pending
+
+For server-side critical actions, keep backend idempotency where practical.
+
+Especially important:
+
+* mark office completed should not resend PDF repeatedly
+* create template should not create duplicate forms on double-click
+* archive/publish/unpublish should not double-run
+
+## Styling
+
+Use existing Tailwind styling.
+
+Disabled buttons should look visibly disabled:
+
+* opacity reduced
+* cursor-not-allowed
+* no hover effect if possible
+
+Status message should be simple:
+
+* success/info/error style if already available
+* otherwise use basic bordered alert box
+
+## Security / Safety
+
+Do not expose secrets.
+
+Do not log sensitive data.
+
+Do not change business logic unless needed to prevent duplicates.
+
+Do not weaken server-side validation.
 
 ## Out of Scope
 
-Do not change email delivery.
-Do not change Lark provider.
-Do not change Office Use Only logic.
-Do not change Google Drive or Dropbox logic.
-Do not change database schema.
-Do not change form builder.
+Do not redesign the whole UI.
+Do not add toast library unless absolutely necessary.
+Do not build a full notification system.
+Do not change database schema unless absolutely necessary.
+Do not change email provider.
+Do not change Google Drive/Dropbox logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-This task is complete when:
+This milestone is complete when:
 
-* Logo appears at the top-left corner.
-* Form title appears below the logo/header area.
-* Form title is centered.
-* Form title is uppercase.
-* Form data starts below the title with proper spacing.
-* PDF uses clean sans-serif font styling.
-* Footer still only says "Form Created using FormOS".
-* Existing PDF emailing to owner and submitter still works.
+* Login button disables and shows pending text.
+* Signup button disables and shows pending text.
+* Create form button disables and shows pending text.
+* Save/update form buttons disable and show pending text.
+* Publish/unpublish/archive buttons disable and show pending text.
+* Builder save button disables and shows pending text.
+* Template creation button disables and shows pending text.
+* Integration action buttons disable and show pending text.
+* Office save/complete buttons disable and show pending text.
+* Download PDF button disables and shows pending text if applicable.
+* Top/section status messages appear for major actions.
+* Double-clicks are prevented for important actions.
+* Existing form submission flow still works.
+* Existing Google Drive/Dropbox uploads still work.
+* Existing PDF email flow still works.
+* Existing auth still works.
+* npx prisma validate passes.
+* npx prisma generate passes.
 * npm run build passes.

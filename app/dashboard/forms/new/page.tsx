@@ -1,5 +1,6 @@
 import { FormMode } from "@prisma/client";
 import Link from "next/link";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { createForm } from "@/lib/forms/actions";
 import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
 
@@ -75,12 +76,12 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           </label>
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <SubmitButton
               className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-              type="submit"
+              pendingText="Creating form..."
             >
               Create Form
-            </button>
+            </SubmitButton>
             <Link
               className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
               href="/dashboard/forms"
@@ -105,12 +106,12 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
               </p>
             </div>
             <form action={createVehicleHireAgreementTemplate}>
-              <button
+              <SubmitButton
                 className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
-                type="submit"
+                pendingText="Creating template..."
               >
                 Use Template
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </section>

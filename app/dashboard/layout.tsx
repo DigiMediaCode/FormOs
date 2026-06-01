@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/(auth)/actions";
 import { DashboardNav } from "@/components/ui/dashboard-nav";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 
 export default async function DashboardLayout({
@@ -28,12 +29,13 @@ export default async function DashboardLayout({
               {user.name ? `${user.name} (${user.email})` : user.email}
             </p>
             <form action={logoutAction}>
-              <button
+              <SubmitButton
                 className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                type="submit"
+                pendingText="Signing out..."
+                showStatus={false}
               >
                 Log out
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>

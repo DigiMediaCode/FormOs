@@ -1,6 +1,7 @@
 import { FormMode, FormStatus } from "@prisma/client";
 import Link from "next/link";
 import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   archiveForm,
   getUserFormById,
@@ -157,12 +158,12 @@ export default async function FormDetailPage({
               </select>
             </label>
 
-            <button
+            <SubmitButton
               className="w-fit rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-              type="submit"
+              pendingText="Saving form details..."
             >
               Save changes
-            </button>
+            </SubmitButton>
           </form>
 
           <aside className="flex flex-col gap-4">
@@ -170,22 +171,22 @@ export default async function FormDetailPage({
               <h2 className="text-lg font-semibold text-slate-950">Status</h2>
               <div className="mt-4 flex flex-wrap gap-2">
                 <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isArchived}
-                    type="submit"
+                    pendingText={isPublished ? "Unpublishing form..." : "Publishing form..."}
                   >
                     {isPublished ? "Unpublish" : "Publish"}
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={archiveForm.bind(null, form.id)}>
-                  <button
+                  <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isArchived}
-                    type="submit"
+                    pendingText="Archiving form..."
                   >
                     Archive
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </section>

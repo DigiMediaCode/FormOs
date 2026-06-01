@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loginAction } from "@/app/(auth)/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -55,12 +56,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             />
           </label>
 
-          <button
+          <SubmitButton
             className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            type="submit"
+            pendingText="Signing you in..."
           >
             Log in
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-slate-700">

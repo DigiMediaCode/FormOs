@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PendingLink } from "@/components/ui/pending-link";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { markOfficeCompleted, saveOfficeFields } from "@/lib/forms/office-actions";
 import { getFormSubmissionById } from "@/lib/forms/submissions";
 import type { FormBuilderField } from "@/lib/forms/fields";
@@ -317,30 +319,32 @@ export default async function SubmissionDetailPage({
                   )}
                 </div>
               ))}
-              <button
+              <SubmitButton
                 className="w-fit rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                type="submit"
+                pendingText="Saving office fields..."
               >
                 Save Office Fields
-              </button>
+              </SubmitButton>
             </form>
           )}
           {!submission.officeCompletedAt ? (
             <form action={markOfficeCompleted.bind(null, form.id, submission.id)} className="mt-4">
-              <button
+              <SubmitButton
                 className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                type="submit"
+                pendingText="Finalizing submission and sending PDF..."
               >
-                Mark Office Completed
-              </button>
+                Finalize Submission
+              </SubmitButton>
             </form>
           ) : (
-            <Link
+            <PendingLink
               className="mt-4 inline-flex rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
               href={`/dashboard/forms/${form.id}/submissions/${submission.id}/completed-pdf`}
+              pendingText="Generating PDF..."
+              resetAfterMs={5000}
             >
               Download Completed PDF
-            </Link>
+            </PendingLink>
           )}
         </section>
 

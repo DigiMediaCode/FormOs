@@ -1,5 +1,6 @@
 import { FormStatus } from "@prisma/client";
 import Link from "next/link";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   archiveForm,
   getUserForms,
@@ -67,12 +68,12 @@ export default async function FormsPage() {
               </p>
             </div>
             <form action={createVehicleHireAgreementTemplate}>
-              <button
+              <SubmitButton
                 className="rounded-md border border-teal-700 bg-white px-4 py-2.5 text-sm font-medium text-teal-800 transition hover:bg-teal-50"
-                type="submit"
+                pendingText="Creating template..."
               >
                 Use Template
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </section>
@@ -145,23 +146,25 @@ export default async function FormsPage() {
                       </Link>
 
                       <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
-                        <button
+                        <SubmitButton
                           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isArchived}
-                          type="submit"
+                          pendingText={isPublished ? "Unpublishing form..." : "Publishing form..."}
+                          showStatus={false}
                         >
                           {isPublished ? "Unpublish" : "Publish"}
-                        </button>
+                        </SubmitButton>
                       </form>
 
                       <form action={archiveForm.bind(null, form.id)}>
-                        <button
+                        <SubmitButton
                           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isArchived}
-                          type="submit"
+                          pendingText="Archiving form..."
+                          showStatus={false}
                         >
                           Archive
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </article>

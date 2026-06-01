@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signupAction } from "@/app/(auth)/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 type SignupPageProps = {
   searchParams: Promise<{
@@ -60,12 +61,12 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             />
           </label>
 
-          <button
+          <SubmitButton
             className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            type="submit"
+            pendingText="Creating your account..."
           >
             Create account
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-sm text-slate-700">
