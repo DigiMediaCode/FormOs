@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 18: Public Website Redesign + Pricing + Legal Pages
+# CURRENT TASK — FormOS Milestone 19: Dynamic Plans, User Quotas, and Usage Limits Foundation
 
 ## Project Context
 
@@ -9,10 +9,9 @@ Current state:
 * FormOS MVP foundation is live and working.
 * Auth/signup/login works.
 * Forms CRUD works.
-* Builder works and has improved UI.
-* Public forms work and have improved UI.
-* Public form logo and platform branding settings exist.
-* QR code feature is already live.
+* Builder works.
+* Public forms work.
+* QR code feature is live.
 * Google Drive and Dropbox uploads work.
 * Storage provider selection works.
 * Office Use Only fields work.
@@ -21,590 +20,598 @@ Current state:
 * Activity timeline / light audit works.
 * Vehicle Hire Agreement template works.
 * Super Admin foundation exists.
-* Super Admin settings exist for logo, favicon, meta title, meta description, and site name.
-* FlowStep.AI has produced a modern landing page design direction.
+* Super Admin platform settings exist.
+* Prisma Migrate deployment workflow is active.
+* Hostinger deployment is live.
+* Supabase database is connected.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Implement a modern public-facing website for FormOS based on the FlowStep design direction.
+Add dynamic subscription plans, user-specific quota overrides, and server-side usage limits.
 
-This milestone should improve the main public marketing website and add supporting public pages.
+This is not billing yet.
 
-The goal is to make FormOS look like a real, polished SaaS product where users can understand the platform and sign up.
+Super Admin should be able to:
+
+1. Create subscription plans.
+2. Edit subscription plans.
+3. Set pricing display for plans.
+4. Set feature limits for each plan.
+5. Assign a plan to a user.
+6. Give user-specific custom quota overrides.
+7. Grant a user unlimited access/custom full access outside normal packages.
+
+Normal users should see their current plan and usage.
+
+Server-side enforcement must protect all major limited features.
 
 ## Important Direction
 
-Use the FlowStep design as the visual reference.
+Do not implement Stripe.
 
-Do not redesign dashboard/admin/builder in this milestone unless small branding/header fixes are needed.
+Do not implement real payments.
 
-Focus on the public website routes:
+Do not implement checkout.
 
-* /
-* /pricing
-* /privacy-policy
-* /terms-of-service
-* /data-security
-* /contact
+Do not implement invoices.
 
-Use Tailwind CSS only.
+Do not implement payment webhooks.
 
-Do not add a heavy UI library.
+Do not build automatic renewal.
 
-Do not change backend workflows.
+Do not build public pricing page logic in this milestone.
 
-Do not touch Google Drive, Dropbox, PDF, email, audit, QR, form submission, or subscription logic.
+This milestone is only:
 
-## Page 1 — Landing Page
+* dynamic plan management
+* manual Super Admin plan assignment
+* user-specific quota overrides
+* usage display
+* server-side enforcement
 
-Update route:
+## Core Concept
 
-/
+Final access should be calculated like this:
 
-Build a polished SaaS landing page with these sections:
+Final Limits = Default Free Limits + Assigned Plan Limits + User Quota Overrides
 
-### Header / Navigation
+User quota overrides win over plan limits.
 
-Include:
+If a numeric limit is null, treat it as unlimited.
 
-* logo from platform settings if available
-* site name fallback if logo is missing
-* navigation links:
+Example:
 
-  * Features
-  * Use Cases
-  * How It Works
-  * Templates
-  * Pricing
-  * Login
-* primary button:
+Plan allows maxForms = 5
+User override maxForms = null
+Final maxForms = unlimited
 
-  * Get Started
+Example:
 
-If user is already logged in, show:
+Plan allows allowDropbox = false
+User override allowDropbox = true
+Final allowDropbox = true
 
-* Dashboard button → /dashboard
+## Default Free Limits
 
-Header should be clean, modern, and responsive.
+If a user has no subscription plan assigned, treat them as Free.
 
-### Hero Section
+Default Free limits:
 
-Headline:
+* maxForms: 1
+* maxMonthlySubmissions: 25
+* allowGoogleDrive: false
+* allowDropbox: false
+* allowPdfGeneration: false
+* allowOfficeUseFields: false
+* allowTemplates: false
+* allowQrCode: true
+* allowCustomBranding: false
 
-Build forms, agreements, and signed workflows in minutes.
+## Default Seed Plans
 
-Subheadline:
+Create seed/default plans if none exist.
 
-Create online forms, collect signatures, receive file uploads, complete office-use fields, and send finished PDFs automatically.
+Default plans:
 
-Buttons:
+### Free
 
-* Get Started Free → /signup
-* View Demo or Login → /login
+* name: Free
+* slug: free
+* priceMonthly: 0
+* priceYearly: 0
+* currency: USD
+* isPublic: true
+* isActive: true
 
-Trust note:
+Limits:
 
-No code required. Works with Google Drive and Dropbox.
+* maxForms: 1
+* maxMonthlySubmissions: 25
+* allowGoogleDrive: false
+* allowDropbox: false
+* allowPdfGeneration: false
+* allowOfficeUseFields: false
+* allowTemplates: false
+* allowQrCode: true
+* allowCustomBranding: false
 
-Hero visual should feel like a modern SaaS product preview.
+### Starter
+
+* name: Starter
+* slug: starter
+* priceMonthly: 19
+* priceYearly: 190
+* currency: USD
+* isPublic: true
+* isActive: true
+
+Limits:
 
-It can include mock cards such as:
+* maxForms: 5
+* maxMonthlySubmissions: 100
+* allowGoogleDrive: true
+* allowDropbox: false
+* allowPdfGeneration: true
+* allowOfficeUseFields: false
+* allowTemplates: true
+* allowQrCode: true
+* allowCustomBranding: false
+
+### Pro
+
+* name: Pro
+* slug: pro
+* priceMonthly: 49
+* priceYearly: 490
+* currency: USD
+* isPublic: true
+* isActive: true
+
+Limits:
+
+* maxForms: 25
+* maxMonthlySubmissions: 1000
+* allowGoogleDrive: true
+* allowDropbox: true
+* allowPdfGeneration: true
+* allowOfficeUseFields: true
+* allowTemplates: true
+* allowQrCode: true
+* allowCustomBranding: false
+
+### Business
+
+* name: Business
+* slug: business
+* priceMonthly: 99
+* priceYearly: 990
+* currency: USD
+* isPublic: true
+* isActive: true
+
+Limits:
+
+* maxForms: null
+* maxMonthlySubmissions: 10000
+* allowGoogleDrive: true
+* allowDropbox: true
+* allowPdfGeneration: true
+* allowOfficeUseFields: true
+* allowTemplates: true
+* allowQrCode: true
+* allowCustomBranding: true
+
+## Prisma Schema
+
+Add dynamic plan models.
+
+Suggested model:
+
+model SubscriptionPlan {
+id           String   @id @default(cuid())
+name         String
+slug         String   @unique
+description  String?
+priceMonthly Decimal?
+priceYearly  Decimal?
+currency     String   @default("USD")
+isActive     Boolean  @default(true)
+isPublic     Boolean  @default(true)
+sortOrder    Int      @default(0)
+limits       Json
+metadata     Json?
+createdAt    DateTime @default(now())
+updatedAt    DateTime @updatedAt
+
+subscriptions UserSubscription[]
+}
+
+Suggested model:
 
-* Agreement.pdf
-* Signed & delivered
-* dashboard/form preview
-* QR/share card
-* storage connected badge
+model UserSubscription {
+id          String   @id @default(cuid())
+userId      String   @unique
+planId      String?
+status      String   @default("ACTIVE")
+assignedBy  String?
+assignedAt  DateTime @default(now())
+expiresAt   DateTime?
+metadata    Json?
+createdAt   DateTime @default(now())
+updatedAt   DateTime @updatedAt
+
+user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+plan        SubscriptionPlan? @relation(fields: [planId], references: [id])
+}
+
+Suggested model:
+
+model UserQuotaOverride {
+id        String   @id @default(cuid())
+userId    String   @unique
+limits    Json
+reason    String?
+createdBy String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-Do not use external images unless already available.
+user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-Use CSS/Tailwind mockups if needed.
+Add User relations if needed.
 
-### Features Section
+Create migration:
 
-Heading:
+npx prisma migrate dev --name add_dynamic_plans_and_quotas
 
-Everything you need to collect & sign
+Do not use prisma db push.
 
-Feature cards:
+## Limits Shape
 
-* Visual Form Builder
-* eSignatures & Initials
-* Drive & Dropbox Uploads
-* Office Use Only Fields
-* Completed PDF Delivery
-* QR Code Sharing
-* Activity Timeline
-* Templates
+Use this JSON structure for plan limits and user overrides:
+
+{
+"maxForms": 5,
+"maxMonthlySubmissions": 100,
+"allowGoogleDrive": true,
+"allowDropbox": false,
+"allowPdfGeneration": true,
+"allowOfficeUseFields": false,
+"allowTemplates": true,
+"allowQrCode": true,
+"allowCustomBranding": false
+}
 
-Each card should include:
+For numeric limits:
 
-* small icon or simple visual marker
-* title
-* short description
+* number = limit
+* null = unlimited
 
-### Use Cases Section
+For boolean limits:
+
+* true = allowed
+* false = not allowed
 
-Heading:
+## Unlimited Toggle UI Rule
 
-Built for every kind of workflow
+For numeric limits in Super Admin UI:
 
-Use case cards:
+* show an Unlimited toggle
+* if Unlimited is enabled:
 
-* Vehicle Hire Agreements
-* Client Intake Forms
-* Consent Forms
-* Service Agreements
-* Staff Onboarding
-* Document Collection
+  * save value as null
+  * hide or disable the input field
+* if Unlimited is disabled:
 
-### How It Works Section
+  * show number input
+  * require a valid number
 
-Heading:
+Numeric fields:
 
-How it works
+* maxForms
+* maxMonthlySubmissions
 
-Steps:
+## Super Admin Plan Management
 
-1. Build your form
-2. Share link or QR code
-3. Collect signatures & files
-4. Complete & send PDF
+Add routes:
 
-### Featured Template Section
+* /admin/plans
+* /admin/plans/new
+* /admin/plans/[planId]
 
-Highlight:
+If dynamic route is too much for one pass, at minimum create:
 
-Vehicle Hire Agreement Template
+* /admin/plans
 
-Include short copy:
+with create/edit actions on same page.
 
-A ready-to-use agreement with signature capture, licence uploads, office-use fields, and completed PDF delivery.
+Super Admin should be able to:
 
-Bullets:
+* view all plans
+* create plan
+* edit plan
+* set name
+* set slug
+* set description
+* set monthly price
+* set yearly price
+* set currency
+* set active/inactive
+* set public/private
+* set sort order
+* set all limits
+* save plan
 
-* Signature & initials fields included
-* Driver licence file upload
-* Auto-generated completed PDF
+Do not delete plans in this milestone unless soft-deactivate only.
 
-CTA:
+Add Super Admin navigation link:
 
-Use this template → /signup
+Plans → /admin/plans
 
-### Storage Integration Section
+## Super Admin User Subscription Management
 
-Heading:
+Update Super Admin user area.
 
-Connect your storage
+Preferred:
 
-Cards:
+* /admin/users/[userId]
 
-* Google Drive
-* Dropbox
+or add editable controls inside /admin/users if simpler.
 
-Explain that uploaded files go to the form owner’s connected storage provider and FormOS does not permanently store uploaded file binaries on its server.
+Super Admin should be able to:
 
-### Pricing Preview Section
+* view user’s current plan
+* assign plan to user
+* change plan
+* view user quota override
+* edit user quota override
+* enable “Unlimited Everything” toggle
+* set custom numeric quota overrides
+* set custom feature boolean overrides
+* clear overrides
 
-Add a small pricing preview on landing page.
+## Unlimited Everything Override
 
-Heading:
+Add a simple option:
 
-Simple pricing for growing teams
+Grant unlimited/full access
 
-Show three cards:
+If enabled, save override limits:
 
-* Starter
-* Pro
-* Business
+{
+"maxForms": null,
+"maxMonthlySubmissions": null,
+"allowGoogleDrive": true,
+"allowDropbox": true,
+"allowPdfGeneration": true,
+"allowOfficeUseFields": true,
+"allowTemplates": true,
+"allowQrCode": true,
+"allowCustomBranding": true
+}
 
-This is only visual marketing content for now.
+If this toggle is enabled:
 
-Do not implement subscription enforcement in this milestone.
+* hide/disable individual quota inputs if practical
+* show clear message:
+  "This user has unlimited access outside normal package limits."
 
-Button:
+If disabled:
 
-View Full Pricing → /pricing
+* allow individual override editing
 
-### Final CTA
+## User Dashboard Plan Display
 
-Headline:
+On /dashboard, show:
 
-Ready to create your first form?
+* current plan name
+* forms used / limit
+* monthly submissions used / limit
+* allowed feature badges
 
-Subheadline:
+If user has custom quota override:
 
-Build, sign, and deliver professional documents in minutes — no code required.
+Show badge:
 
-Button:
+Custom quota applied
 
-Create Free Account → /signup
+If unlimited:
 
-### Footer
+Show:
 
-Footer must include:
+Unlimited
 
-* logo or site name
-* short product description
-* product links:
+Example:
 
-  * Features
-  * Use Cases
-  * Pricing
-  * Login
-  * Signup
-* legal links:
+Plan: Starter
+Forms: Unlimited
+Submissions this month: Unlimited
+Custom quota applied
 
-  * Privacy Policy
-  * Terms
-  * Data Security
-  * Contact
+## Usage Calculation
 
-Footer must include:
+Calculate usage from existing data.
 
-FormOS is a project of DigiMedia Code LLC.
+### Forms Usage
 
-Also show:
+Count forms owned by user.
 
-© 2025 FormOS. All rights reserved.
+If no deleted state exists, count all forms.
 
-## Page 2 — Pricing Page
+### Monthly Submissions Usage
 
-Create route:
+Count submissions owned by user where createdAt is within current calendar month.
 
-/pricing
+Use ownerId.
 
-Pricing page should use the same public header/footer as landing page.
+## Plan Helpers
 
-### Pricing Hero
+Create helpers under:
 
-Headline:
+lib/plans/
 
-Simple pricing for forms, agreements, and signed workflows.
+Suggested functions:
 
-Subheadline:
+* getDefaultFreeLimits
+* normalizePlanLimits
+* mergeLimits
+* getPlanLimits
+* getUserPlan
+* getUserEffectiveLimits
+* getUserUsage
+* assertCanCreateForm
+* assertCanReceiveSubmission
+* assertCanUseStorageProvider
+* assertCanUseOfficeFields
+* assertCanGeneratePdf
+* assertCanUseTemplate
+* assertCanUseQrCode
+* seedDefaultPlansIfMissing
 
-Choose the plan that fits your business. Start small and scale as your workflow grows.
+## Enforcement Points
 
-### Pricing Cards
+Server-side enforcement is required.
 
-Create three pricing cards.
+### Create Form
 
-This is display-only pricing for now.
+Enforce maxForms.
 
-Do not implement billing.
+Apply to:
 
-#### Starter
+* blank form creation
+* template form creation
 
-Price:
+If limit exceeded, show friendly error:
 
-$19/month
+Your current plan allows up to X forms. Upgrade your plan to create more forms.
 
-Description:
+If unlimited, allow.
 
-Best for individuals and small businesses.
+### Public Submission
 
-Features:
+Before saving public submission, check owner’s monthly submission limit.
 
-* Up to 5 forms
-* Up to 100 submissions / month
-* Public form sharing
-* Signatures & initials
-* QR code sharing
-* Basic templates
-* PDF generation
+If exceeded, block with public-safe message:
 
-CTA:
+This form is temporarily unavailable because the owner has reached their monthly submission limit.
 
-Get Started
+Do not expose plan details to public submitter.
 
-#### Pro
+### Storage Provider Activation
 
-Price:
+When user sets active upload provider:
 
-$49/month
+* if Google Drive selected, check allowGoogleDrive
+* if Dropbox selected, check allowDropbox
 
-Description:
+If blocked, show:
 
-Best for growing businesses.
+Your current plan does not include Google Drive uploads.
 
-Badge:
+or
 
-Most Popular
+Your current plan does not include Dropbox uploads.
 
-Features:
+Do not disconnect existing integrations automatically.
 
-* Up to 25 forms
-* Up to 1,000 submissions / month
-* Google Drive integration
-* Dropbox integration
-* Office Use Only fields
-* Completed PDF email delivery
-* Activity timeline
-* Priority support
+### Office Use Only Fields
 
-CTA:
+When saving builder fields:
 
-Start Pro
+* if any field has visibility OFFICE
+* and allowOfficeUseFields is false
+* block save with friendly error:
 
-#### Business
+Office Use Only fields are not included in your current plan.
 
-Price:
+Existing saved office fields should not crash.
 
-$99/month
+### PDF Generation / Finalize Submission
 
-Description:
+Before finalized PDF generation/email:
 
-Best for teams and advanced workflows.
+* check allowPdfGeneration
+* if false, block with owner-facing error:
 
-Features:
+Completed PDF generation is not included in your current plan.
 
-* Unlimited forms
-* Up to 10,000 submissions / month
-* All Pro features
-* Advanced branding
-* Team-ready workflows
-* Advanced templates
-* Better support
+### Templates
 
-CTA:
+When creating Vehicle Hire Agreement template:
 
-Start Business or Contact Sales
+* check allowTemplates
+* if false, block with friendly error:
 
-### Feature Comparison
+Templates are not included in your current plan.
 
-Add a clean comparison section/table.
+### QR Code
 
-Rows:
+Use allowQrCode helper.
 
-* Number of forms
-* Monthly submissions
-* Signature support
-* QR code sharing
-* PDF generation
-* Google Drive integration
-* Dropbox integration
-* Office Use Only fields
-* Branding
-* Priority support
+For now, default plans allow QR code.
 
-### FAQ Section
+If disabled by custom plan/override later:
 
-Add FAQs:
-
-* Can I change plans later?
-* Do you offer annual billing?
-* Are uploaded files stored on FormOS?
-* Can I use Google Drive or Dropbox?
-* Do all plans support signed agreements?
-
-### Pricing CTA
-
-Headline:
-
-Start building smarter forms today.
-
-Buttons:
-
-* Get Started Free
-* Contact Sales
-
-## Legal Pages
-
-Create these routes:
-
-* /privacy-policy
-* /terms-of-service
-* /data-security
-* /contact
-
-All pages should use the same public header/footer and branding.
-
-Keep legal pages clean and readable.
-
-Use simple but professional placeholder content.
-
-This is not legal advice. Content should be owner-editable later.
-
-### Privacy Policy Page
-
-Include sections about:
-
-* what FormOS is
-* account data
-* form data and submissions
-* uploaded files
-* Google Drive and Dropbox storage model
-* email notifications
-* cookies/session auth
-* data retention
-* contact
-
-Important message:
-
-Uploaded files may be stored in the form owner’s connected Google Drive or Dropbox. FormOS does not permanently store uploaded file binaries when connected storage is used.
-
-### Terms of Service Page
-
-Include sections about:
-
-* using FormOS
-* user responsibilities
-* form owner responsibility for form/agreement wording
-* no legal advice disclaimer
-* uploaded content responsibility
-* acceptable use
-* account access
-* limitation of liability
-* changes to service
-* contact
-
-### Data Security Page
-
-Include sections about:
-
-* connected storage model
-* Google Drive and Dropbox integrations
-* file upload handling
-* signatures and submissions
-* activity timeline
-* secure account access
-* best practices for form owners
-* no public file exposure by default
-
-### Contact Page
-
-Include:
-
-* page title
-* support message
-* contact email placeholder or text
-* small card layout
-
-If there is no real contact email setting yet, use placeholder:
-
-[support@example.com](mailto:support@example.com)
-
-or use platform settings if contact email exists.
-
-Do not create a working contact form unless already simple.
-
-## Shared Public Layout
-
-Create or improve reusable public website components if practical:
-
-* PublicHeader
-* PublicFooter
-* MarketingSection
-* FeatureCard
-* PricingCard
-* LegalPageLayout
-
-Use platform settings:
-
-* siteName
-* logoUrl
-* metaTitle
-* metaDescription
-* faviconUrl where practical
-
-Avoid duplicate code where reasonable.
-
-## Branding Rules
-
-Use Super Admin platform settings where practical:
-
-* logoUrl for header/footer logo
-* siteName fallback
-* metaTitle/metaDescription for landing metadata where practical
-
-If logo exists, do not show awkward duplicate “FormOS” text beside it unless visually appropriate.
-
-Footer must always include:
-
-FormOS is a project of DigiMedia Code LLC.
-
-## Visual Style
-
-Use the FlowStep design as the visual reference.
-
-Style direction:
-
-* premium modern SaaS
-* clean white/off-white background
-* blue/indigo accents
-* rounded cards
-* subtle shadows
-* soft borders
-* large hero typography
-* good spacing
-* responsive mobile-first layout
-* polished buttons
-* implementation-friendly Tailwind
-
-## SEO Metadata
-
-Use platform settings where practical.
-
-Landing page should use:
-
-* metaTitle from settings or fallback
-* metaDescription from settings or fallback
-
-Pricing/legal pages should have sensible static metadata if dynamic metadata is not simple.
-
-Do not break build over dynamic metadata.
+* hide or disable QR card
+* show upgrade notice
 
 ## Security
 
-Public pages should only read safe platform settings.
-
-Do not expose:
-
-* secrets
-* OAuth tokens
-* storage credentials
-* Super Admin data
-* private form/user data
+* Only Super Admin can create/edit plans.
+* Only Super Admin can assign plans.
+* Only Super Admin can edit user quota overrides.
+* Normal users cannot change their own plan.
+* All limits must be enforced server-side.
+* Do not rely only on UI hiding.
+* Public submissions must be checked server-side.
+* Do not expose admin plan controls to normal users.
 
 ## Out of Scope
 
+Do not build Stripe.
 Do not build billing.
-Do not build subscription enforcement.
-Do not build custom domains.
-Do not build user-level branding.
-Do not build per-form branding.
-Do not change dashboard functionality.
-Do not change public form submission logic.
-Do not change Google Drive/Dropbox logic.
-Do not change PDF/email/audit logic.
+Do not build checkout.
+Do not build invoices.
+Do not build payment webhooks.
+Do not build automatic renewal.
+Do not build public pricing page integration.
+Do not change landing page.
+Do not change PDF design.
+Do not change Google Drive or Dropbox OAuth logic unless needed for plan enforcement.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 18 is complete when:
+Milestone 19 is complete when:
 
-* / is redesigned as modern SaaS landing page.
-* Landing page has header, hero, features, use cases, how-it-works, featured template, integrations, pricing preview, CTA, and footer.
-* /pricing exists and looks modern.
-* Pricing page has three pricing cards.
-* Pricing page has feature comparison and FAQ.
-* /privacy-policy exists.
-* /terms-of-service exists.
-* /data-security exists.
-* /contact exists.
-* Public header/footer are consistent.
-* Footer includes "FormOS is a project of DigiMedia Code LLC."
-* Logo/site name from platform settings is used where practical.
-* Landing page and pricing page are mobile responsive.
-* Legal pages are clean and readable.
-* Existing auth still works.
-* Existing dashboard/admin still works.
-* Existing public form pages still work.
-* Existing QR code feature still works.
-* Existing Google Drive/Dropbox upload flow still works.
-* Existing PDF/email/audit flows still work.
+* SubscriptionPlan model exists.
+* UserSubscription model exists.
+* UserQuotaOverride model exists.
+* Prisma migration exists.
+* Default seed plans can be created if missing.
+* Super Admin can create/edit plans dynamically.
+* Plans can store monthly and yearly pricing.
+* Plans can store numeric and boolean limits.
+* Numeric limits support Unlimited toggle saved as null.
+* Super Admin can assign plan to user.
+* Super Admin can set user quota overrides.
+* Super Admin can grant unlimited/full access to a user.
+* User-specific overrides win over plan limits.
+* Users default to Free if no subscription exists.
+* Dashboard shows current plan and usage.
+* Form creation limit is enforced server-side.
+* Template creation limit is enforced server-side.
+* Monthly submission limit is enforced server-side.
+* Storage provider activation checks plan/effective limits.
+* Office Use Only field saving checks plan/effective limits.
+* PDF generation/finalization checks plan/effective limits.
+* Friendly errors are shown when limits are reached.
+* Normal users cannot change their own plan or quota.
+* Existing users/forms/submissions still work.
+* Existing Google Drive/Dropbox integrations still work for allowed users.
+* Existing PDF/email/audit flow still works for allowed users.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev --name add_dynamic_plans_and_quotas creates migration.
 * npm run build passes.

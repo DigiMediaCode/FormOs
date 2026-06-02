@@ -212,7 +212,7 @@ export function SignaturePadField({
         <div>
           <label className="text-sm font-semibold text-slate-900" htmlFor={fieldId}>
             {label}
-            {required ? <span className="ml-1 text-teal-700">*</span> : null}
+            {required ? <span className="ml-1 text-blue-700">*</span> : null}
           </label>
           <p className="mt-1 text-sm leading-6 text-slate-600">
             Draw your {variant === "initials" ? "initials" : "signature"} below.
@@ -221,7 +221,7 @@ export function SignaturePadField({
         <div className="flex flex-wrap items-center gap-2">
           {canReuseFirstSignature ? (
             <button
-              className="rounded-md border border-teal-700 bg-white px-3 py-2 text-sm font-medium text-teal-800 transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:opacity-70 disabled:hover:bg-white"
+              className="rounded-md border border-blue-600 bg-white px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:opacity-70 disabled:hover:bg-white"
               disabled={!firstSignatureValue}
               onClick={reuseFirstSignature}
               type="button"

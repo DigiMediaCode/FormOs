@@ -44,7 +44,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Email
             <input
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               name="email"
               required
               type="email"
@@ -54,7 +54,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Password
             <input
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               name="password"
               required
               type="password"
@@ -62,7 +62,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </label>
 
           <SubmitButton
-            className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
             pendingText="Signing you in..."
           >
             Log in
@@ -71,7 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <p className="mt-6 text-sm text-slate-700">
           No account yet?{" "}
-          <Link className="font-medium text-teal-700 hover:text-teal-800" href="/signup">
+          <Link className="font-medium text-blue-700 hover:text-blue-800" href="/signup">
             Sign up
           </Link>
         </p>

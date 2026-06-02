@@ -51,6 +51,20 @@ export async function getAdminUsers() {
           where: { provider: IntegrationProvider.GOOGLE_DRIVE },
           select: { id: true },
         },
+        subscription: {
+          select: {
+            plan: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        quotaOverride: {
+          select: {
+            id: true,
+          },
+        },
       },
     }),
     prisma.formSubmission.groupBy({
@@ -71,6 +85,8 @@ export async function getAdminUsers() {
     formsCount: user._count.forms,
     submissionsCount: submissionsByOwner.get(user.id) ?? 0,
     googleDriveConnected: user.integrations.length > 0,
+    planName: user.subscription?.plan?.name ?? "Free",
+    hasQuotaOverride: Boolean(user.quotaOverride),
   }));
 }
 

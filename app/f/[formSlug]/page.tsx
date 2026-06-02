@@ -22,11 +22,11 @@ type PublicFormPageProps = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100";
+  "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100";
 
 function RequiredMarker({ required }: { required: boolean }) {
   return required ? (
-    <span className="ml-1 text-teal-700" aria-label="required">
+    <span className="ml-1 text-blue-700" aria-label="required">
       *
     </span>
   ) : null;
@@ -86,11 +86,11 @@ function renderInput(field: FormBuilderField) {
   if (field.type === "checkbox") {
     return (
       <label
-        className="flex min-h-14 items-start gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition focus-within:border-teal-600 focus-within:ring-4 focus-within:ring-teal-100"
+        className="flex min-h-14 items-start gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100"
         htmlFor={field.id}
       >
         <input
-          className="mt-1 h-5 w-5 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+          className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-700 focus:ring-blue-600"
           id={field.id}
           name={field.id}
           type="checkbox"
@@ -216,7 +216,7 @@ function renderField(
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
           <input
             accept="image/jpeg,image/png,image/webp,application/pdf"
-            className="w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-950 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+            className="w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700"
             name={field.id}
             type="file"
           />
@@ -289,7 +289,7 @@ export default async function PublicFormPage({
     return (
       <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6">
         <section className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+          <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
             FormOS
           </p>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
@@ -323,7 +323,7 @@ export default async function PublicFormPage({
               src={logoUrl}
             />
           ) : (
-            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
               {platformSettings.siteName}
             </p>
           )}

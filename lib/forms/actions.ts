@@ -4,7 +4,8 @@ import { FormMode, FormStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { validateFormFields } from "@/lib/forms/fields";
+import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
+import { assertCanCreateForm, assertCanUseOfficeFields } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_FORM_SETTINGS = {
@@ -148,6 +149,15 @@ export async function createForm(formData: FormData) {
     errorRedirect("/dashboard/forms/new", "Choose a valid form mode.");
   }
 
+  try {
+    await assertCanCreateForm(user.id);
+  } catch (error) {
+    errorRedirect(
+      "/dashboard/forms/new",
+      error instanceof Error ? error.message : "Unable to create form.",
+    );
+  }
+
   const form = await prisma.form.create({
     data: {
       ownerId: user.id,
@@ -271,6 +281,19 @@ export async function updateFormFields(formId: string, formData: FormData) {
 
   if (validation.error || !validation.fields) {
     errorRedirect(errorPath, validation.error ?? "Unable to save fields.");
+  }
+
+  if (validation.fields.some(isOfficeField)) {
+    try {
+      await assertCanUseOfficeFields(user.id);
+    } catch (error) {
+      errorRedirect(
+        errorPath,
+        error instanceof Error
+          ? error.message
+          : "Office Use Only fields are not included in your current plan.",
+      );
+    }
   }
 
   const existingForm = await prisma.form.findFirst({

@@ -9,6 +9,7 @@ import {
   getVehicleHireAgreementFields,
   VEHICLE_HIRE_AGREEMENT_TEMPLATE,
 } from "@/lib/forms/templates/vehicle-hire-agreement";
+import { assertCanCreateForm, assertCanUseTemplate } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 export async function createVehicleHireAgreementTemplate() {
@@ -16,6 +17,17 @@ export async function createVehicleHireAgreementTemplate() {
 
   if (!user) {
     redirect("/login");
+  }
+
+  try {
+    await assertCanUseTemplate(user.id);
+    await assertCanCreateForm(user.id);
+  } catch (error) {
+    redirect(
+      `/dashboard/forms/new?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Unable to create template.",
+      )}`,
+    );
   }
 
   const form = await prisma.form.create({

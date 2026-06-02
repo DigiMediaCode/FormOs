@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
+import { assertCanGeneratePdf } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 type CompletedPdfRouteProps = {
@@ -51,6 +52,17 @@ export async function GET(
 
   if (!submission.officeCompletedAt) {
     return new NextResponse("Submission is not completed yet.", { status: 400 });
+  }
+
+  try {
+    await assertCanGeneratePdf(user.id);
+  } catch (error) {
+    return new NextResponse(
+      error instanceof Error
+        ? error.message
+        : "Completed PDF generation is not included in your current plan.",
+      { status: 403 },
+    );
   }
 
   const pdf = await generateCompletedSubmissionPdf({

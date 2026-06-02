@@ -26,6 +26,10 @@ import {
 } from "@/lib/integrations/dropbox/client";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifications";
+import {
+  assertCanReceiveSubmission,
+  assertCanUseStorageProvider,
+} from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 
@@ -231,10 +235,19 @@ export async function getPublishedFormForPublicView(formId: string) {
 
   const snapshot = buildSnapshot(form);
   const uploadProvider = await getResolvedUploadProvider(form.ownerId);
+  let uploadsAvailable = uploadProvider.uploadsAvailable;
+
+  if (uploadProvider.activeProvider) {
+    try {
+      await assertCanUseStorageProvider(form.ownerId, uploadProvider.activeProvider);
+    } catch {
+      uploadsAvailable = false;
+    }
+  }
 
   return {
     ...snapshot,
-    uploadsAvailable: uploadProvider.uploadsAvailable,
+    uploadsAvailable,
     uploadProvider: uploadProvider.activeProvider,
   } satisfies PublicFormView;
 }
@@ -266,12 +279,31 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     errorRedirect(formId, "This form is not available.");
   }
 
+  try {
+    await assertCanReceiveSubmission(form.ownerId);
+  } catch (error) {
+    errorRedirect(
+      form.id,
+      error instanceof Error
+        ? error.message
+        : "This form is temporarily unavailable.",
+    );
+  }
+
   const formSnapshot = buildSnapshot(form);
   const submittedData: Record<string, string | boolean> = {};
   const submittedSignatures: Record<string, string> = {};
   const uploadRequests: UploadRequest[] = [];
   const uploadProvider = await getResolvedUploadProvider(form.ownerId);
-  const uploadsAvailable = uploadProvider.uploadsAvailable;
+  let uploadsAvailable = uploadProvider.uploadsAvailable;
+
+  if (uploadProvider.activeProvider) {
+    try {
+      await assertCanUseStorageProvider(form.ownerId, uploadProvider.activeProvider);
+    } catch {
+      uploadsAvailable = false;
+    }
+  }
 
   logUploadDiagnostic("Public form upload availability checked.", {
     formId: form.id,

@@ -13,6 +13,7 @@ import {
 } from "@/lib/forms/actions";
 import { normalizeFormFields } from "@/lib/forms/fields";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
+import { getUserEffectiveLimits } from "@/lib/plans/limits";
 
 type FormDetailPageProps = {
   params: Promise<{
@@ -45,7 +46,10 @@ export default async function FormDetailPage({
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
-  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
+  const [uploadProvider, limits] = await Promise.all([
+    getResolvedUploadProvider(form.ownerId),
+    getUserEffectiveLimits(form.ownerId),
+  ]);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -85,12 +89,18 @@ export default async function FormDetailPage({
           <GoogleDriveUploadWarning />
         ) : null}
 
-        <PublicFormQrCard
-          formId={form.id}
-          formSlug={form.slug}
-          publicFormUrl={publicFormUrl}
-          status={form.status}
-        />
+        {limits.allowQrCode ? (
+          <PublicFormQrCard
+            formId={form.id}
+            formSlug={form.slug}
+            publicFormUrl={publicFormUrl}
+            status={form.status}
+          />
+        ) : (
+          <section className="rounded-md border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-900">
+            QR codes are not included in your current plan.
+          </section>
+        )}
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>

@@ -8,6 +8,7 @@ import { isOfficeField, normalizeFormFields, type FormBuilderField } from "@/lib
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { sendCompletedSubmissionPdfNotifications } from "@/lib/notifications/form-notifications";
 import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
+import { assertCanGeneratePdf } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 const OFFICE_SUPPORTED_FIELD_TYPES = [
@@ -153,6 +154,18 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
 
   if (submission.officeCompletedAt) {
     redirect(`${detailPath}?success=Office work is already marked completed.`);
+  }
+
+  try {
+    await assertCanGeneratePdf(user.id);
+  } catch (error) {
+    redirect(
+      `${detailPath}?error=${encodeURIComponent(
+        error instanceof Error
+          ? error.message
+          : "Completed PDF generation is not included in your current plan.",
+      )}`,
+    );
   }
 
   const completedAt = new Date();

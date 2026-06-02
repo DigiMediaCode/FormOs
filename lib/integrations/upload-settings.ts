@@ -1,6 +1,7 @@
 import "server-only";
 
 import { IntegrationProvider, StorageProvider } from "@prisma/client";
+import { assertCanUseStorageProvider } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 type UploadSettingsDelegate = {
@@ -116,6 +117,8 @@ export async function setActiveUploadProvider(
   userId: string,
   provider: StorageProvider,
 ) {
+  await assertCanUseStorageProvider(userId, provider);
+
   const integration = await prisma.userIntegration.findUnique({
     where: {
       userId_provider: {

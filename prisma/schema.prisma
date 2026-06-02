@@ -42,16 +42,18 @@ enum UserRole {
 }
 
 model User {
-  id           String            @id @default(cuid())
-  name         String?
-  email        String            @unique
-  passwordHash String
-  role         UserRole          @default(USER)
-  forms        Form[]
-  integrations UserIntegration[]
+  id             String             @id @default(cuid())
+  name           String?
+  email          String             @unique
+  passwordHash   String
+  role           UserRole           @default(USER)
+  forms          Form[]
+  integrations   UserIntegration[]
   uploadSettings UserUploadSettings?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  subscription   UserSubscription?
+  quotaOverride  UserQuotaOverride?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 model UserIntegration {
@@ -147,4 +149,51 @@ model PlatformSetting {
   value     Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SubscriptionPlan {
+  id           String             @id @default(cuid())
+  name         String
+  slug         String             @unique
+  description  String?
+  priceMonthly Decimal?
+  priceYearly  Decimal?
+  currency     String             @default("USD")
+  isActive     Boolean            @default(true)
+  isPublic     Boolean            @default(true)
+  sortOrder    Int                @default(0)
+  limits       Json
+  metadata     Json?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  subscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  planId     String?
+  status     String    @default("ACTIVE")
+  assignedBy String?
+  assignedAt DateTime  @default(now())
+  expiresAt  DateTime?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan? @relation(fields: [planId], references: [id])
+}
+
+model UserQuotaOverride {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  limits    Json
+  reason    String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

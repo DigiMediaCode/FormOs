@@ -121,7 +121,7 @@ export function PublicFormQrCard({
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
               onClick={copyLink}
               type="button"
             >

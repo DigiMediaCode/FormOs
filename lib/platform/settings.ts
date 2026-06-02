@@ -28,12 +28,16 @@ function publicFileExists(path: string) {
 }
 
 function defaultLogoUrl() {
-  if (publicFileExists("/pdf-logo.png")) {
-    return "/pdf-logo.png";
+  if (publicFileExists("/formos-logo-v2.png")) {
+    return "/formos-logo-v2.png";
   }
 
   if (publicFileExists("/formos-logo.png")) {
     return "/formos-logo.png";
+  }
+
+  if (publicFileExists("/pdf-logo.png")) {
+    return "/pdf-logo.png";
   }
 
   return "";

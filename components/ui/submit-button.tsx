@@ -28,7 +28,7 @@ export function SubmitButton({
   return (
     <div className="flex flex-col gap-3">
       {pending && showStatus ? (
-        <p className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <p className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           {statusMessage ?? pendingText}
         </p>
       ) : null}

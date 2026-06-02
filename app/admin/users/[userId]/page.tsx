@@ -1,0 +1,303 @@
+import Link from "next/link";
+import {
+  assignUserPlanAction,
+  clearUserQuotaOverrideAction,
+  saveUserQuotaOverrideAction,
+} from "@/app/admin/users/[userId]/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { requireSuperAdmin } from "@/lib/admin/auth";
+import {
+  featureLabels,
+  getUserPlanAccess,
+  limitLabel,
+  normalizePlanLimits,
+  type PlanLimits,
+} from "@/lib/plans/limits";
+import { prisma } from "@/lib/prisma";
+
+type AdminUserDetailPageProps = {
+  params: Promise<{
+    userId: string;
+  }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+  }>;
+};
+
+const numericOverrideFields = [
+  ["maxForms", "Max forms"],
+  ["maxMonthlySubmissions", "Monthly submissions"],
+] as const;
+
+const booleanOverrideFields = [
+  ["allowGoogleDrive", "Google Drive uploads"],
+  ["allowDropbox", "Dropbox uploads"],
+  ["allowPdfGeneration", "Completed PDF generation"],
+  ["allowOfficeUseFields", "Office Use Only fields"],
+  ["allowTemplates", "Templates"],
+  ["allowQrCode", "QR codes"],
+  ["allowCustomBranding", "Custom branding"],
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function rawOverrideValue(value: unknown, key: keyof PlanLimits) {
+  return isRecord(value) && key in value ? value[key] : undefined;
+}
+
+function numericMode(value: unknown) {
+  if (value === undefined) {
+    return "inherit";
+  }
+
+  return value === null ? "unlimited" : "custom";
+}
+
+function booleanMode(value: unknown) {
+  if (value === undefined) {
+    return "inherit";
+  }
+
+  return value === true ? "allow" : "block";
+}
+
+export default async function AdminUserDetailPage({
+  params,
+  searchParams,
+}: AdminUserDetailPageProps) {
+  await requireSuperAdmin();
+  const { userId } = await params;
+  const { error, success } = await searchParams;
+  const [user, plans, access, override] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        subscription: {
+          select: {
+            planId: true,
+          },
+        },
+      },
+    }),
+    prisma.subscriptionPlan.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    }),
+    getUserPlanAccess(userId),
+    prisma.userQuotaOverride.findUnique({
+      where: { userId },
+      select: {
+        limits: true,
+        reason: true,
+      },
+    }),
+  ]);
+
+  if (!user) {
+    return (
+      <main className="px-6 py-10">
+        <div className="mx-auto max-w-4xl rounded-md border border-red-200 bg-red-50 p-6 text-red-800">
+          User not found.
+        </div>
+      </main>
+    );
+  }
+
+  const overrideLimits = override?.limits;
+  const normalizedOverride = override ? normalizePlanLimits(override.limits) : null;
+
+  return (
+    <main className="px-6 py-10">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
+        <header className="border-b border-slate-200 pb-6">
+          <Link className="text-sm font-medium text-blue-700 hover:text-blue-800" href="/admin/users">
+            Users
+          </Link>
+          <h2 className="mt-3 text-3xl font-semibold text-slate-950">
+            Manage {user.email}
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            {user.name || "No name"} · {user.role}
+          </p>
+        </header>
+
+        {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{success}</p> : null}
+        {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <h3 className="text-xl font-semibold text-slate-950">Current Access</h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-slate-200 p-4">
+              <p className="text-sm text-slate-500">Plan</p>
+              <p className="mt-1 font-semibold text-slate-950">{access.plan.name}</p>
+            </div>
+            <div className="rounded-md border border-slate-200 p-4">
+              <p className="text-sm text-slate-500">Forms</p>
+              <p className="mt-1 font-semibold text-slate-950">
+                {access.usage.formsUsed} / {limitLabel(access.limits.maxForms)}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 p-4">
+              <p className="text-sm text-slate-500">This month submissions</p>
+              <p className="mt-1 font-semibold text-slate-950">
+                {access.usage.monthlySubmissionsUsed} / {limitLabel(access.limits.maxMonthlySubmissions)}
+              </p>
+            </div>
+          </div>
+          {access.hasCustomQuota ? (
+            <p className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              {access.isUnlimitedEverything
+                ? "This user has unlimited access outside normal package limits."
+                : "Custom quota applied."}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {featureLabels(access.limits).map((feature) => (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  feature.allowed
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+                key={feature.label}
+              >
+                {feature.label}: {feature.allowed ? "Allowed" : "Blocked"}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <h3 className="text-xl font-semibold text-slate-950">Assign Plan</h3>
+          <form action={assignUserPlanAction.bind(null, user.id)} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <label className="flex flex-1 flex-col gap-2 text-sm font-medium text-slate-800">
+              Plan
+              <select
+                className="rounded-md border border-slate-300 px-3 py-2"
+                defaultValue={user.subscription?.planId ?? ""}
+                name="planId"
+              >
+                <option value="">Free default</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} ({plan.slug})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <SubmitButton
+              className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              pendingText="Assigning plan..."
+            >
+              Assign Plan
+            </SubmitButton>
+          </form>
+        </section>
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <h3 className="text-xl font-semibold text-slate-950">Quota Override</h3>
+          <form action={saveUserQuotaOverrideAction.bind(null, user.id)} className="grid gap-5">
+            <label className="flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">
+              <input
+                defaultChecked={
+                  normalizedOverride
+                    ? JSON.stringify(normalizedOverride) ===
+                      JSON.stringify({
+                        maxForms: null,
+                        maxMonthlySubmissions: null,
+                        allowGoogleDrive: true,
+                        allowDropbox: true,
+                        allowPdfGeneration: true,
+                        allowOfficeUseFields: true,
+                        allowTemplates: true,
+                        allowQrCode: true,
+                        allowCustomBranding: true,
+                      })
+                    : false
+                }
+                name="unlimitedEverything"
+                type="checkbox"
+              />
+              Grant unlimited/full access
+            </label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {numericOverrideFields.map(([key, label]) => {
+                const value = rawOverrideValue(overrideLimits, key);
+
+                return (
+                  <div className="rounded-md border border-slate-200 p-4" key={key}>
+                    <p className="text-sm font-semibold text-slate-950">{label}</p>
+                    <select className="mt-3 rounded-md border border-slate-300 px-3 py-2 text-sm" defaultValue={numericMode(value)} name={`${key}Mode`}>
+                      <option value="inherit">Inherit plan</option>
+                      <option value="custom">Custom number</option>
+                      <option value="unlimited">Unlimited</option>
+                    </select>
+                    <input
+                      className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      defaultValue={typeof value === "number" ? value : ""}
+                      min={0}
+                      name={key}
+                      placeholder="Custom number"
+                      type="number"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {booleanOverrideFields.map(([key, label]) => {
+                const value = rawOverrideValue(overrideLimits, key);
+
+                return (
+                  <label className="flex flex-col gap-2 rounded-md border border-slate-200 p-4 text-sm font-medium text-slate-800" key={key}>
+                    {label}
+                    <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" defaultValue={booleanMode(value)} name={`${key}Mode`}>
+                      <option value="inherit">Inherit plan</option>
+                      <option value="allow">Allow</option>
+                      <option value="block">Block</option>
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+              Reason
+              <textarea className="min-h-20 rounded-md border border-slate-300 px-3 py-2" defaultValue={override?.reason ?? ""} name="reason" />
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <SubmitButton
+                className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                pendingText="Saving quota override..."
+              >
+                Save Override
+              </SubmitButton>
+            </div>
+          </form>
+          <form action={clearUserQuotaOverrideAction.bind(null, user.id)}>
+            <SubmitButton
+              className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+              pendingText="Clearing quota override..."
+            >
+              Clear Override
+            </SubmitButton>
+          </form>
+        </section>
+      </div>
+    </main>
+  );
+}
