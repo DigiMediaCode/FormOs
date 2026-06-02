@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 18: Landing Page + Global Branding Application
+# CURRENT TASK — FormOS Milestone 18: Public Website Redesign + Pricing + Legal Pages
 
 ## Project Context
 
@@ -9,288 +9,599 @@ Current state:
 * FormOS MVP foundation is live and working.
 * Auth/signup/login works.
 * Forms CRUD works.
-* Builder works.
-* Public forms work.
-* Public form logo and branding settings exist.
-* Super Admin settings exist for logo, favicon, meta title, meta description, and site name.
+* Builder works and has improved UI.
+* Public forms work and have improved UI.
+* Public form logo and platform branding settings exist.
 * QR code feature is already live.
 * Google Drive and Dropbox uploads work.
+* Storage provider selection works.
 * Office Use Only fields work.
 * Finalize Submission works.
 * Completed PDF generation and email delivery work.
 * Activity timeline / light audit works.
 * Vehicle Hire Agreement template works.
+* Super Admin foundation exists.
+* Super Admin settings exist for logo, favicon, meta title, meta description, and site name.
+* FlowStep.AI has produced a modern landing page design direction.
 * Do not touch CommerceOS.
-
-## Problem
-
-The platform branding settings exist, but the logo/favicon/site branding are not consistently visible across the public site, dashboard, admin, auth pages, and landing page.
-
-The current website landing page is too basic and does not make FormOS look like a modern SaaS product.
-
-Before subscriptions/packages, FormOS needs a professional landing page where visitors can understand the product and register/sign up.
 
 ## Goal
 
-Create a modern, attractive landing page for FormOS and apply global branding settings consistently across the app.
+Implement a modern public-facing website for FormOS based on the FlowStep design direction.
 
-The landing page should help users understand FormOS quickly and encourage them to sign up.
+This milestone should improve the main public marketing website and add supporting public pages.
 
-## Main Route
+The goal is to make FormOS look like a real, polished SaaS product where users can understand the platform and sign up.
 
-Update:
+## Important Direction
+
+Use the FlowStep design as the visual reference.
+
+Do not redesign dashboard/admin/builder in this milestone unless small branding/header fixes are needed.
+
+Focus on the public website routes:
 
 * /
+* /pricing
+* /privacy-policy
+* /terms-of-service
+* /data-security
+* /contact
 
-This should become the public marketing landing page.
+Use Tailwind CSS only.
 
-## Landing Page Requirements
+Do not add a heavy UI library.
 
-Create a modern SaaS landing page with these sections:
+Do not change backend workflows.
 
-### 1. Header / Navigation
+Do not touch Google Drive, Dropbox, PDF, email, audit, QR, form submission, or subscription logic.
 
-Show:
+## Page 1 — Landing Page
 
-* platform logo from Super Admin settings if available
-* site name if logo is missing
+Update route:
+
+/
+
+Build a polished SaaS landing page with these sections:
+
+### Header / Navigation
+
+Include:
+
+* logo from platform settings if available
+* site name fallback if logo is missing
 * navigation links:
 
   * Features
   * Use Cases
   * How It Works
+  * Templates
+  * Pricing
   * Login
+* primary button:
+
   * Get Started
-
-Buttons:
-
-* Login → /login
-* Get Started → /signup
 
 If user is already logged in, show:
 
-* Dashboard → /dashboard
+* Dashboard button → /dashboard
 
-### 2. Hero Section
+Header should be clean, modern, and responsive.
 
-Create a strong hero section.
+### Hero Section
 
-Suggested headline:
+Headline:
 
 Build forms, agreements, and signed workflows in minutes.
 
-Suggested subheadline:
+Subheadline:
 
-FormOS helps businesses create online forms, collect signatures, receive file uploads, complete office-use fields, and send finished PDFs automatically.
+Create online forms, collect signatures, receive file uploads, complete office-use fields, and send finished PDFs automatically.
 
-Primary button:
+Buttons:
 
-Get Started Free → /signup
+* Get Started Free → /signup
+* View Demo or Login → /login
 
-Secondary button:
-
-Login → /login
-
-Optional small trust text:
+Trust note:
 
 No code required. Works with Google Drive and Dropbox.
 
-### 3. Feature Cards
+Hero visual should feel like a modern SaaS product preview.
 
-Show key features:
+It can include mock cards such as:
 
-* Form Builder
-* eSignatures and Initials
-* File Uploads to Google Drive or Dropbox
+* Agreement.pdf
+* Signed & delivered
+* dashboard/form preview
+* QR/share card
+* storage connected badge
+
+Do not use external images unless already available.
+
+Use CSS/Tailwind mockups if needed.
+
+### Features Section
+
+Heading:
+
+Everything you need to collect & sign
+
+Feature cards:
+
+* Visual Form Builder
+* eSignatures & Initials
+* Drive & Dropbox Uploads
 * Office Use Only Fields
 * Completed PDF Delivery
-* QR Code Form Sharing
+* QR Code Sharing
 * Activity Timeline
 * Templates
 
-Keep text short and clean.
+Each card should include:
 
-### 4. Use Cases
+* small icon or simple visual marker
+* title
+* short description
 
-Show use cases:
+### Use Cases Section
 
-* Vehicle hire agreements
-* Client intake forms
-* Consent forms
-* Service agreements
-* Onboarding forms
-* Document collection forms
+Heading:
 
-### 5. How It Works
+Built for every kind of workflow
 
-Show 3 or 4 steps:
+Use case cards:
 
-1. Create your form
+* Vehicle Hire Agreements
+* Client Intake Forms
+* Consent Forms
+* Service Agreements
+* Staff Onboarding
+* Document Collection
+
+### How It Works Section
+
+Heading:
+
+How it works
+
+Steps:
+
+1. Build your form
 2. Share link or QR code
-3. Collect signatures and documents
-4. Complete office fields and send PDF
+3. Collect signatures & files
+4. Complete & send PDF
 
-### 6. Call To Action
+### Featured Template Section
 
-Final CTA section:
+Highlight:
+
+Vehicle Hire Agreement Template
+
+Include short copy:
+
+A ready-to-use agreement with signature capture, licence uploads, office-use fields, and completed PDF delivery.
+
+Bullets:
+
+* Signature & initials fields included
+* Driver licence file upload
+* Auto-generated completed PDF
+
+CTA:
+
+Use this template → /signup
+
+### Storage Integration Section
+
+Heading:
+
+Connect your storage
+
+Cards:
+
+* Google Drive
+* Dropbox
+
+Explain that uploaded files go to the form owner’s connected storage provider and FormOS does not permanently store uploaded file binaries on its server.
+
+### Pricing Preview Section
+
+Add a small pricing preview on landing page.
+
+Heading:
+
+Simple pricing for growing teams
+
+Show three cards:
+
+* Starter
+* Pro
+* Business
+
+This is only visual marketing content for now.
+
+Do not implement subscription enforcement in this milestone.
+
+Button:
+
+View Full Pricing → /pricing
+
+### Final CTA
+
+Headline:
 
 Ready to create your first form?
+
+Subheadline:
+
+Build, sign, and deliver professional documents in minutes — no code required.
 
 Button:
 
 Create Free Account → /signup
 
-### 7. Footer
+### Footer
 
-Footer should show:
+Footer must include:
 
 * logo or site name
-* short description
-* copyright
-* links:
+* short product description
+* product links:
 
+  * Features
+  * Use Cases
+  * Pricing
   * Login
   * Signup
+* legal links:
 
-## Visual Style
+  * Privacy Policy
+  * Terms
+  * Data Security
+  * Contact
 
-Use a modern SaaS look.
+Footer must include:
 
-Direction:
+FormOS is a project of DigiMedia Code LLC.
 
-* clean white/light background
-* soft gradient or subtle background accents
-* large hero typography
-* rounded cards
-* subtle shadows
-* good spacing
-* modern buttons
-* responsive design
-* mobile-friendly layout
+Also show:
 
-Do not use a heavy UI library.
+© 2025 FormOS. All rights reserved.
 
-Use Tailwind only.
+## Page 2 — Pricing Page
 
-## Global Branding Application
+Create route:
 
-Use platform settings from Super Admin:
+/pricing
+
+Pricing page should use the same public header/footer as landing page.
+
+### Pricing Hero
+
+Headline:
+
+Simple pricing for forms, agreements, and signed workflows.
+
+Subheadline:
+
+Choose the plan that fits your business. Start small and scale as your workflow grows.
+
+### Pricing Cards
+
+Create three pricing cards.
+
+This is display-only pricing for now.
+
+Do not implement billing.
+
+#### Starter
+
+Price:
+
+$19/month
+
+Description:
+
+Best for individuals and small businesses.
+
+Features:
+
+* Up to 5 forms
+* Up to 100 submissions / month
+* Public form sharing
+* Signatures & initials
+* QR code sharing
+* Basic templates
+* PDF generation
+
+CTA:
+
+Get Started
+
+#### Pro
+
+Price:
+
+$49/month
+
+Description:
+
+Best for growing businesses.
+
+Badge:
+
+Most Popular
+
+Features:
+
+* Up to 25 forms
+* Up to 1,000 submissions / month
+* Google Drive integration
+* Dropbox integration
+* Office Use Only fields
+* Completed PDF email delivery
+* Activity timeline
+* Priority support
+
+CTA:
+
+Start Pro
+
+#### Business
+
+Price:
+
+$99/month
+
+Description:
+
+Best for teams and advanced workflows.
+
+Features:
+
+* Unlimited forms
+* Up to 10,000 submissions / month
+* All Pro features
+* Advanced branding
+* Team-ready workflows
+* Advanced templates
+* Better support
+
+CTA:
+
+Start Business or Contact Sales
+
+### Feature Comparison
+
+Add a clean comparison section/table.
+
+Rows:
+
+* Number of forms
+* Monthly submissions
+* Signature support
+* QR code sharing
+* PDF generation
+* Google Drive integration
+* Dropbox integration
+* Office Use Only fields
+* Branding
+* Priority support
+
+### FAQ Section
+
+Add FAQs:
+
+* Can I change plans later?
+* Do you offer annual billing?
+* Are uploaded files stored on FormOS?
+* Can I use Google Drive or Dropbox?
+* Do all plans support signed agreements?
+
+### Pricing CTA
+
+Headline:
+
+Start building smarter forms today.
+
+Buttons:
+
+* Get Started Free
+* Contact Sales
+
+## Legal Pages
+
+Create these routes:
+
+* /privacy-policy
+* /terms-of-service
+* /data-security
+* /contact
+
+All pages should use the same public header/footer and branding.
+
+Keep legal pages clean and readable.
+
+Use simple but professional placeholder content.
+
+This is not legal advice. Content should be owner-editable later.
+
+### Privacy Policy Page
+
+Include sections about:
+
+* what FormOS is
+* account data
+* form data and submissions
+* uploaded files
+* Google Drive and Dropbox storage model
+* email notifications
+* cookies/session auth
+* data retention
+* contact
+
+Important message:
+
+Uploaded files may be stored in the form owner’s connected Google Drive or Dropbox. FormOS does not permanently store uploaded file binaries when connected storage is used.
+
+### Terms of Service Page
+
+Include sections about:
+
+* using FormOS
+* user responsibilities
+* form owner responsibility for form/agreement wording
+* no legal advice disclaimer
+* uploaded content responsibility
+* acceptable use
+* account access
+* limitation of liability
+* changes to service
+* contact
+
+### Data Security Page
+
+Include sections about:
+
+* connected storage model
+* Google Drive and Dropbox integrations
+* file upload handling
+* signatures and submissions
+* activity timeline
+* secure account access
+* best practices for form owners
+* no public file exposure by default
+
+### Contact Page
+
+Include:
+
+* page title
+* support message
+* contact email placeholder or text
+* small card layout
+
+If there is no real contact email setting yet, use placeholder:
+
+[support@example.com](mailto:support@example.com)
+
+or use platform settings if contact email exists.
+
+Do not create a working contact form unless already simple.
+
+## Shared Public Layout
+
+Create or improve reusable public website components if practical:
+
+* PublicHeader
+* PublicFooter
+* MarketingSection
+* FeatureCard
+* PricingCard
+* LegalPageLayout
+
+Use platform settings:
 
 * siteName
 * logoUrl
-* faviconUrl
 * metaTitle
 * metaDescription
+* faviconUrl where practical
 
-Apply branding where practical:
+Avoid duplicate code where reasonable.
 
-### Landing Page
+## Branding Rules
 
-* logo in header
+Use Super Admin platform settings where practical:
+
+* logoUrl for header/footer logo
 * siteName fallback
-* meta title/description
+* metaTitle/metaDescription for landing metadata where practical
 
-### Auth Pages
+If logo exists, do not show awkward duplicate “FormOS” text beside it unless visually appropriate.
 
-* login page should show logo/site name
-* signup page should show logo/site name
-* favicon should apply globally if practical
+Footer must always include:
 
-### Dashboard
+FormOS is a project of DigiMedia Code LLC.
 
-* dashboard header/sidebar should use logo/site name where practical
-* if logo exists, show it instead of hardcoded FormOS text where appropriate
-* avoid duplicate logo + "FORMOS" text if logo exists
+## Visual Style
 
-### Admin
+Use the FlowStep design as the visual reference.
 
-* admin layout/header should use logo/site name where practical
-* do not confuse admin branding with public form owner branding
+Style direction:
 
-### Public Forms
-
-* logo should appear above everything
-* title should appear below logo
-* if logo exists, do not show small "FORMOS" text next to it
-
-## Favicon
-
-Use faviconUrl from platform settings if practical.
-
-If dynamic favicon is difficult in the current Next.js setup:
-
-* keep static favicon fallback
-* document limitation
-* do not break build
+* premium modern SaaS
+* clean white/off-white background
+* blue/indigo accents
+* rounded cards
+* subtle shadows
+* soft borders
+* large hero typography
+* good spacing
+* responsive mobile-first layout
+* polished buttons
+* implementation-friendly Tailwind
 
 ## SEO Metadata
 
-Use metaTitle and metaDescription from platform settings where practical.
+Use platform settings where practical.
 
-At minimum:
+Landing page should use:
 
-* landing page should use configured metadata
-* fallback to sensible defaults if settings are missing
+* metaTitle from settings or fallback
+* metaDescription from settings or fallback
 
-Defaults:
+Pricing/legal pages should have sensible static metadata if dynamic metadata is not simple.
 
-siteName: FormOS
-metaTitle: FormOS — Online Form Builder
-metaDescription: Create online forms, agreements, signatures, file uploads, and completed PDFs with FormOS.
-
-## Technical Notes
-
-Suggested helpers:
-
-* getPlatformSettings
-* getPlatformBranding
-* getPlatformMetadata
-
-Reuse existing platform settings helpers if already created.
-
-Do not duplicate settings logic.
+Do not break build over dynamic metadata.
 
 ## Security
 
-* Public landing page can read safe platform settings only.
-* Do not expose secrets.
-* Do not expose OAuth tokens.
-* Do not expose storage credentials.
-* Do not expose Super Admin-only data.
+Public pages should only read safe platform settings.
+
+Do not expose:
+
+* secrets
+* OAuth tokens
+* storage credentials
+* Super Admin data
+* private form/user data
 
 ## Out of Scope
 
-Do not build pricing/packages yet.
 Do not build billing.
-Do not build subscription limits.
-Do not build custom domain support.
+Do not build subscription enforcement.
+Do not build custom domains.
 Do not build user-level branding.
-Do not build per-form branding settings.
-Do not change Google Drive or Dropbox logic.
-Do not change PDF generation.
-Do not change Office Use Only logic.
+Do not build per-form branding.
+Do not change dashboard functionality.
+Do not change public form submission logic.
+Do not change Google Drive/Dropbox logic.
+Do not change PDF/email/audit logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
 Milestone 18 is complete when:
 
-* / is a modern landing page.
-* Landing page has header, hero, features, use cases, how-it-works, CTA, and footer.
-* Landing page has Login and Get Started buttons.
-* Logged-in users can access Dashboard from landing page.
-* Platform logo appears on landing page if configured.
-* Site name appears if logo is missing.
-* Auth pages show platform logo/site name.
-* Dashboard/admin branding uses platform logo/site name where practical.
-* Public forms show logo above everything.
-* Small "FORMOS" text is hidden when logo exists.
-* Meta title and meta description use platform settings where practical.
-* Favicon uses platform setting where practical or gracefully falls back.
-* Page is responsive/mobile-friendly.
+* / is redesigned as modern SaaS landing page.
+* Landing page has header, hero, features, use cases, how-it-works, featured template, integrations, pricing preview, CTA, and footer.
+* /pricing exists and looks modern.
+* Pricing page has three pricing cards.
+* Pricing page has feature comparison and FAQ.
+* /privacy-policy exists.
+* /terms-of-service exists.
+* /data-security exists.
+* /contact exists.
+* Public header/footer are consistent.
+* Footer includes "FormOS is a project of DigiMedia Code LLC."
+* Logo/site name from platform settings is used where practical.
+* Landing page and pricing page are mobile responsive.
+* Legal pages are clean and readable.
 * Existing auth still works.
-* Existing forms/dashboard/admin still work.
-* Existing public form submission still works.
+* Existing dashboard/admin still works.
+* Existing public form pages still work.
 * Existing QR code feature still works.
 * Existing Google Drive/Dropbox upload flow still works.
 * Existing PDF/email/audit flows still work.

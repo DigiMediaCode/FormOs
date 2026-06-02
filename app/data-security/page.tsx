@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import { LegalPageLayout } from "@/components/public/legal-page-layout";
+
+export const metadata: Metadata = {
+  title: "Data Security | FormOS",
+};
+
+export default function DataSecurityPage() {
+  return (
+    <LegalPageLayout
+      description="How FormOS approaches submissions, connected storage, and access control."
+      title="Data Security"
+    >
+      <section>
+        <h2 className="text-lg font-semibold text-slate-950">Connected storage model</h2>
+        <p className="mt-2">FormOS routes public file uploads to the form owner&apos;s connected Google Drive or Dropbox account. Public submitters cannot choose the destination.</p>
+      </section>
+      <section>
+        <h2 className="text-lg font-semibold text-slate-950">Submissions and signatures</h2>
+        <p className="mt-2">Submission answers, signatures, initials, office-use fields, and completed status are stored so the form owner can review and finalize each workflow.</p>
+      </section>
+      <section>
+        <h2 className="text-lg font-semibold text-slate-950">Activity timeline</h2>
+        <p className="mt-2">Important submission events are recorded for owners, including creation, uploads, signatures, office updates, PDF generation, and email delivery status.</p>
+      </section>
+      <section>
+        <h2 className="text-lg font-semibold text-slate-950">Secure access</h2>
+        <p className="mt-2">Dashboard, submission, integration, and admin pages are protected by authentication and ownership checks. Super Admin views do not expose uploaded file links by default.</p>
+      </section>
+      <section>
+        <h2 className="text-lg font-semibold text-slate-950">File exposure</h2>
+        <p className="mt-2">FormOS does not create public Dropbox share links and does not expose storage provider tokens. Google Drive and Dropbox access remains server-side.</p>
+      </section>
+    </LegalPageLayout>
+  );
+}

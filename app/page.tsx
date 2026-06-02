@@ -276,7 +276,7 @@ export default async function HomePage() {
               completed PDFs with {settings.siteName}.
             </p>
             <p className="mt-3 text-xs text-slate-500">
-              © {new Date().getFullYear()} {settings.siteName}. All rights reserved.
+              &copy; {new Date().getFullYear()} {settings.siteName}. All rights reserved.
             </p>
           </div>
           <div className="flex gap-4 text-sm font-medium text-slate-700">
