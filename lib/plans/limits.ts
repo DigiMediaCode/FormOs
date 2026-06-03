@@ -35,6 +35,9 @@ export type UserPlanSummary = {
   name: string;
   slug: string;
   isAssigned: boolean;
+  status?: string | null;
+  billingProvider?: string | null;
+  currentPeriodEnd?: Date | null;
 };
 
 export type UserPlanAccess = {
@@ -213,6 +216,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function shouldUseSubscriptionPlan(subscription: {
+  status: string | null;
+  currentPeriodEnd: Date | null;
+}) {
+  const status = subscription.status?.toUpperCase() ?? "ACTIVE";
+
+  if (["ACTIVE", "TRIALING", "MANUAL", "PAST_DUE", "INCOMPLETE"].includes(status)) {
+    return true;
+  }
+
+  if (status === "CANCELED" && subscription.currentPeriodEnd) {
+    return subscription.currentPeriodEnd.getTime() > Date.now();
+  }
+
+  return false;
+}
+
 function normalizeNumericLimit(value: unknown, fallback: NumericLimit): NumericLimit {
   if (value === null) {
     return null;
@@ -380,6 +400,9 @@ export async function getUserPlan(userId: string): Promise<UserPlanSummary> {
   const subscription = await prisma.userSubscription.findUnique({
     where: { userId },
     select: {
+      status: true,
+      billingProvider: true,
+      currentPeriodEnd: true,
       plan: {
         select: {
           id: true,
@@ -390,18 +413,24 @@ export async function getUserPlan(userId: string): Promise<UserPlanSummary> {
     },
   });
 
-  if (!subscription?.plan) {
+  if (!subscription?.plan || !shouldUseSubscriptionPlan(subscription)) {
     return {
       id: null,
       name: "Free",
       slug: "free",
       isAssigned: false,
+      status: subscription?.status ?? null,
+      billingProvider: subscription?.billingProvider ?? null,
+      currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
     };
   }
 
   return {
     ...subscription.plan,
     isAssigned: true,
+    status: subscription.status,
+    billingProvider: subscription.billingProvider,
+    currentPeriodEnd: subscription.currentPeriodEnd,
   };
 }
 
@@ -410,6 +439,8 @@ export async function getUserEffectiveLimits(userId: string) {
     prisma.userSubscription.findUnique({
       where: { userId },
       select: {
+        status: true,
+        currentPeriodEnd: true,
         plan: {
           select: {
             limits: true,
@@ -427,7 +458,9 @@ export async function getUserEffectiveLimits(userId: string) {
 
   return mergeLimits(
     getDefaultFreeLimits(),
-    subscription?.plan?.limits,
+    subscription && shouldUseSubscriptionPlan(subscription)
+      ? subscription.plan?.limits
+      : undefined,
     override?.limits,
   );
 }

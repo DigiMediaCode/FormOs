@@ -20,6 +20,7 @@ export default async function AdminUsersPage() {
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Auth</th>
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">Company</th>
                 <th className="px-4 py-3 font-medium">Country</th>
@@ -28,6 +29,7 @@ export default async function AdminUsersPage() {
                 <th className="px-4 py-3 font-medium">Submissions</th>
                 <th className="px-4 py-3 font-medium">Google Drive</th>
                 <th className="px-4 py-3 font-medium">Plan</th>
+                <th className="px-4 py-3 font-medium">Billing</th>
                 <th className="px-4 py-3 font-medium">Manage</th>
               </tr>
             </thead>
@@ -36,6 +38,7 @@ export default async function AdminUsersPage() {
                 <tr key={user.id}>
                   <td className="px-4 py-3 text-slate-900">{user.name || "No name"}</td>
                   <td className="px-4 py-3 text-slate-700">{user.email}</td>
+                  <td className="px-4 py-3 text-slate-700">{user.authMethods}</td>
                   <td className="px-4 py-3 text-slate-700">{user.role}</td>
                   <td className="px-4 py-3 text-slate-700">
                     {user.companyName || "Not set"}
@@ -56,6 +59,12 @@ export default async function AdminUsersPage() {
                         Custom
                       </span>
                     ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    <div>{user.subscriptionStatus}</div>
+                    <div className="text-xs text-slate-500">
+                      {user.billingProvider || "No provider"}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-slate-700">
                     <Link

@@ -40,7 +40,30 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </p>
         ) : null}
 
-        <form action={loginAction} className="mt-8 flex flex-col gap-5">
+        <div className="mt-8 grid gap-3">
+          <Link
+            className="flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+            href="/api/auth/google/login"
+          >
+            Continue with Google
+          </Link>
+          <Link
+            className="flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+            href="/api/auth/lark/login"
+          >
+            Continue with Lark
+          </Link>
+        </div>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            or log in with email
+          </span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <form action={loginAction} className="flex flex-col gap-5">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Email
             <input

@@ -137,12 +137,15 @@ export async function assignUserPlanAction(userId: string, formData: FormData) {
         userId,
         planId: planId || null,
         assignedBy: admin.id,
+        status: "MANUAL",
+        billingProvider: "manual",
       },
       update: {
         planId: planId || null,
         assignedBy: admin.id,
         assignedAt: new Date(),
-        status: "ACTIVE",
+        status: "MANUAL",
+        billingProvider: "manual",
       },
     });
   } catch (error) {

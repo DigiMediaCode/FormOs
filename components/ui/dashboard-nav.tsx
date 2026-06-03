@@ -24,6 +24,11 @@ const NAV_ITEMS = [
     label: "Profile / Business Profile",
     section: "settings",
   },
+  {
+    href: "/dashboard/settings/billing",
+    label: "Billing",
+    section: "settings",
+  },
 ];
 
 function activeSection(pathname: string) {

@@ -6,6 +6,7 @@ type PricingCardProps = {
   description: string;
   features: string[];
   highlighted?: boolean;
+  href?: string;
 };
 
 export function PricingCard({
@@ -14,6 +15,7 @@ export function PricingCard({
   description,
   features,
   highlighted = false,
+  href = "/signup",
 }: PricingCardProps) {
   return (
     <article
@@ -37,7 +39,7 @@ export function PricingCard({
             ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:from-blue-700 hover:to-violet-700"
             : "border border-blue-100 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50"
         }`}
-        href="/signup"
+        href={href}
       >
         Get Started
       </Link>

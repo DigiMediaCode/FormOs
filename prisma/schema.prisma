@@ -53,7 +53,7 @@ model User {
   lastName       String?
   phone          String?
   email          String             @unique
-  passwordHash   String
+  passwordHash   String?
   emailVerifiedAt DateTime?
   role           UserRole           @default(USER)
   forms          Form[]
@@ -63,8 +63,26 @@ model User {
   subscription   UserSubscription?
   quotaOverride  UserQuotaOverride?
   authTokens     AuthToken[]
+  oauthAccounts  UserOAuthAccount[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+}
+
+model UserOAuthAccount {
+  id             String   @id @default(cuid())
+  userId         String
+  provider       String
+  providerUserId String
+  providerEmail  String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@index([providerEmail])
 }
 
 model BusinessProfile {
@@ -208,6 +226,12 @@ model SubscriptionPlan {
   description  String?
   priceMonthly Decimal?
   priceYearly  Decimal?
+  stripeProductId String?
+  stripeMonthlyPriceId String?
+  stripeYearlyPriceId  String?
+  stripeSyncedAt DateTime?
+  stripeSyncStatus String?
+  stripeSyncError String?
   currency     String             @default("USD")
   isActive     Boolean            @default(true)
   isPublic     Boolean            @default(true)
@@ -228,12 +252,23 @@ model UserSubscription {
   assignedBy String?
   assignedAt DateTime  @default(now())
   expiresAt  DateTime?
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  stripePriceId String?
+  billingProvider String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
   metadata   Json?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@index([stripePriceId])
 }
 
 model UserQuotaOverride {
@@ -246,4 +281,26 @@ model UserQuotaOverride {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BillingEvent {
+  id             String   @id @default(cuid())
+  provider       String   @default("stripe")
+  eventId        String?  @unique
+  eventType      String
+  userId         String?
+  subscriptionId String?
+  customerId     String?
+  status         String   @default("RECEIVED")
+  message        String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  processedAt    DateTime?
+
+  @@index([provider])
+  @@index([eventType])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([customerId])
+  @@index([status])
 }

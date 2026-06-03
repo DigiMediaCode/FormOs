@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { syncPlanToStripe } from "@/lib/billing/stripe";
 import { isSupportedFieldType } from "@/lib/forms/fields";
 import {
   normalizePlanLimits,
@@ -119,6 +120,23 @@ function readPlanData(formData: FormData) {
     sortOrder: readInt(formData, "sortOrder"),
     limits: readLimits(formData) as unknown as Prisma.InputJsonValue,
   };
+}
+
+export async function syncPlanToStripeAction(planId: string) {
+  await requireSuperAdmin();
+
+  try {
+    await syncPlanToStripe(planId);
+  } catch (error) {
+    revalidatePath(ADMIN_PLANS_PATH);
+    redirectWith(
+      "error",
+      error instanceof Error ? error.message : "Unable to sync plan to Stripe.",
+    );
+  }
+
+  revalidatePath(ADMIN_PLANS_PATH);
+  redirectWith("success", "Plan synced to Stripe.");
 }
 
 export async function seedDefaultPlansAction() {

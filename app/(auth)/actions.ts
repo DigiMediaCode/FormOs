@@ -99,7 +99,7 @@ export async function loginAction(formData: FormData) {
     },
   });
 
-  if (!user) {
+  if (!user || !user.passwordHash) {
     errorRedirect("/login", "Invalid email or password.");
   }
 

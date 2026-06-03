@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PricingCard } from "@/components/public/pricing-card";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
+import { getSessionUserId } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Pricing | FormOS",
@@ -80,7 +81,10 @@ const faqs = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const userId = await getSessionUserId();
+  const planHref = userId ? "/dashboard/settings/billing" : "/signup";
+
   return (
     <main className="min-h-screen bg-slate-50">
       <PublicHeader />
@@ -96,7 +100,7 @@ export default function PricingPage() {
 
       <section className="mx-auto grid max-w-7xl gap-6 px-5 pb-16 sm:px-6 lg:grid-cols-3">
         {plans.map((plan) => (
-          <PricingCard key={plan.name} {...plan} />
+          <PricingCard href={planHref} key={plan.name} {...plan} />
         ))}
       </section>
 

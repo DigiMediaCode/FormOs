@@ -2,6 +2,7 @@ import {
   createPlanAction,
   deleteSubscriptionPlan,
   seedDefaultPlansAction,
+  syncPlanToStripeAction,
   toggleSubscriptionPlanStatus,
   updatePlanAction,
 } from "@/app/admin/plans/actions";
@@ -36,6 +37,17 @@ const booleanLimitFields = [
 
 function moneyValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
+}
+
+function formatDate(date: Date | null | undefined) {
+  if (!date) {
+    return "Never";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function LimitInputs({ limits }: { limits: PlanLimits }) {
@@ -138,6 +150,12 @@ function PlanForm({
     description: string | null;
     priceMonthly: unknown;
     priceYearly: unknown;
+    stripeProductId?: string | null;
+    stripeMonthlyPriceId?: string | null;
+    stripeYearlyPriceId?: string | null;
+    stripeSyncedAt?: Date | null;
+    stripeSyncStatus?: string | null;
+    stripeSyncError?: string | null;
     currency: string;
     isActive: boolean;
     isPublic: boolean;
@@ -164,6 +182,10 @@ function PlanForm({
         Description
         <textarea className="min-h-20 rounded-md border border-slate-300 px-3 py-2" defaultValue={defaults.description ?? ""} name="description" />
       </label>
+      <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+        Changing a plan price creates a new Stripe Price for future subscriptions.
+        Existing subscribers are not automatically migrated.
+      </p>
       <div className="grid gap-4 md:grid-cols-4">
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
           Monthly price
@@ -181,6 +203,54 @@ function PlanForm({
           Sort order
           <input className="rounded-md border border-slate-300 px-3 py-2" defaultValue={defaults.sortOrder} name="sortOrder" type="number" />
         </label>
+      </div>
+      <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+        <h4 className="text-sm font-semibold text-slate-950">Stripe Sync</h4>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Product ID
+            </p>
+            <p className="mt-1 break-all text-sm text-slate-800">
+              {defaults.stripeProductId || "Not synced"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Monthly Price ID
+            </p>
+            <p className="mt-1 break-all text-sm text-slate-800">
+              {defaults.stripeMonthlyPriceId || "Not synced"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Yearly Price ID
+            </p>
+            <p className="mt-1 break-all text-sm text-slate-800">
+              {defaults.stripeYearlyPriceId || "Not synced"}
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <p className="text-sm text-slate-700">
+            Status:{" "}
+            <span className="font-medium text-slate-950">
+              {defaults.stripeSyncStatus || "Not synced"}
+            </span>
+          </p>
+          <p className="text-sm text-slate-700">
+            Last synced:{" "}
+            <span className="font-medium text-slate-950">
+              {formatDate(defaults.stripeSyncedAt)}
+            </span>
+          </p>
+        </div>
+        {defaults.stripeSyncError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {defaults.stripeSyncError}
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-3">
         <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -280,6 +350,33 @@ export default async function AdminPlansPage({ searchParams }: AdminPlansPagePro
                     Edit plan details below, or use the controls on the right to
                     activate, deactivate, or safely delete the plan.
                   </p>
+                  <dl className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2 xl:grid-cols-3">
+                    <div>
+                      <dt className="font-medium text-slate-500">Stripe Product</dt>
+                      <dd className="break-all">{plan.stripeProductId || "Not synced"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Monthly Price</dt>
+                      <dd className="break-all">{plan.stripeMonthlyPriceId || "Not synced"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Yearly Price</dt>
+                      <dd className="break-all">{plan.stripeYearlyPriceId || "Not synced"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Sync status</dt>
+                      <dd>{plan.stripeSyncStatus || "Not synced"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Last synced</dt>
+                      <dd>{formatDate(plan.stripeSyncedAt)}</dd>
+                    </div>
+                  </dl>
+                  {plan.stripeSyncError ? (
+                    <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                      {plan.stripeSyncError}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <a
@@ -295,6 +392,15 @@ export default async function AdminPlansPage({ searchParams }: AdminPlansPagePro
                       showStatus={false}
                     >
                       {plan.isActive ? "Deactivate" : "Activate"}
+                    </SubmitButton>
+                  </form>
+                  <form action={syncPlanToStripeAction.bind(null, plan.id)}>
+                    <SubmitButton
+                      className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                      pendingText="Syncing to Stripe..."
+                      showStatus={false}
+                    >
+                      Sync to Stripe
                     </SubmitButton>
                   </form>
                   <form action={deleteSubscriptionPlan.bind(null, plan.id)}>

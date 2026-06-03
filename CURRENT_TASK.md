@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 20.1: User Profile + Business/Billing Profile Foundation
+# CURRENT TASK — FormOS Milestone 23: Stripe Billing Testing, Webhook Logs, and Subscription Sync Safety
 
 ## Project Context
 
@@ -6,242 +6,274 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Auth/signup/login works.
-* Email verification and password reset are being added or completed.
-* Dynamic plans and quota controls exist.
-* Super Admin exists.
-* FormOS is live on Hostinger.
-* Supabase is connected.
+* Stripe billing foundation has been implemented.
+* Super Admin can sync FormOS plans to Stripe.
+* Stripe products/prices can be created from FormOS plans.
+* User billing page exists or is being completed.
+* Stripe Checkout exists or is being completed.
+* Stripe Customer Portal exists or is being completed.
+* Stripe webhook endpoint exists or is being completed.
+* Dynamic plans and user quota overrides exist.
+* User quota overrides must always win over Stripe subscription state.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Improve user account data structure by separating personal user information from business/billing profile information.
+Add billing diagnostics and safety tools so Stripe billing can be tested reliably.
 
-Signup should stay simple, but FormOS should collect enough business information for future subscriptions, invoices, and customer management.
+This milestone should make it easy for Super Admin to inspect:
 
-## Important Direction
+* Stripe sync status
+* checkout session creation
+* webhook events received
+* webhook processing success/failure
+* subscription state
+* plan mapping
+* billing errors
 
-Do not make signup too heavy.
+## Why This Matters
 
-Do not ask for full company/billing details during initial signup.
+Stripe billing can silently fail if:
 
-Do not build Stripe yet.
+* webhook secret is wrong
+* webhook route is not reachable
+* Stripe price ID does not match a FormOS plan
+* Checkout succeeds but webhook does not update subscription
+* subscription status changes but FormOS does not sync
+* plan override logic breaks access
 
-Do not store credit card or payment method data.
+We need visibility before relying on billing.
 
-Do not build checkout.
-
-This milestone is only:
-
-* first name / last name support
-* business profile
-* billing profile metadata
-* account/profile settings page
-* Super Admin visibility of business profile
-
-## Signup Update
-
-Update signup form fields to:
-
-* First Name
-* Last Name
-* Email
-* Password
-
-Remove or replace old single name input if currently used.
-
-User display name can be generated as:
-
-firstName + " " + lastName
-
-If existing User model has `name`, keep it for compatibility and populate it from firstName/lastName.
-
-## Prisma Schema
-
-Add fields to User if not already present:
-
-* firstName String?
-* lastName String?
-* phone String?
-
-Keep existing email and name fields.
+## Prisma Model
 
 Add model:
 
-BusinessProfile {
-id              String   @id @default(cuid())
-userId          String   @unique
-companyName     String?
-taxId           String?
-taxIdLabel      String?  // ABN, GST, VAT, EIN, Tax ID, etc.
-phone           String?
-billingEmail    String?
-billingName     String?
-addressLine1    String?
-addressLine2    String?
-city            String?
-state           String?
-postcode        String?
-country         String?
-metadata        Json?
-createdAt       DateTime @default(now())
-updatedAt       DateTime @updatedAt
+```prisma
+model BillingEvent {
+  id             String   @id @default(cuid())
+  provider       String   @default("stripe")
+  eventId        String?  @unique
+  eventType      String
+  userId         String?
+  subscriptionId String?
+  customerId     String?
+  status         String   @default("RECEIVED")
+  message        String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  processedAt    DateTime?
 
-user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([provider])
+  @@index([eventType])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([customerId])
+  @@index([status])
 }
+```
 
 Create migration:
 
-npx prisma migrate dev --name add_user_business_profile
+```bash
+npx prisma migrate dev --name add_billing_events
+```
 
 Do not use prisma db push.
 
-## Profile Settings Page
+## Billing Event Logging
 
-Create or update route:
+Log safe billing events for:
 
-/dashboard/settings/profile
+* checkout session created
+* checkout.session.completed
+* customer.subscription.created
+* customer.subscription.updated
+* customer.subscription.deleted
+* invoice.payment_succeeded
+* invoice.payment_failed
+* webhook signature failed
+* webhook processing failed
+* plan sync to Stripe succeeded
+* plan sync to Stripe failed
+* customer portal session created
 
-Add navigation link:
+Do not log:
 
-Profile / Business Profile
+* Stripe secret key
+* webhook secret
+* payment method details
+* card details
+* full raw webhook payload if too large/sensitive
 
-Fields:
+Metadata should be safe and minimal.
 
-### Personal Details
+## Webhook Idempotency
 
-* First Name
-* Last Name
-* Email readonly or editable only if current system supports it safely
-* Phone
+Webhook processing should avoid duplicate processing.
 
-### Business Details
+If Stripe event ID already exists:
 
-* Company / Business Name
-* ABN / Tax ID
-* Tax ID Label
-* Business Phone
-* Billing Email
-* Billing Name
+* do not process again
+* log or mark as duplicate safely
+* return success to Stripe if already processed
 
-### Address
+Webhook route should still verify Stripe signature first.
 
-* Address Line 1
-* Address Line 2
-* City
-* State
-* Postcode
-* Country
+## Super Admin Billing Events Page
 
-Add Save Profile button.
+Create route:
 
-Use existing pending button UX.
+```text
+/admin/billing/events
+```
 
-Show success/error messages.
+Add Super Admin navigation link:
 
-## Dashboard Prompt
+```text
+Billing Events
+```
 
-If business profile is incomplete, show a gentle dashboard banner:
+Page should show:
 
-Complete your business profile to prepare your account for billing and invoices.
+* event type
+* status
+* related user if available
+* customer ID shortened
+* subscription ID shortened
+* message
+* created date
+* processed date
 
-Button:
+Add simple filters if easy:
 
-Complete Profile
+* status
+* event type
 
-Do not block app usage yet.
+No need for advanced search.
 
-## Super Admin User View
+## Super Admin User Billing Detail
 
-Update Super Admin users area or user detail if it exists.
+Update user detail or admin users table if practical.
 
-Super Admin should be able to view:
+Show:
 
-* first name
-* last name
-* phone
-* company name
-* ABN / tax ID
-* country
 * current plan
+* subscription status
+* billing provider
+* Stripe customer ID shortened
+* Stripe subscription ID shortened
+* current period end
+* custom quota badge
+* unlimited override badge
 
-Super Admin should not edit business profile in this milestone unless already simple.
+## Billing Health Panel
 
-## Billing Preparation
+Add to `/admin` or `/admin/billing/events`:
 
-Add safe placeholders only.
+```text
+Billing Health
+```
 
-Do not implement payment processor.
+Show checklist:
 
-Do not store card data.
+* Stripe secret key configured: Yes/No
+* Stripe webhook secret configured: Yes/No
+* Stripe webhook endpoint path: /api/stripe/webhook
+* Number of failed billing events
+* Number of recent successful webhook events
+* Number of plans synced to Stripe
 
-Do not store bank account data.
+Do not expose actual secret values.
 
-If needed, add metadata fields for future billing integration, but do not use them yet.
+## Checkout Safety
 
-## Validation
+When user starts checkout:
 
-Basic validation:
+* log billing event: checkout_session_created
+* include safe metadata:
+  * planId
+  * interval
+  * priceId
+  * userId
+  * customerId
 
-* email format if editable
-* phone can be free text
-* billing email should be valid email if provided
-* postcode optional
-* country optional
-* tax ID optional
+If checkout fails:
 
-Do not over-validate ABN/tax ID in this milestone.
+* log billing event: checkout_session_failed
+* show friendly error
 
-## Existing Users
+## Plan Sync Safety
 
-Existing users should not break.
+When Super Admin syncs plan to Stripe:
 
-For existing users:
+* log billing event: stripe_plan_sync_succeeded
+* or stripe_plan_sync_failed
 
-* firstName/lastName can be null
-* name can remain as fallback
-* BusinessProfile can be created on first save
-* no hard backfill required unless simple
+Show sync errors in admin UI.
 
-## Security
+## Webhook Processing Safety
 
-* Logged-in user can edit only their own profile.
-* Normal users cannot edit another user profile.
-* Super Admin can view profile summary.
-* Do not expose sensitive billing metadata publicly.
-* Do not store payment method data.
+For every webhook:
+
+1. Verify signature.
+2. Store event record.
+3. Process event.
+4. Mark status PROCESSED or FAILED.
+5. Save safe message.
+6. Do not throw raw errors to public.
+
+## Manual Override Safety
+
+Confirm final effective limits remain:
+
+```text
+Default Free Limits + Stripe/Assigned Plan Limits + User Quota Overrides
+```
+
+User quota override must win.
+
+Add a small display on billing page/admin user view showing:
+
+```text
+Effective access is using custom override
+```
+
+when override exists.
 
 ## Out of Scope
 
-Do not build Stripe.
-Do not build checkout.
+Do not build new billing provider.
+Do not build refunds.
+Do not build coupons.
+Do not build taxes.
 Do not build invoices.
-Do not build tax validation.
-Do not build team/company workspaces.
-Do not build user-level branding.
-Do not change Google Drive/Dropbox logic.
-Do not change PDF/email/audit logic.
+Do not build usage-based billing.
+Do not change checkout UI deeply.
+Do not change plan limit logic unless fixing bugs.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 20.1 is complete when:
+Milestone 23 is complete when:
 
-* Signup collects first name and last name.
-* User model supports firstName and lastName.
-* Existing name field still works as fallback if present.
-* BusinessProfile model exists.
+* BillingEvent model exists.
 * Prisma migration exists.
-* /dashboard/settings/profile exists.
-* Logged-in user can save personal details.
-* Logged-in user can save business/billing profile.
-* Dashboard shows profile completion prompt if business profile is incomplete.
-* Super Admin can view user business profile summary.
-* Existing users are not broken.
-* Existing signup/login still works.
-* Existing email verification/password reset still works.
-* No payment/card data is stored.
+* Stripe webhook events are logged safely.
+* Duplicate Stripe webhook events are handled idempotently.
+* Checkout session creation is logged.
+* Customer portal session creation is logged.
+* Stripe plan sync success/failure is logged.
+* Webhook failures are visible to Super Admin.
+* /admin/billing/events exists.
+* Super Admin can view billing events.
+* Billing Health panel exists.
+* Stripe secrets are never exposed.
+* Card/payment method data is never stored.
+* Existing checkout still works.
+* Existing customer portal still works.
+* Existing webhooks still update subscriptions.
+* User quota overrides still win.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev --name add_billing_events creates migration.
 * npm run build passes.

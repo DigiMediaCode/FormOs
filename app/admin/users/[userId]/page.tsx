@@ -75,6 +75,39 @@ function allowedFieldTypesMode(value: unknown) {
   return value === null ? "all" : "custom";
 }
 
+function formatAuthMethods(user: {
+  passwordHash: string | null;
+  oauthAccounts: Array<{ provider: string }>;
+}) {
+  const methods = new Set<string>();
+
+  if (user.passwordHash) {
+    methods.add("Password");
+  }
+
+  user.oauthAccounts.forEach((account) => {
+    if (account.provider === "google") {
+      methods.add("Google");
+    } else if (account.provider === "lark") {
+      methods.add("Lark");
+    }
+  });
+
+  return Array.from(methods).join(" + ") || "Not set";
+}
+
+function maskStripeId(value: string | null | undefined) {
+  if (!value) {
+    return "Not set";
+  }
+
+  if (value.length <= 12) {
+    return value;
+  }
+
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
 export default async function AdminUserDetailPage({
   params,
   searchParams,
@@ -92,7 +125,13 @@ export default async function AdminUserDetailPage({
         lastName: true,
         phone: true,
         email: true,
+        passwordHash: true,
         role: true,
+        oauthAccounts: {
+          select: {
+            provider: true,
+          },
+        },
         businessProfile: {
           select: {
             companyName: true,
@@ -107,6 +146,11 @@ export default async function AdminUserDetailPage({
         subscription: {
           select: {
             planId: true,
+            status: true,
+            billingProvider: true,
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            currentPeriodEnd: true,
           },
         },
       },
@@ -236,6 +280,46 @@ export default async function AdminUserDetailPage({
               </p>
             </div>
             <div>
+              <p className="text-sm text-slate-500">Auth methods</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {formatAuthMethods(user)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Subscription status</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.subscription?.status || "FREE"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Billing provider</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.subscription?.billingProvider || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Stripe customer</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {maskStripeId(user.subscription?.stripeCustomerId)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Stripe subscription</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {maskStripeId(user.subscription?.stripeSubscriptionId)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Current period end</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.subscription?.currentPeriodEnd
+                  ? new Intl.DateTimeFormat("en", {
+                      dateStyle: "medium",
+                    }).format(user.subscription.currentPeriodEnd)
+                  : "Not set"}
+              </p>
+            </div>
+            <div>
               <p className="text-sm text-slate-500">Company</p>
               <p className="mt-1 text-sm font-medium text-slate-950">
                 {user.businessProfile?.companyName || "Not set"}
@@ -266,6 +350,11 @@ export default async function AdminUserDetailPage({
               Business phone: {user.businessProfile?.phone || "Not set"}
             </p>
           </div>
+          {override ? (
+            <p className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              Effective access is using custom override.
+            </p>
+          ) : null}
         </section>
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
