@@ -4,10 +4,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { createAuthToken } from "@/lib/auth/tokens";
 import {
   sendLoginNotification,
   sendSignupNotification,
 } from "@/lib/notifications/auth-notifications";
+import { sendEmailVerificationEmail } from "@/lib/notifications/auth-token-notifications";
+import { AuthTokenType } from "@prisma/client";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -47,12 +50,23 @@ export async function signupAction(formData: FormData) {
         passwordHash: await hashPassword(password),
       },
       select: {
+        id: true,
         name: true,
         email: true,
       },
     });
 
     await sendSignupNotification(user);
+    const verificationToken = await createAuthToken({
+      email: user.email,
+      type: AuthTokenType.EMAIL_VERIFICATION,
+      userId: user.id,
+    });
+    await sendEmailVerificationEmail({
+      email: user.email,
+      name: user.name,
+      rawToken: verificationToken.rawToken,
+    });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       errorRedirect("/signup", "An account already exists for that email.");
@@ -61,7 +75,7 @@ export async function signupAction(formData: FormData) {
     errorRedirect("/signup", "Unable to create your account right now.");
   }
 
-  redirect("/login?success=Account created. Please log in.");
+  redirect("/login?success=Account created. Please check your email to verify your account.");
 }
 
 export async function loginAction(formData: FormData) {

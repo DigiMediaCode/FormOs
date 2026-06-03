@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 19.2: Delete / Deactivate Subscription Plans
+# CURRENT TASK — FormOS Milestone 20: Auth Hardening — Email Verification + Password Reset
 
 ## Project Context
 
@@ -6,136 +6,373 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Dynamic subscription plans exist.
-* Super Admin can create/edit plans.
-* Plan limits and allowed field types work.
-* User quota overrides work.
-* Super Admin can assign plans to users.
+* FormOS MVP foundation is live and working.
+* Auth/signup/login works.
+* Lark email notifications work.
+* Forms CRUD works.
+* Builder works.
+* Public forms work.
+* QR code feature is live.
+* Google Drive and Dropbox uploads work.
+* Office Use Only fields work.
+* Finalize Submission works.
+* Completed PDF generation and email delivery work.
+* Activity timeline / light audit works.
+* Vehicle Hire Agreement template works.
+* Super Admin foundation exists.
+* Dynamic plans and quotas exist.
+* Plan field controls exist.
 * Do not touch CommerceOS.
-
-## Problem
-
-Super Admin currently has no option to delete a subscription plan.
-
-This makes plan management incomplete.
 
 ## Goal
 
-Add safe plan delete/deactivate controls for Super Admin.
+Improve authentication security and usability by adding:
 
-## Important Rule
+1. Email verification after signup
+2. Resend verification email
+3. Forgot password flow
+4. Reset password flow
 
-Do not blindly delete plans that are assigned to users.
+Use existing Lark email provider for sending emails.
 
-If a plan has active or historical user subscriptions, hard delete should be blocked.
+## Important Direction
 
-Super Admin should be able to deactivate the plan instead.
+Do not remove the existing password login system.
 
-## Required Behaviour
+Do not build Lark SSO yet.
 
-On `/admin/plans`, each plan should have:
+Do not build email OTP login yet.
 
-* Edit
-* Deactivate / Activate
-* Delete
+Do not break existing users.
 
-## Delete Rules
+This milestone is only:
 
-### If plan has no UserSubscription records
+* verify email
+* forgot password
+* reset password
+* auth-related UI and tokens
 
-Allow hard delete.
+## Existing Users Safety
 
-Show confirmation before delete:
+Do not lock existing users out unexpectedly.
 
-"Are you sure you want to delete this plan? This cannot be undone."
+Recommended behaviour:
 
-After delete, show success message.
+* New users should receive verification email after signup.
+* Existing users should still be able to log in.
+* If emailVerifiedAt is missing for existing users, show a dashboard/banner prompting verification instead of blocking everything.
+* Super Admin should not be blocked by missing verification.
 
-### If plan has UserSubscription records
+If enforcing email verification globally is too risky, keep enforcement soft for this milestone.
 
-Block hard delete.
+## Prisma Schema Changes
 
-Show friendly error:
+Add to User model:
 
-"This plan is assigned to users and cannot be deleted. Deactivate it instead."
+emailVerifiedAt DateTime?
 
-Do not delete related subscriptions.
+Add token model:
 
-## Deactivate / Activate Rules
+AuthToken {
+id        String   @id @default(cuid())
+userId    String?
+email     String
+type      AuthTokenType
+tokenHash String
+expiresAt DateTime
+usedAt    DateTime?
+createdAt DateTime @default(now())
 
-Super Admin can toggle `isActive`.
+user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-If deactivated:
+@@index([email])
+@@index([tokenHash])
+@@index([type])
+}
 
-* plan remains in database
-* existing assigned users can keep the plan
-* plan should not be shown as assignable to new users unless specifically allowed by current UI
-* show badge: Inactive
+Enum:
 
-If activated:
+AuthTokenType {
+EMAIL_VERIFICATION
+PASSWORD_RESET
+}
 
-* plan becomes available again
+Create Prisma migration:
 
-## UI Requirements
+npx prisma migrate dev --name add_auth_tokens_and_email_verification
 
-On `/admin/plans`:
+Do not use prisma db push.
 
-* show plan status badge:
+## Token Rules
 
-  * Active
-  * Inactive
-* add Deactivate / Activate button
-* add Delete button
-* disable or visually warn delete if users are assigned if count is available
-* show assigned users count if practical
+Raw tokens must never be stored in the database.
 
-## Server Action Requirements
+Use secure random token generation.
 
-Create or update server actions:
+Store only a hashed token.
 
-* deleteSubscriptionPlan(planId)
-* toggleSubscriptionPlanStatus(planId)
+Recommended:
 
-Security:
+* generate random token using crypto
+* hash token using sha256 or secure hash helper
+* store hash in database
+* send raw token to user in URL
 
-* require SUPER_ADMIN
-* normal users cannot delete/deactivate plans
-* validate plan exists
-* do not delete if subscriptions exist
+Token expiry:
 
-## Safety
+* email verification token: 24 hours
+* password reset token: 1 hour
 
-Do not delete default plans automatically.
+Tokens should be one-time use.
 
-Do not seed duplicate default plans.
+When used:
 
-Do not break existing user subscriptions.
+* set usedAt
+* do not allow reuse
 
-Do not change billing/payment logic.
+## Email Verification Flow
+
+### Signup
+
+After successful signup:
+
+1. Create user.
+2. Create verification token.
+3. Send verification email through Lark.
+4. Continue normal signup flow.
+
+If verification email fails:
+
+* signup should still succeed
+* log safe error
+* show message encouraging user to request resend
+
+### Verification Email
+
+Subject:
+
+Verify your FormOS email address
+
+Body should include:
+
+* greeting
+* verify button/link
+* expiry note: link expires in 24 hours
+* if user did not create account, ignore this email
+
+Verification link:
+
+{APP_URL}/verify-email?token={rawToken}
+
+Do not expose token hash.
+
+### Verify Email Page
+
+Create route:
+
+/verify-email
+
+Behaviour:
+
+* read token from query
+* validate token
+* mark user emailVerifiedAt = now
+* mark token usedAt = now
+* show success message
+* link to dashboard/login
+
+If invalid/expired/used token:
+
+* show friendly error
+* show link to resend verification if possible
+
+### Resend Verification
+
+Create UI/action:
+
+* on dashboard banner if user email is not verified
+* or on /verify-email page
+* optional on login page if practical
+
+Action:
+
+* require user email
+* create new verification token
+* send verification email
+* friendly success message
+
+Do not spam. If easy, rate limit by checking recent tokens within last few minutes.
+
+## Dashboard Verification Banner
+
+If logged-in user emailVerifiedAt is null:
+
+Show banner on /dashboard:
+
+Please verify your email address.
+
+Button:
+
+Resend verification email
+
+Do not block all functionality in this milestone unless implementation is already safe.
+
+## Forgot Password Flow
+
+Create route:
+
+/forgot-password
+
+Fields:
+
+* email
+
+Button:
+
+Send reset link
+
+Behaviour:
+
+* user enters email
+* always show generic success:
+  If an account exists for this email, a password reset link has been sent.
+* do not reveal whether email exists
+* if user exists:
+
+  * create password reset token
+  * send password reset email through Lark
+* if email does not exist:
+
+  * do nothing but show same success message
+
+## Password Reset Email
+
+Subject:
+
+Reset your FormOS password
+
+Body should include:
+
+* reset button/link
+* expiry note: link expires in 1 hour
+* if user did not request this, ignore this email
+
+Reset link:
+
+{APP_URL}/reset-password?token={rawToken}
+
+## Reset Password Flow
+
+Create route:
+
+/reset-password
+
+Behaviour:
+
+* read token from query
+* validate token
+* show new password form if valid
+* user enters new password
+* hash password using existing password helper
+* update user password
+* mark token usedAt = now
+* optionally invalidate other password reset tokens for same email
+* redirect/show success with login link
+
+Password rules:
+
+* minimum 8 characters
+* friendly error if too short
+
+If token invalid/expired/used:
+
+* show friendly error
+* link to /forgot-password
+
+## Login Page Update
+
+Add link:
+
+Forgot password?
+
+Link to:
+
+/forgot-password
+
+Do not break login.
+
+## Signup Page Update
+
+After signup, optionally show message:
+
+Account created. Please check your email to verify your account.
+
+Do not break current signup redirect/session logic unless necessary.
+
+## Email Provider
+
+Use existing Lark email abstraction.
+
+Add notification helpers:
+
+* sendEmailVerificationEmail
+* sendPasswordResetEmail
+
+Do not log:
+
+* raw tokens
+* token hashes
+* passwords
+* Lark secrets
+* access tokens
+
+## Security Requirements
+
+* Raw tokens never stored in database.
+* Password reset does not reveal whether email exists.
+* Tokens expire.
+* Tokens are one-time use.
+* Passwords are hashed using existing password hashing helper.
+* Do not log passwords.
+* Do not log raw tokens.
+* Do not expose secrets.
+* Do not break existing sessions.
+* Do not lock existing users out unexpectedly.
 
 ## Out of Scope
 
-Do not build Stripe.
-Do not build checkout.
-Do not build invoices.
-Do not build plan archive history.
-Do not build bulk reassignment.
+Do not build Lark SSO.
+Do not build email OTP login.
+Do not build MFA.
+Do not build phone verification.
+Do not build team invites.
+Do not build billing.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-This task is complete when:
+Milestone 20 is complete when:
 
-* Super Admin can delete a plan with zero user subscriptions.
-* Super Admin cannot delete a plan assigned to users.
-* Super Admin sees friendly error when delete is blocked.
-* Super Admin can deactivate a plan.
-* Super Admin can reactivate a plan.
-* Inactive plans show an Inactive badge.
-* Assigned users are not broken when a plan is deactivated.
-* Normal users cannot access delete/deactivate actions.
-* Existing plan creation/editing still works.
-* Existing user plan assignment still works.
+* User.emailVerifiedAt exists.
+* AuthToken model exists.
+* Prisma migration exists.
+* Signup creates and sends verification email.
+* /verify-email validates token and marks email verified.
+* Resend verification email works.
+* Dashboard shows verification banner when email is unverified.
+* /forgot-password exists.
+* Forgot password sends reset email without revealing whether email exists.
+* /reset-password exists.
+* Valid reset token allows password change.
+* Used/expired/invalid reset token is rejected.
+* Password reset tokens are one-time use.
+* Login page has Forgot password link.
+* Existing login still works.
+* Existing signup still works.
+* Existing Lark email notifications still work.
+* Existing dashboard/forms/submissions still work.
+* Existing plans/quotas still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev --name add_auth_tokens_and_email_verification creates migration.
 * npm run build passes.
