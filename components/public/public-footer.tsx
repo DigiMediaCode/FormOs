@@ -19,7 +19,7 @@ export async function PublicFooter() {
             deliver finished PDFs automatically.
           </p>
           <p className="mt-3 text-sm text-slate-600">
-            FormOS is a project of DigiMedia Code LLC.
+            Project by DigiMedia Code LLC
           </p>
         </div>
         <div>

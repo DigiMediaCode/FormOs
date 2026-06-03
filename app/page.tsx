@@ -1,7 +1,17 @@
 import Link from "next/link";
+import { PackageCarousel } from "@/components/public/package-carousel";
+import { PublicFooter } from "@/components/public/public-footer";
 import { PlatformBrand } from "@/components/ui/platform-brand";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  DEFAULT_PLAN_DEFINITIONS,
+  featureLabels,
+  limitLabel,
+  normalizePlanLimits,
+} from "@/lib/plans/limits";
+import { getAppUrl } from "@/lib/app-url";
 import { getPlatformSettings } from "@/lib/platform/settings";
+import { prisma } from "@/lib/prisma";
 
 const features = [
   {
@@ -54,14 +64,162 @@ const steps = [
   "Complete office fields and send PDF",
 ];
 
+type LandingPlan = {
+  id: string;
+  name: string;
+  description: string | null;
+  priceMonthly: unknown;
+  priceYearly: unknown;
+  currency: string;
+  slug: string;
+  limits: unknown;
+};
+
+function formatMoney(value: unknown, currency: string) {
+  if (value === null || value === undefined) {
+    return "Contact us";
+  }
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "Contact us";
+  }
+
+  if (amount === 0) {
+    return "Free";
+  }
+
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount);
+}
+
+function PlanCheck() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.5"
+      viewBox="0 0 24 24"
+    >
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function safeAppUrl() {
+  try {
+    return getAppUrl();
+  } catch {
+    return "https://formos.com.au";
+  }
+}
+
+function defaultLandingPlans(): LandingPlan[] {
+  return DEFAULT_PLAN_DEFINITIONS.filter((plan) => plan.isActive && plan.isPublic).map(
+    (plan) => ({
+      id: plan.slug,
+      name: plan.name,
+      description: plan.description,
+      priceMonthly: plan.priceMonthly,
+      priceYearly: plan.priceYearly,
+      currency: plan.currency,
+      slug: plan.slug,
+      limits: plan.limits,
+    }),
+  );
+}
+
+async function getLandingPlans() {
+  const subscriptionPlanDelegate = (
+    prisma as unknown as {
+      subscriptionPlan?: {
+        findMany: (args: unknown) => Promise<LandingPlan[]>;
+      };
+    }
+  ).subscriptionPlan;
+
+  if (!subscriptionPlanDelegate?.findMany) {
+    return defaultLandingPlans();
+  }
+
+  try {
+    const plans = await subscriptionPlanDelegate.findMany({
+      where: {
+        isActive: true,
+        isPublic: true,
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        priceMonthly: true,
+        priceYearly: true,
+        currency: true,
+        slug: true,
+        limits: true,
+      },
+    });
+
+    return plans.length > 0 ? plans : defaultLandingPlans();
+  } catch (error) {
+    console.warn("[formos:landing] Could not load subscription plans.", {
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return defaultLandingPlans();
+  }
+}
+
 export default async function HomePage() {
-  const [user, settings] = await Promise.all([
+  const [user, settings, plans] = await Promise.all([
     getCurrentUser(),
     getPlatformSettings(),
+    getLandingPlans(),
   ]);
+  const packageHref = user ? "/dashboard/settings/billing" : "/signup";
+  const appUrl = safeAppUrl();
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: settings.siteName,
+        url: appUrl,
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: settings.siteName,
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "Web",
+        url: appUrl,
+        description:
+          "FormOS is an online form builder for forms, agreements, signatures, file uploads, office-use workflows, completed PDFs, and submission automation.",
+        offers: plans.map((plan) => ({
+          "@type": "Offer",
+          name: plan.name,
+          price: Number(plan.priceMonthly) || 0,
+          priceCurrency: plan.currency,
+          url: `${appUrl}/pricing`,
+        })),
+      },
+    ],
+  };
 
   return (
     <main className="min-h-screen bg-white text-[#071124]">
+      <script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        type="application/ld+json"
+      />
       <header className="sticky top-0 z-20 border-b border-blue-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <PlatformBrand
@@ -78,6 +236,9 @@ export default async function HomePage() {
             </a>
             <a className="hover:text-blue-600" href="#how-it-works">
               How It Works
+            </a>
+            <a className="hover:text-blue-600" href="#packages">
+              Packages
             </a>
           </nav>
           <div className="flex items-center gap-2">
@@ -245,6 +406,107 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {plans.length > 0 ? (
+        <section className="mx-auto max-w-7xl px-6 py-20" id="packages">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+              Packages
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
+              Choose the plan that fits your workflow.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Packages are managed dynamically from FormOS plans, so your public
+              pricing reflects the active plans configured by Super Admin.
+            </p>
+          </div>
+          <PackageCarousel>
+            {plans.map((plan) => {
+              const limits = normalizePlanLimits(plan.limits);
+              const includedFeatures = featureLabels(limits)
+                .filter((feature) => feature.allowed)
+                .slice(0, 4);
+              const isHighlighted = plan.slug === "pro";
+
+              return (
+                <article
+                  className={`flex min-w-[min(82vw,22rem)] snap-start flex-col rounded-2xl border bg-white p-6 shadow-sm shadow-blue-950/5 lg:min-w-[22rem] ${
+                    isHighlighted
+                      ? "border-blue-300 ring-4 ring-blue-100"
+                      : "border-blue-100"
+                  }`}
+                  data-package-card
+                  key={plan.id}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-[#071124]">
+                        {plan.name}
+                      </h3>
+                      <p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">
+                        {plan.description ?? "Flexible FormOS package."}
+                      </p>
+                    </div>
+                    {isHighlighted ? (
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                        Popular
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-6">
+                    <p className="text-4xl font-semibold tracking-tight text-[#071124]">
+                      {formatMoney(plan.priceMonthly, plan.currency)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Monthly package
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-slate-700">
+                      Yearly: {formatMoney(plan.priceYearly, plan.currency)}
+                    </p>
+                  </div>
+                  <ul className="mt-6 grid gap-3 text-sm text-slate-700">
+                    <li className="flex gap-2">
+                      <PlanCheck />
+                      <span>{limitLabel(limits.maxForms)} forms</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <PlanCheck />
+                      <span>
+                        {limitLabel(limits.maxMonthlySubmissions)} submissions / month
+                      </span>
+                    </li>
+                    {includedFeatures.map((feature) => (
+                      <li className="flex gap-2" key={feature.label}>
+                        <PlanCheck />
+                        <span>{feature.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    className={`mt-6 inline-flex w-full justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition ${
+                      isHighlighted
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "border border-blue-100 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50"
+                    }`}
+                    href={packageHref}
+                  >
+                    {user ? "Manage Package" : "Get Started"}
+                  </Link>
+                </article>
+              );
+            })}
+          </PackageCarousel>
+          <div className="mt-6 text-center">
+            <Link
+              className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+              href="/pricing"
+            >
+              View full pricing details
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className="px-6 pb-20">
         <div className="mx-auto max-w-5xl rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-violet-700 px-6 py-14 text-center shadow-xl shadow-blue-950/20">
           <h2 className="text-3xl font-semibold tracking-tight text-white">
@@ -263,32 +525,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 px-6 py-10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <PlatformBrand
-              href="/"
-              imageClassName="h-auto max-w-[110px] object-contain"
-            textClassName="text-lg font-semibold text-[#071124]"
-            />
-            <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
-              Create online forms, agreements, signatures, file uploads, and
-              completed PDFs with {settings.siteName}.
-            </p>
-            <p className="mt-3 text-xs text-slate-500">
-              &copy; {new Date().getFullYear()} {settings.siteName}. All rights reserved.
-            </p>
-          </div>
-          <div className="flex gap-4 text-sm font-medium text-slate-700">
-            <Link className="hover:text-blue-600" href="/login">
-              Login
-            </Link>
-            <Link className="hover:text-blue-600" href="/signup">
-              Signup
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </main>
   );
 }
