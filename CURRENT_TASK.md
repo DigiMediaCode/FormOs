@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 20: Auth Hardening — Email Verification + Password Reset
+# CURRENT TASK — FormOS Milestone 20.1: User Profile + Business/Billing Profile Foundation
 
 ## Project Context
 
@@ -6,373 +6,242 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS MVP foundation is live and working.
 * Auth/signup/login works.
-* Lark email notifications work.
-* Forms CRUD works.
-* Builder works.
-* Public forms work.
-* QR code feature is live.
-* Google Drive and Dropbox uploads work.
-* Office Use Only fields work.
-* Finalize Submission works.
-* Completed PDF generation and email delivery work.
-* Activity timeline / light audit works.
-* Vehicle Hire Agreement template works.
-* Super Admin foundation exists.
-* Dynamic plans and quotas exist.
-* Plan field controls exist.
+* Email verification and password reset are being added or completed.
+* Dynamic plans and quota controls exist.
+* Super Admin exists.
+* FormOS is live on Hostinger.
+* Supabase is connected.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Improve authentication security and usability by adding:
+Improve user account data structure by separating personal user information from business/billing profile information.
 
-1. Email verification after signup
-2. Resend verification email
-3. Forgot password flow
-4. Reset password flow
-
-Use existing Lark email provider for sending emails.
+Signup should stay simple, but FormOS should collect enough business information for future subscriptions, invoices, and customer management.
 
 ## Important Direction
 
-Do not remove the existing password login system.
+Do not make signup too heavy.
 
-Do not build Lark SSO yet.
+Do not ask for full company/billing details during initial signup.
 
-Do not build email OTP login yet.
+Do not build Stripe yet.
 
-Do not break existing users.
+Do not store credit card or payment method data.
+
+Do not build checkout.
 
 This milestone is only:
 
-* verify email
-* forgot password
-* reset password
-* auth-related UI and tokens
+* first name / last name support
+* business profile
+* billing profile metadata
+* account/profile settings page
+* Super Admin visibility of business profile
 
-## Existing Users Safety
+## Signup Update
 
-Do not lock existing users out unexpectedly.
+Update signup form fields to:
 
-Recommended behaviour:
+* First Name
+* Last Name
+* Email
+* Password
 
-* New users should receive verification email after signup.
-* Existing users should still be able to log in.
-* If emailVerifiedAt is missing for existing users, show a dashboard/banner prompting verification instead of blocking everything.
-* Super Admin should not be blocked by missing verification.
+Remove or replace old single name input if currently used.
 
-If enforcing email verification globally is too risky, keep enforcement soft for this milestone.
+User display name can be generated as:
 
-## Prisma Schema Changes
+firstName + " " + lastName
 
-Add to User model:
+If existing User model has `name`, keep it for compatibility and populate it from firstName/lastName.
 
-emailVerifiedAt DateTime?
+## Prisma Schema
 
-Add token model:
+Add fields to User if not already present:
 
-AuthToken {
-id        String   @id @default(cuid())
-userId    String?
-email     String
-type      AuthTokenType
-tokenHash String
-expiresAt DateTime
-usedAt    DateTime?
-createdAt DateTime @default(now())
+* firstName String?
+* lastName String?
+* phone String?
 
-user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+Keep existing email and name fields.
 
-@@index([email])
-@@index([tokenHash])
-@@index([type])
+Add model:
+
+BusinessProfile {
+id              String   @id @default(cuid())
+userId          String   @unique
+companyName     String?
+taxId           String?
+taxIdLabel      String?  // ABN, GST, VAT, EIN, Tax ID, etc.
+phone           String?
+billingEmail    String?
+billingName     String?
+addressLine1    String?
+addressLine2    String?
+city            String?
+state           String?
+postcode        String?
+country         String?
+metadata        Json?
+createdAt       DateTime @default(now())
+updatedAt       DateTime @updatedAt
+
+user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-Enum:
+Create migration:
 
-AuthTokenType {
-EMAIL_VERIFICATION
-PASSWORD_RESET
-}
-
-Create Prisma migration:
-
-npx prisma migrate dev --name add_auth_tokens_and_email_verification
+npx prisma migrate dev --name add_user_business_profile
 
 Do not use prisma db push.
 
-## Token Rules
+## Profile Settings Page
 
-Raw tokens must never be stored in the database.
+Create or update route:
 
-Use secure random token generation.
+/dashboard/settings/profile
 
-Store only a hashed token.
+Add navigation link:
 
-Recommended:
-
-* generate random token using crypto
-* hash token using sha256 or secure hash helper
-* store hash in database
-* send raw token to user in URL
-
-Token expiry:
-
-* email verification token: 24 hours
-* password reset token: 1 hour
-
-Tokens should be one-time use.
-
-When used:
-
-* set usedAt
-* do not allow reuse
-
-## Email Verification Flow
-
-### Signup
-
-After successful signup:
-
-1. Create user.
-2. Create verification token.
-3. Send verification email through Lark.
-4. Continue normal signup flow.
-
-If verification email fails:
-
-* signup should still succeed
-* log safe error
-* show message encouraging user to request resend
-
-### Verification Email
-
-Subject:
-
-Verify your FormOS email address
-
-Body should include:
-
-* greeting
-* verify button/link
-* expiry note: link expires in 24 hours
-* if user did not create account, ignore this email
-
-Verification link:
-
-{APP_URL}/verify-email?token={rawToken}
-
-Do not expose token hash.
-
-### Verify Email Page
-
-Create route:
-
-/verify-email
-
-Behaviour:
-
-* read token from query
-* validate token
-* mark user emailVerifiedAt = now
-* mark token usedAt = now
-* show success message
-* link to dashboard/login
-
-If invalid/expired/used token:
-
-* show friendly error
-* show link to resend verification if possible
-
-### Resend Verification
-
-Create UI/action:
-
-* on dashboard banner if user email is not verified
-* or on /verify-email page
-* optional on login page if practical
-
-Action:
-
-* require user email
-* create new verification token
-* send verification email
-* friendly success message
-
-Do not spam. If easy, rate limit by checking recent tokens within last few minutes.
-
-## Dashboard Verification Banner
-
-If logged-in user emailVerifiedAt is null:
-
-Show banner on /dashboard:
-
-Please verify your email address.
-
-Button:
-
-Resend verification email
-
-Do not block all functionality in this milestone unless implementation is already safe.
-
-## Forgot Password Flow
-
-Create route:
-
-/forgot-password
+Profile / Business Profile
 
 Fields:
 
-* email
+### Personal Details
+
+* First Name
+* Last Name
+* Email readonly or editable only if current system supports it safely
+* Phone
+
+### Business Details
+
+* Company / Business Name
+* ABN / Tax ID
+* Tax ID Label
+* Business Phone
+* Billing Email
+* Billing Name
+
+### Address
+
+* Address Line 1
+* Address Line 2
+* City
+* State
+* Postcode
+* Country
+
+Add Save Profile button.
+
+Use existing pending button UX.
+
+Show success/error messages.
+
+## Dashboard Prompt
+
+If business profile is incomplete, show a gentle dashboard banner:
+
+Complete your business profile to prepare your account for billing and invoices.
 
 Button:
 
-Send reset link
+Complete Profile
 
-Behaviour:
+Do not block app usage yet.
 
-* user enters email
-* always show generic success:
-  If an account exists for this email, a password reset link has been sent.
-* do not reveal whether email exists
-* if user exists:
+## Super Admin User View
 
-  * create password reset token
-  * send password reset email through Lark
-* if email does not exist:
+Update Super Admin users area or user detail if it exists.
 
-  * do nothing but show same success message
+Super Admin should be able to view:
 
-## Password Reset Email
+* first name
+* last name
+* phone
+* company name
+* ABN / tax ID
+* country
+* current plan
 
-Subject:
+Super Admin should not edit business profile in this milestone unless already simple.
 
-Reset your FormOS password
+## Billing Preparation
 
-Body should include:
+Add safe placeholders only.
 
-* reset button/link
-* expiry note: link expires in 1 hour
-* if user did not request this, ignore this email
+Do not implement payment processor.
 
-Reset link:
+Do not store card data.
 
-{APP_URL}/reset-password?token={rawToken}
+Do not store bank account data.
 
-## Reset Password Flow
+If needed, add metadata fields for future billing integration, but do not use them yet.
 
-Create route:
+## Validation
 
-/reset-password
+Basic validation:
 
-Behaviour:
+* email format if editable
+* phone can be free text
+* billing email should be valid email if provided
+* postcode optional
+* country optional
+* tax ID optional
 
-* read token from query
-* validate token
-* show new password form if valid
-* user enters new password
-* hash password using existing password helper
-* update user password
-* mark token usedAt = now
-* optionally invalidate other password reset tokens for same email
-* redirect/show success with login link
+Do not over-validate ABN/tax ID in this milestone.
 
-Password rules:
+## Existing Users
 
-* minimum 8 characters
-* friendly error if too short
+Existing users should not break.
 
-If token invalid/expired/used:
+For existing users:
 
-* show friendly error
-* link to /forgot-password
+* firstName/lastName can be null
+* name can remain as fallback
+* BusinessProfile can be created on first save
+* no hard backfill required unless simple
 
-## Login Page Update
+## Security
 
-Add link:
-
-Forgot password?
-
-Link to:
-
-/forgot-password
-
-Do not break login.
-
-## Signup Page Update
-
-After signup, optionally show message:
-
-Account created. Please check your email to verify your account.
-
-Do not break current signup redirect/session logic unless necessary.
-
-## Email Provider
-
-Use existing Lark email abstraction.
-
-Add notification helpers:
-
-* sendEmailVerificationEmail
-* sendPasswordResetEmail
-
-Do not log:
-
-* raw tokens
-* token hashes
-* passwords
-* Lark secrets
-* access tokens
-
-## Security Requirements
-
-* Raw tokens never stored in database.
-* Password reset does not reveal whether email exists.
-* Tokens expire.
-* Tokens are one-time use.
-* Passwords are hashed using existing password hashing helper.
-* Do not log passwords.
-* Do not log raw tokens.
-* Do not expose secrets.
-* Do not break existing sessions.
-* Do not lock existing users out unexpectedly.
+* Logged-in user can edit only their own profile.
+* Normal users cannot edit another user profile.
+* Super Admin can view profile summary.
+* Do not expose sensitive billing metadata publicly.
+* Do not store payment method data.
 
 ## Out of Scope
 
-Do not build Lark SSO.
-Do not build email OTP login.
-Do not build MFA.
-Do not build phone verification.
-Do not build team invites.
-Do not build billing.
+Do not build Stripe.
+Do not build checkout.
+Do not build invoices.
+Do not build tax validation.
+Do not build team/company workspaces.
+Do not build user-level branding.
+Do not change Google Drive/Dropbox logic.
+Do not change PDF/email/audit logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 20 is complete when:
+Milestone 20.1 is complete when:
 
-* User.emailVerifiedAt exists.
-* AuthToken model exists.
+* Signup collects first name and last name.
+* User model supports firstName and lastName.
+* Existing name field still works as fallback if present.
+* BusinessProfile model exists.
 * Prisma migration exists.
-* Signup creates and sends verification email.
-* /verify-email validates token and marks email verified.
-* Resend verification email works.
-* Dashboard shows verification banner when email is unverified.
-* /forgot-password exists.
-* Forgot password sends reset email without revealing whether email exists.
-* /reset-password exists.
-* Valid reset token allows password change.
-* Used/expired/invalid reset token is rejected.
-* Password reset tokens are one-time use.
-* Login page has Forgot password link.
-* Existing login still works.
-* Existing signup still works.
-* Existing Lark email notifications still work.
-* Existing dashboard/forms/submissions still work.
-* Existing plans/quotas still work.
+* /dashboard/settings/profile exists.
+* Logged-in user can save personal details.
+* Logged-in user can save business/billing profile.
+* Dashboard shows profile completion prompt if business profile is incomplete.
+* Super Admin can view user business profile summary.
+* Existing users are not broken.
+* Existing signup/login still works.
+* Existing email verification/password reset still works.
+* No payment/card data is stored.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev --name add_auth_tokens_and_email_verification creates migration.
 * npm run build passes.

@@ -88,8 +88,22 @@ export default async function AdminUserDetailPage({
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
         email: true,
         role: true,
+        businessProfile: {
+          select: {
+            companyName: true,
+            taxId: true,
+            taxIdLabel: true,
+            phone: true,
+            billingEmail: true,
+            billingName: true,
+            country: true,
+          },
+        },
         subscription: {
           select: {
             planId: true,
@@ -194,6 +208,62 @@ export default async function AdminUserDetailPage({
             </p>
             <p className="mt-1 text-sm leading-6 text-slate-700">
               {allowedFieldTypeLabels(access.limits)}
+            </p>
+          </div>
+        </section>
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <h3 className="text-xl font-semibold text-slate-950">
+            Profile Summary
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <p className="text-sm text-slate-500">First name</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.firstName || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Last name</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.lastName || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Phone</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.phone || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Company</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.businessProfile?.companyName || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">
+                {user.businessProfile?.taxIdLabel || "Tax ID / ABN"}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.businessProfile?.taxId || "Not set"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Country</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.businessProfile?.country || "Not set"}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-950">
+              Billing profile
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              Billing name: {user.businessProfile?.billingName || "Not set"} ·
+              Billing email: {user.businessProfile?.billingEmail || "Not set"} ·
+              Business phone: {user.businessProfile?.phone || "Not set"}
             </p>
           </div>
         </section>

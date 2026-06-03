@@ -16,6 +16,9 @@ export const getCurrentUser = cache(async () => {
     select: {
       id: true,
       name: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
       email: true,
       emailVerifiedAt: true,
       role: true,

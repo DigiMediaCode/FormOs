@@ -19,6 +19,11 @@ const NAV_ITEMS = [
     label: "Settings / Integrations",
     section: "settings",
   },
+  {
+    href: "/dashboard/settings/profile",
+    label: "Profile / Business Profile",
+    section: "settings",
+  },
 ];
 
 function activeSection(pathname: string) {

@@ -21,6 +21,8 @@ export default async function AdminUsersPage() {
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
                 <th className="px-4 py-3 font-medium">Role</th>
+                <th className="px-4 py-3 font-medium">Company</th>
+                <th className="px-4 py-3 font-medium">Country</th>
                 <th className="px-4 py-3 font-medium">Created</th>
                 <th className="px-4 py-3 font-medium">Forms</th>
                 <th className="px-4 py-3 font-medium">Submissions</th>
@@ -35,6 +37,12 @@ export default async function AdminUsersPage() {
                   <td className="px-4 py-3 text-slate-900">{user.name || "No name"}</td>
                   <td className="px-4 py-3 text-slate-700">{user.email}</td>
                   <td className="px-4 py-3 text-slate-700">{user.role}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {user.companyName || "Not set"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {user.country || "Not set"}
+                  </td>
                   <td className="px-4 py-3 text-slate-700">{formatDate(user.createdAt)}</td>
                   <td className="px-4 py-3 text-slate-700">{user.formsCount}</td>
                   <td className="px-4 py-3 text-slate-700">{user.submissionsCount}</td>

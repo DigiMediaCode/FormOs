@@ -30,7 +30,9 @@ function isUniqueConstraintError(error: unknown) {
 }
 
 export async function signupAction(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const name = [firstName, lastName].filter(Boolean).join(" ").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
 
@@ -46,6 +48,8 @@ export async function signupAction(formData: FormData) {
     const user = await prisma.user.create({
       data: {
         name: name || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
         email,
         passwordHash: await hashPassword(password),
       },

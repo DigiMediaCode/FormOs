@@ -36,14 +36,25 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         ) : null}
 
         <form action={signupAction} className="mt-8 flex flex-col gap-5">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
-            Name
-            <input
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              name="name"
-              type="text"
-            />
-          </label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+              First Name
+              <input
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                name="firstName"
+                type="text"
+              />
+            </label>
+
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+              Last Name
+              <input
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                name="lastName"
+                type="text"
+              />
+            </label>
+          </div>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Email

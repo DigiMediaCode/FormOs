@@ -43,9 +43,19 @@ export async function getAdminUsers() {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
         email: true,
         role: true,
         createdAt: true,
+        businessProfile: {
+          select: {
+            companyName: true,
+            taxId: true,
+            country: true,
+          },
+        },
         _count: { select: { forms: true } },
         integrations: {
           where: { provider: IntegrationProvider.GOOGLE_DRIVE },
@@ -79,9 +89,15 @@ export async function getAdminUsers() {
   return users.map((user) => ({
     id: user.id,
     name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
     email: user.email,
     role: user.role,
     createdAt: user.createdAt,
+    companyName: user.businessProfile?.companyName ?? null,
+    taxId: user.businessProfile?.taxId ?? null,
+    country: user.businessProfile?.country ?? null,
     formsCount: user._count.forms,
     submissionsCount: submissionsByOwner.get(user.id) ?? 0,
     googleDriveConnected: user.integrations.length > 0,

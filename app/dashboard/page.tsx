@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { prisma } from "@/lib/prisma";
 import {
   allowedFieldTypeLabels,
   featureLabels,
@@ -20,9 +21,19 @@ type DashboardPageProps = {
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const { error, success } = await searchParams;
   const user = await getCurrentUser();
-  const access = user ? await getUserPlanAccess(user.id) : null;
+  const [access, businessProfile] = user
+    ? await Promise.all([
+        getUserPlanAccess(user.id),
+        prisma.businessProfile.findUnique({
+          where: { userId: user.id },
+          select: { companyName: true },
+        }),
+      ])
+    : [null, null];
   const shouldShowVerificationBanner =
     user && !user.emailVerifiedAt && user.role !== UserRole.SUPER_ADMIN;
+  const shouldShowBusinessProfilePrompt =
+    user && (!businessProfile || !businessProfile.companyName);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -73,6 +84,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   Resend verification email
                 </SubmitButton>
               </form>
+            </div>
+          </section>
+        ) : null}
+
+        {shouldShowBusinessProfilePrompt ? (
+          <section className="rounded-md border border-blue-200 bg-blue-50 p-5 text-blue-950">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold">
+                  Complete your business profile to prepare your account for billing and invoices.
+                </h2>
+                <p className="mt-1 text-sm leading-6">
+                  This is optional for now and helps future billing setup go smoothly.
+                </p>
+              </div>
+              <Link
+                className="w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                href="/dashboard/settings/profile"
+              >
+                Complete Profile
+              </Link>
             </div>
           </section>
         ) : null}
