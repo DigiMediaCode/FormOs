@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 19: Dynamic Plans, User Quotas, and Usage Limits Foundation
+# CURRENT TASK — FormOS Milestone 19.1: Plan-Based Field Type Controls
 
 ## Project Context
 
@@ -6,270 +6,40 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS MVP foundation is live and working.
-* Auth/signup/login works.
-* Forms CRUD works.
-* Builder works.
-* Public forms work.
-* QR code feature is live.
-* Google Drive and Dropbox uploads work.
-* Storage provider selection works.
-* Office Use Only fields work.
-* Finalize Submission works.
-* Completed PDF generation and email delivery work.
-* Activity timeline / light audit works.
-* Vehicle Hire Agreement template works.
-* Super Admin foundation exists.
-* Super Admin platform settings exist.
-* Prisma Migrate deployment workflow is active.
-* Hostinger deployment is live.
-* Supabase database is connected.
+* Dynamic subscription plans are created in the backend.
+* Super Admin can create/edit plans.
+* User-specific quota overrides exist or are being added.
+* Basic plan/usage foundation exists.
+* Form builder supports multiple field types.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add dynamic subscription plans, user-specific quota overrides, and server-side usage limits.
+Allow Super Admin to control which form field types are available for each subscription plan.
 
-This is not billing yet.
+Different plans should be able to allow or block specific field types.
 
-Super Admin should be able to:
+This lets FormOS create real package differences such as:
 
-1. Create subscription plans.
-2. Edit subscription plans.
-3. Set pricing display for plans.
-4. Set feature limits for each plan.
-5. Assign a plan to a user.
-6. Give user-specific custom quota overrides.
-7. Grant a user unlimited access/custom full access outside normal packages.
+* Free plan: basic fields only
+* Starter plan: basic fields + upload/signature
+* Pro plan: agreement fields + office fields
+* Business plan: all fields
 
-Normal users should see their current plan and usage.
+## Core Requirement
 
-Server-side enforcement must protect all major limited features.
+Each subscription plan should support allowed field type limits.
 
-## Important Direction
+Add to plan limits JSON:
 
-Do not implement Stripe.
+allowedFieldTypes: string[] | null
 
-Do not implement real payments.
+Rules:
 
-Do not implement checkout.
-
-Do not implement invoices.
-
-Do not implement payment webhooks.
-
-Do not build automatic renewal.
-
-Do not build public pricing page logic in this milestone.
-
-This milestone is only:
-
-* dynamic plan management
-* manual Super Admin plan assignment
-* user-specific quota overrides
-* usage display
-* server-side enforcement
-
-## Core Concept
-
-Final access should be calculated like this:
-
-Final Limits = Default Free Limits + Assigned Plan Limits + User Quota Overrides
-
-User quota overrides win over plan limits.
-
-If a numeric limit is null, treat it as unlimited.
+* string array = only these field types are allowed
+* null = all field types allowed
 
 Example:
-
-Plan allows maxForms = 5
-User override maxForms = null
-Final maxForms = unlimited
-
-Example:
-
-Plan allows allowDropbox = false
-User override allowDropbox = true
-Final allowDropbox = true
-
-## Default Free Limits
-
-If a user has no subscription plan assigned, treat them as Free.
-
-Default Free limits:
-
-* maxForms: 1
-* maxMonthlySubmissions: 25
-* allowGoogleDrive: false
-* allowDropbox: false
-* allowPdfGeneration: false
-* allowOfficeUseFields: false
-* allowTemplates: false
-* allowQrCode: true
-* allowCustomBranding: false
-
-## Default Seed Plans
-
-Create seed/default plans if none exist.
-
-Default plans:
-
-### Free
-
-* name: Free
-* slug: free
-* priceMonthly: 0
-* priceYearly: 0
-* currency: USD
-* isPublic: true
-* isActive: true
-
-Limits:
-
-* maxForms: 1
-* maxMonthlySubmissions: 25
-* allowGoogleDrive: false
-* allowDropbox: false
-* allowPdfGeneration: false
-* allowOfficeUseFields: false
-* allowTemplates: false
-* allowQrCode: true
-* allowCustomBranding: false
-
-### Starter
-
-* name: Starter
-* slug: starter
-* priceMonthly: 19
-* priceYearly: 190
-* currency: USD
-* isPublic: true
-* isActive: true
-
-Limits:
-
-* maxForms: 5
-* maxMonthlySubmissions: 100
-* allowGoogleDrive: true
-* allowDropbox: false
-* allowPdfGeneration: true
-* allowOfficeUseFields: false
-* allowTemplates: true
-* allowQrCode: true
-* allowCustomBranding: false
-
-### Pro
-
-* name: Pro
-* slug: pro
-* priceMonthly: 49
-* priceYearly: 490
-* currency: USD
-* isPublic: true
-* isActive: true
-
-Limits:
-
-* maxForms: 25
-* maxMonthlySubmissions: 1000
-* allowGoogleDrive: true
-* allowDropbox: true
-* allowPdfGeneration: true
-* allowOfficeUseFields: true
-* allowTemplates: true
-* allowQrCode: true
-* allowCustomBranding: false
-
-### Business
-
-* name: Business
-* slug: business
-* priceMonthly: 99
-* priceYearly: 990
-* currency: USD
-* isPublic: true
-* isActive: true
-
-Limits:
-
-* maxForms: null
-* maxMonthlySubmissions: 10000
-* allowGoogleDrive: true
-* allowDropbox: true
-* allowPdfGeneration: true
-* allowOfficeUseFields: true
-* allowTemplates: true
-* allowQrCode: true
-* allowCustomBranding: true
-
-## Prisma Schema
-
-Add dynamic plan models.
-
-Suggested model:
-
-model SubscriptionPlan {
-id           String   @id @default(cuid())
-name         String
-slug         String   @unique
-description  String?
-priceMonthly Decimal?
-priceYearly  Decimal?
-currency     String   @default("USD")
-isActive     Boolean  @default(true)
-isPublic     Boolean  @default(true)
-sortOrder    Int      @default(0)
-limits       Json
-metadata     Json?
-createdAt    DateTime @default(now())
-updatedAt    DateTime @updatedAt
-
-subscriptions UserSubscription[]
-}
-
-Suggested model:
-
-model UserSubscription {
-id          String   @id @default(cuid())
-userId      String   @unique
-planId      String?
-status      String   @default("ACTIVE")
-assignedBy  String?
-assignedAt  DateTime @default(now())
-expiresAt   DateTime?
-metadata    Json?
-createdAt   DateTime @default(now())
-updatedAt   DateTime @updatedAt
-
-user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-plan        SubscriptionPlan? @relation(fields: [planId], references: [id])
-}
-
-Suggested model:
-
-model UserQuotaOverride {
-id        String   @id @default(cuid())
-userId    String   @unique
-limits    Json
-reason    String?
-createdBy String?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-Add User relations if needed.
-
-Create migration:
-
-npx prisma migrate dev --name add_dynamic_plans_and_quotas
-
-Do not use prisma db push.
-
-## Limits Shape
-
-Use this JSON structure for plan limits and user overrides:
 
 {
 "maxForms": 5,
@@ -280,338 +50,304 @@ Use this JSON structure for plan limits and user overrides:
 "allowOfficeUseFields": false,
 "allowTemplates": true,
 "allowQrCode": true,
-"allowCustomBranding": false
+"allowCustomBranding": false,
+"allowedFieldTypes": ["text", "textarea", "email", "phone", "date", "select", "checkbox"]
 }
 
-For numeric limits:
+## Supported Field Types
 
-* number = limit
-* null = unlimited
+The system currently supports:
 
-For boolean limits:
+* text
+* textarea
+* date
+* phone
+* email
+* address
+* number
+* currency
+* select
+* checkbox
+* image_upload
+* signature
+* initials
+* static_text
+* section_heading
+* html
 
-* true = allowed
-* false = not allowed
+Use these exact internal values.
 
-## Unlimited Toggle UI Rule
+## Default Plan Field Controls
 
-For numeric limits in Super Admin UI:
+Update default seeded plan limits.
 
-* show an Unlimited toggle
-* if Unlimited is enabled:
+### Free
 
-  * save value as null
-  * hide or disable the input field
-* if Unlimited is disabled:
+Allowed field types:
 
-  * show number input
-  * require a valid number
+* text
+* textarea
+* email
+* phone
+* date
+* select
+* checkbox
+* section_heading
+* static_text
 
-Numeric fields:
+### Starter
 
-* maxForms
-* maxMonthlySubmissions
+Allowed field types:
 
-## Super Admin Plan Management
+* text
+* textarea
+* email
+* phone
+* date
+* address
+* number
+* currency
+* select
+* checkbox
+* image_upload
+* signature
+* initials
+* section_heading
+* static_text
 
-Add routes:
+### Pro
 
-* /admin/plans
-* /admin/plans/new
-* /admin/plans/[planId]
+Allowed field types:
 
-If dynamic route is too much for one pass, at minimum create:
+* all supported field types
 
-* /admin/plans
+Set allowedFieldTypes to null or full array.
 
-with create/edit actions on same page.
+### Business
 
-Super Admin should be able to:
+Allowed field types:
 
-* view all plans
-* create plan
-* edit plan
-* set name
-* set slug
-* set description
-* set monthly price
-* set yearly price
-* set currency
-* set active/inactive
-* set public/private
-* set sort order
-* set all limits
-* save plan
+* all supported field types
 
-Do not delete plans in this milestone unless soft-deactivate only.
+Set allowedFieldTypes to null.
 
-Add Super Admin navigation link:
+## Super Admin Plan UI
 
-Plans → /admin/plans
+Update /admin/plans plan create/edit UI.
 
-## Super Admin User Subscription Management
+Add a section:
 
-Update Super Admin user area.
+Allowed Field Types
 
-Preferred:
+Show all supported field types as checkboxes with human-friendly labels:
 
-* /admin/users/[userId]
+* Text
+* Long Text
+* Date
+* Phone
+* Email
+* Address
+* Number
+* Currency
+* Dropdown
+* Checkbox
+* File Upload
+* Signature
+* Initials
+* Static Text
+* Section Heading
+* HTML Content
 
-or add editable controls inside /admin/users if simpler.
+Add option:
 
-Super Admin should be able to:
+Allow all field types
 
-* view user’s current plan
-* assign plan to user
-* change plan
-* view user quota override
-* edit user quota override
-* enable “Unlimited Everything” toggle
-* set custom numeric quota overrides
-* set custom feature boolean overrides
-* clear overrides
+If "Allow all field types" is enabled:
 
-## Unlimited Everything Override
-
-Add a simple option:
-
-Grant unlimited/full access
-
-If enabled, save override limits:
-
-{
-"maxForms": null,
-"maxMonthlySubmissions": null,
-"allowGoogleDrive": true,
-"allowDropbox": true,
-"allowPdfGeneration": true,
-"allowOfficeUseFields": true,
-"allowTemplates": true,
-"allowQrCode": true,
-"allowCustomBranding": true
-}
-
-If this toggle is enabled:
-
-* hide/disable individual quota inputs if practical
-* show clear message:
-  "This user has unlimited access outside normal package limits."
+* save allowedFieldTypes as null
+* disable/hide individual field type checkboxes
 
 If disabled:
 
-* allow individual override editing
+* show individual field type checkboxes
+* require at least one field type to be selected
 
-## User Dashboard Plan Display
+## User Quota Override
 
-On /dashboard, show:
+Update user quota override UI.
 
-* current plan name
-* forms used / limit
-* monthly submissions used / limit
-* allowed feature badges
+Super Admin should be able to override allowed field types per user.
 
-If user has custom quota override:
+Add:
 
-Show badge:
+Allowed Field Types Override
 
-Custom quota applied
+Options:
 
-If unlimited:
+* Use plan default
+* Allow all field types
+* Custom allowed field types
 
-Show:
+Rules:
 
-Unlimited
+* Use plan default = no override for allowedFieldTypes
+* Allow all field types = allowedFieldTypes: null in override
+* Custom allowed field types = array of selected field types
 
-Example:
+If Unlimited Everything is enabled:
 
-Plan: Starter
-Forms: Unlimited
-Submissions this month: Unlimited
-Custom quota applied
+* allowedFieldTypes should be null
+* hide/disable individual field type controls
 
-## Usage Calculation
+## Effective Limits Logic
 
-Calculate usage from existing data.
+Update limits merging logic.
 
-### Forms Usage
+Rules:
 
-Count forms owned by user.
+* default free limits apply first
+* assigned plan limits override defaults
+* user quota override overrides plan limits
+* allowedFieldTypes follows the same merge rule
 
-If no deleted state exists, count all forms.
+If final allowedFieldTypes is null:
 
-### Monthly Submissions Usage
+* all field types are allowed
 
-Count submissions owned by user where createdAt is within current calendar month.
+If final allowedFieldTypes is array:
 
-Use ownerId.
+* only those field types are allowed
 
-## Plan Helpers
+Create helper:
 
-Create helpers under:
+isFieldTypeAllowed(effectiveLimits, fieldType)
 
-lib/plans/
+Create assertion:
 
-Suggested functions:
+assertCanUseFieldTypes(userId, fields)
 
-* getDefaultFreeLimits
-* normalizePlanLimits
-* mergeLimits
-* getPlanLimits
-* getUserPlan
-* getUserEffectiveLimits
-* getUserUsage
-* assertCanCreateForm
-* assertCanReceiveSubmission
-* assertCanUseStorageProvider
-* assertCanUseOfficeFields
-* assertCanGeneratePdf
-* assertCanUseTemplate
-* assertCanUseQrCode
-* seedDefaultPlansIfMissing
+This should check all fields being saved.
 
-## Enforcement Points
+## Enforcement
 
 Server-side enforcement is required.
 
-### Create Form
+Update builder save action.
 
-Enforce maxForms.
+When user saves form fields:
 
-Apply to:
+1. Load user effective limits.
+2. Check every field type in submitted fields.
+3. If any field type is not allowed, block save.
+4. Return friendly error such as:
 
-* blank form creation
-* template form creation
+Your current plan does not allow these field types: Signature, File Upload.
 
-If limit exceeded, show friendly error:
+Do not save partial fields.
 
-Your current plan allows up to X forms. Upgrade your plan to create more forms.
+Do not rely only on hiding UI.
 
-If unlimited, allow.
+## Builder UI
 
-### Public Submission
+Update form builder Add Field panel.
 
-Before saving public submission, check owner’s monthly submission limit.
+If a field type is not allowed by the user’s effective plan:
 
-If exceeded, block with public-safe message:
+* disable that field type button
+* show small badge or message:
+  Upgrade required
+* optionally show helper:
+  This field type is not included in your current plan.
 
-This form is temporarily unavailable because the owner has reached their monthly submission limit.
+Allowed fields should work normally.
 
-Do not expose plan details to public submitter.
+Existing forms:
 
-### Storage Provider Activation
+* If user already has disallowed fields due to downgrade, do not crash.
+* Show warning in builder:
+  This form contains field types that are not included in your current plan. You can remove them or upgrade your plan.
+* Prevent saving until disallowed fields are removed or plan is upgraded.
 
-When user sets active upload provider:
+## Template Creation
 
-* if Google Drive selected, check allowGoogleDrive
-* if Dropbox selected, check allowDropbox
+Template creation must also respect allowed field types.
 
-If blocked, show:
+Before creating Vehicle Hire Agreement template:
 
-Your current plan does not include Google Drive uploads.
+* check whether all template field types are allowed
+* if not, block template creation with friendly error:
+  Your current plan does not include all field types required for this template.
 
-or
+This is separate from allowTemplates.
 
-Your current plan does not include Dropbox uploads.
+Both conditions must pass:
 
-Do not disconnect existing integrations automatically.
+* allowTemplates true
+* all template field types allowed
 
-### Office Use Only Fields
+## Public Submission Behaviour
 
-When saving builder fields:
+Public submissions for existing forms should not crash.
 
-* if any field has visibility OFFICE
-* and allowOfficeUseFields is false
-* block save with friendly error:
+Plan field type enforcement should mostly happen at builder/template creation time.
 
-Office Use Only fields are not included in your current plan.
+Do not block public submission just because a field type later becomes disallowed, unless existing plan enforcement already requires it.
 
-Existing saved office fields should not crash.
+## Dashboard Plan Display
 
-### PDF Generation / Finalize Submission
+Update user dashboard plan/usage display if practical.
 
-Before finalized PDF generation/email:
+Show:
 
-* check allowPdfGeneration
-* if false, block with owner-facing error:
+Field types available:
 
-Completed PDF generation is not included in your current plan.
+* All field types
 
-### Templates
+or:
 
-When creating Vehicle Hire Agreement template:
+Field types available:
+Text, Long Text, Email, Phone, Dropdown...
 
-* check allowTemplates
-* if false, block with friendly error:
-
-Templates are not included in your current plan.
-
-### QR Code
-
-Use allowQrCode helper.
-
-For now, default plans allow QR code.
-
-If disabled by custom plan/override later:
-
-* hide or disable QR card
-* show upgrade notice
+Keep it simple.
 
 ## Security
 
-* Only Super Admin can create/edit plans.
-* Only Super Admin can assign plans.
-* Only Super Admin can edit user quota overrides.
-* Normal users cannot change their own plan.
-* All limits must be enforced server-side.
-* Do not rely only on UI hiding.
-* Public submissions must be checked server-side.
-* Do not expose admin plan controls to normal users.
+* Only Super Admin can edit plan field type controls.
+* Only Super Admin can edit user field type overrides.
+* Server-side builder save enforcement is required.
+* Normal users cannot bypass limits by editing requests.
+* Do not expose admin controls to normal users.
 
 ## Out of Scope
 
 Do not build Stripe.
 Do not build billing.
 Do not build checkout.
-Do not build invoices.
-Do not build payment webhooks.
-Do not build automatic renewal.
-Do not build public pricing page integration.
-Do not change landing page.
-Do not change PDF design.
-Do not change Google Drive or Dropbox OAuth logic unless needed for plan enforcement.
+Do not build new field types.
+Do not change public form rendering unless needed for compatibility.
+Do not change Google Drive or Dropbox logic.
+Do not change PDF/email/audit logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 19 is complete when:
+Milestone 19.1 is complete when:
 
-* SubscriptionPlan model exists.
-* UserSubscription model exists.
-* UserQuotaOverride model exists.
-* Prisma migration exists.
-* Default seed plans can be created if missing.
-* Super Admin can create/edit plans dynamically.
-* Plans can store monthly and yearly pricing.
-* Plans can store numeric and boolean limits.
-* Numeric limits support Unlimited toggle saved as null.
-* Super Admin can assign plan to user.
-* Super Admin can set user quota overrides.
-* Super Admin can grant unlimited/full access to a user.
-* User-specific overrides win over plan limits.
-* Users default to Free if no subscription exists.
-* Dashboard shows current plan and usage.
-* Form creation limit is enforced server-side.
-* Template creation limit is enforced server-side.
-* Monthly submission limit is enforced server-side.
-* Storage provider activation checks plan/effective limits.
-* Office Use Only field saving checks plan/effective limits.
-* PDF generation/finalization checks plan/effective limits.
-* Friendly errors are shown when limits are reached.
-* Normal users cannot change their own plan or quota.
-* Existing users/forms/submissions still work.
-* Existing Google Drive/Dropbox integrations still work for allowed users.
-* Existing PDF/email/audit flow still works for allowed users.
+* Plan limits support allowedFieldTypes.
+* Super Admin can configure allowed field types for each plan.
+* Super Admin can choose Allow all field types for a plan.
+* User quota overrides can override allowed field types.
+* Unlimited Everything grants all field types.
+* Effective limit calculation includes allowedFieldTypes.
+* Builder disables disallowed field types in Add Field panel.
+* Builder save action blocks disallowed field types server-side.
+* Friendly error shows disallowed field names.
+* Existing forms with disallowed fields do not crash.
+* Template creation checks required field types.
+* Dashboard shows field type availability if practical.
+* Existing allowed field builder flow still works.
+* Existing public submissions still work.
+* Existing Google Drive/Dropbox/PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev --name add_dynamic_plans_and_quotas creates migration.
 * npm run build passes.

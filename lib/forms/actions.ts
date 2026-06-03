@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
-import { assertCanCreateForm, assertCanUseOfficeFields } from "@/lib/plans/limits";
+import {
+  assertCanCreateForm,
+  assertCanUseFieldTypes,
+  assertCanUseOfficeFields,
+} from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_FORM_SETTINGS = {
@@ -281,6 +285,17 @@ export async function updateFormFields(formId: string, formData: FormData) {
 
   if (validation.error || !validation.fields) {
     errorRedirect(errorPath, validation.error ?? "Unable to save fields.");
+  }
+
+  try {
+    await assertCanUseFieldTypes(user.id, validation.fields);
+  } catch (error) {
+    errorRedirect(
+      errorPath,
+      error instanceof Error
+        ? error.message
+        : "Your current plan does not allow one or more field types.",
+    );
   }
 
   if (validation.fields.some(isOfficeField)) {

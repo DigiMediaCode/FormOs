@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { featureLabels, getUserPlanAccess, limitLabel } from "@/lib/plans/limits";
+import {
+  allowedFieldTypeLabels,
+  featureLabels,
+  getUserPlanAccess,
+  limitLabel,
+} from "@/lib/plans/limits";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -61,6 +66,15 @@ export default async function DashboardPage() {
                   {limitLabel(access.limits.maxMonthlySubmissions)}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-950">
+                Field types available
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                {allowedFieldTypeLabels(access.limits)}
+              </p>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">

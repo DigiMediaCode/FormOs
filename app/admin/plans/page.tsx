@@ -1,6 +1,7 @@
 import { createPlanAction, seedDefaultPlansAction, updatePlanAction } from "@/app/admin/plans/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { fieldTypeLabel, SUPPORTED_FIELD_TYPES } from "@/lib/forms/fields";
 import {
   DEFAULT_PLAN_DEFINITIONS,
   normalizePlanLimits,
@@ -77,6 +78,42 @@ function LimitInputs({ limits }: { limits: PlanLimits }) {
             {label}
           </label>
         ))}
+      </div>
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+        <h4 className="text-sm font-semibold text-slate-950">
+          Allowed Field Types
+        </h4>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Use Allow all for unrestricted plans, or choose the exact field types
+          this plan can save in the builder.
+        </p>
+        <label className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-800">
+          <input
+            defaultChecked={limits.allowedFieldTypes === null}
+            name="allowAllFieldTypes"
+            type="checkbox"
+          />
+          Allow all field types
+        </label>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {SUPPORTED_FIELD_TYPES.map((fieldType) => (
+            <label
+              className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+              key={fieldType}
+            >
+              <input
+                defaultChecked={
+                  limits.allowedFieldTypes === null ||
+                  limits.allowedFieldTypes.includes(fieldType)
+                }
+                name="allowedFieldTypes"
+                type="checkbox"
+                value={fieldType}
+              />
+              {fieldTypeLabel(fieldType)}
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );

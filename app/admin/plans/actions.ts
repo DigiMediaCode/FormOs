@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { isSupportedFieldType } from "@/lib/forms/fields";
 import {
   normalizePlanLimits,
   seedDefaultPlansIfMissing,
@@ -66,6 +67,17 @@ function readNumericLimit(formData: FormData, key: keyof PlanLimits) {
 }
 
 function readLimits(formData: FormData): PlanLimits {
+  const allowedFieldTypes = readBoolean(formData, "allowAllFieldTypes")
+    ? null
+    : formData
+        .getAll("allowedFieldTypes")
+        .map((value) => String(value))
+        .filter(isSupportedFieldType);
+
+  if (allowedFieldTypes !== null && allowedFieldTypes.length === 0) {
+    throw new Error("Choose at least one allowed field type, or allow all field types.");
+  }
+
   return normalizePlanLimits({
     maxForms: readNumericLimit(formData, "maxForms"),
     maxMonthlySubmissions: readNumericLimit(formData, "maxMonthlySubmissions"),
@@ -76,6 +88,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowTemplates: readBoolean(formData, "allowTemplates"),
     allowQrCode: readBoolean(formData, "allowQrCode"),
     allowCustomBranding: readBoolean(formData, "allowCustomBranding"),
+    allowedFieldTypes,
   });
 }
 

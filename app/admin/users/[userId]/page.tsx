@@ -6,11 +6,14 @@ import {
 } from "@/app/admin/users/[userId]/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { fieldTypeLabel, SUPPORTED_FIELD_TYPES } from "@/lib/forms/fields";
 import {
+  allowedFieldTypeLabels,
   featureLabels,
   getUserPlanAccess,
   limitLabel,
   normalizePlanLimits,
+  UNLIMITED_EVERYTHING_LIMITS,
   type PlanLimits,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
@@ -62,6 +65,14 @@ function booleanMode(value: unknown) {
   }
 
   return value === true ? "allow" : "block";
+}
+
+function allowedFieldTypesMode(value: unknown) {
+  if (value === undefined) {
+    return "inherit";
+  }
+
+  return value === null ? "all" : "custom";
 }
 
 export default async function AdminUserDetailPage({
@@ -176,6 +187,14 @@ export default async function AdminUserDetailPage({
               </span>
             ))}
           </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-950">
+              Field types available
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              {allowedFieldTypeLabels(access.limits)}
+            </p>
+          </div>
         </section>
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
@@ -213,17 +232,7 @@ export default async function AdminUserDetailPage({
                 defaultChecked={
                   normalizedOverride
                     ? JSON.stringify(normalizedOverride) ===
-                      JSON.stringify({
-                        maxForms: null,
-                        maxMonthlySubmissions: null,
-                        allowGoogleDrive: true,
-                        allowDropbox: true,
-                        allowPdfGeneration: true,
-                        allowOfficeUseFields: true,
-                        allowTemplates: true,
-                        allowQrCode: true,
-                        allowCustomBranding: true,
-                      })
+                      JSON.stringify(UNLIMITED_EVERYTHING_LIMITS)
                     : false
                 }
                 name="unlimitedEverything"
@@ -272,6 +281,50 @@ export default async function AdminUserDetailPage({
                   </label>
                 );
               })}
+            </div>
+
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+              <h4 className="text-sm font-semibold text-slate-950">
+                Allowed Field Types Override
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Leave this on plan default unless this user needs field type
+                access outside their package.
+              </p>
+              <select
+                className="mt-4 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                defaultValue={allowedFieldTypesMode(
+                  rawOverrideValue(overrideLimits, "allowedFieldTypes"),
+                )}
+                name="allowedFieldTypesMode"
+              >
+                <option value="inherit">Use plan default</option>
+                <option value="all">Allow all field types</option>
+                <option value="custom">Custom allowed field types</option>
+              </select>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {SUPPORTED_FIELD_TYPES.map((fieldType) => {
+                  const value = rawOverrideValue(overrideLimits, "allowedFieldTypes");
+                  const checked =
+                    value === null ||
+                    (Array.isArray(value) && value.includes(fieldType));
+
+                  return (
+                    <label
+                      className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                      key={fieldType}
+                    >
+                      <input
+                        defaultChecked={checked}
+                        name="allowedFieldTypes"
+                        type="checkbox"
+                        value={fieldType}
+                      />
+                      {fieldTypeLabel(fieldType)}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">

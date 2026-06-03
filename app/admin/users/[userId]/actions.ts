@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { isSupportedFieldType } from "@/lib/forms/fields";
 import {
   normalizePlanLimits,
   UNLIMITED_EVERYTHING_LIMITS,
@@ -95,6 +96,23 @@ function readQuotaOverride(formData: FormData) {
     if (value !== undefined) {
       limits[key] = value;
     }
+  }
+
+  const allowedFieldTypesMode = readString(formData, "allowedFieldTypesMode");
+
+  if (allowedFieldTypesMode === "all") {
+    limits.allowedFieldTypes = null;
+  } else if (allowedFieldTypesMode === "custom") {
+    const allowedFieldTypes = formData
+      .getAll("allowedFieldTypes")
+      .map((value) => String(value))
+      .filter(isSupportedFieldType);
+
+    if (allowedFieldTypes.length === 0) {
+      throw new Error("Choose at least one custom field type or use the plan default.");
+    }
+
+    limits.allowedFieldTypes = allowedFieldTypes;
   }
 
   return limits;

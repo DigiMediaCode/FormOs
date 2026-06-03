@@ -9,7 +9,11 @@ import {
   getVehicleHireAgreementFields,
   VEHICLE_HIRE_AGREEMENT_TEMPLATE,
 } from "@/lib/forms/templates/vehicle-hire-agreement";
-import { assertCanCreateForm, assertCanUseTemplate } from "@/lib/plans/limits";
+import {
+  assertCanCreateForm,
+  assertCanUseFieldTypes,
+  assertCanUseTemplate,
+} from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 
 export async function createVehicleHireAgreementTemplate() {
@@ -21,11 +25,17 @@ export async function createVehicleHireAgreementTemplate() {
 
   try {
     await assertCanUseTemplate(user.id);
+    await assertCanUseFieldTypes(user.id, getVehicleHireAgreementFields());
     await assertCanCreateForm(user.id);
   } catch (error) {
     redirect(
       `/dashboard/forms/new?error=${encodeURIComponent(
-        error instanceof Error ? error.message : "Unable to create template.",
+        error instanceof Error &&
+          error.message.startsWith("Your current plan does not allow")
+          ? "Your current plan does not include all field types required for this template."
+          : error instanceof Error
+            ? error.message
+            : "Unable to create template.",
       )}`,
     );
   }

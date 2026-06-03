@@ -14,6 +14,7 @@ import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 type FormBuilderEditorProps = {
   formId: string;
   initialFields: FormBuilderField[];
+  allowedFieldTypes: FormFieldType[] | null;
   saveAction: (formData: FormData) => void;
 };
 
@@ -148,12 +149,29 @@ function FieldHelper({ field }: { field: FormBuilderField }) {
 }
 
 export function FormBuilderEditor({
+  allowedFieldTypes,
   initialFields,
   saveAction,
 }: FormBuilderEditorProps) {
+  const firstAllowedFieldType =
+    allowedFieldTypes === null ? "text" : allowedFieldTypes[0] ?? "text";
   const [fields, setFields] = useState<FormBuilderField[]>(normalizeOrders(initialFields));
-  const [fieldTypeToAdd, setFieldTypeToAdd] = useState<FormFieldType>("text");
+  const [fieldTypeToAdd, setFieldTypeToAdd] =
+    useState<FormFieldType>(firstAllowedFieldType);
   const serializedFields = useMemo(() => JSON.stringify(normalizeOrders(fields)), [fields]);
+  const disallowedFieldTypes = useMemo(
+    () =>
+      allowedFieldTypes === null
+        ? []
+        : [...new Set(fields.map((field) => field.type))]
+            .filter((fieldType) => !allowedFieldTypes.includes(fieldType))
+            .map(fieldTypeLabel),
+    [allowedFieldTypes, fields],
+  );
+
+  function isAllowedFieldType(type: FormFieldType) {
+    return allowedFieldTypes === null || allowedFieldTypes.includes(type);
+  }
 
   function updateField(fieldId: string, updates: Partial<FormBuilderField>) {
     setFields((currentFields) =>
@@ -180,6 +198,10 @@ export function FormBuilderEditor({
   }
 
   function addField() {
+    if (!isAllowedFieldType(fieldTypeToAdd)) {
+      return;
+    }
+
     setFields((currentFields) =>
       normalizeOrders([...currentFields, createField(fieldTypeToAdd, currentFields.length + 1)]),
     );
@@ -296,6 +318,14 @@ export function FormBuilderEditor({
             <Badge tone="teal">{fields.length} fields</Badge>
           </div>
         </div>
+
+        {disallowedFieldTypes.length > 0 ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            This form contains field types that are not included in your current
+            plan. Remove them or upgrade your plan before saving. Disallowed
+            field types: {disallowedFieldTypes.join(", ")}.
+          </p>
+        ) : null}
 
         {fields.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
@@ -549,15 +579,25 @@ export function FormBuilderEditor({
                   {group.types.map((type) => (
                     <button
                       className={`rounded-md border px-3 py-2 text-left text-sm font-medium transition ${
-                        fieldTypeToAdd === type
+                        !isAllowedFieldType(type)
+                          ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
+                          : fieldTypeToAdd === type
                           ? "border-teal-700 bg-teal-50 text-teal-900"
                           : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                       }`}
+                      disabled={!isAllowedFieldType(type)}
                       key={type}
                       onClick={() => setFieldTypeToAdd(type)}
                       type="button"
                     >
-                      {fieldTypeLabel(type)}
+                      <span className="flex flex-col gap-1">
+                        <span>{fieldTypeLabel(type)}</span>
+                        {!isAllowedFieldType(type) ? (
+                          <span className="text-xs font-medium text-amber-700">
+                            Upgrade required
+                          </span>
+                        ) : null}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -567,6 +607,7 @@ export function FormBuilderEditor({
 
           <button
             className="mt-5 w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+            disabled={!isAllowedFieldType(fieldTypeToAdd)}
             onClick={addField}
             type="button"
           >

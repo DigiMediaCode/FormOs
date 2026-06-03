@@ -4,6 +4,10 @@ import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload
 import { getUserFormById, updateFormFields } from "@/lib/forms/actions";
 import { normalizeFormFields } from "@/lib/forms/fields";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
+import {
+  disallowedFieldTypeLabels,
+  getUserEffectiveLimits,
+} from "@/lib/plans/limits";
 
 type BuilderPageProps = {
   params: Promise<{
@@ -37,7 +41,11 @@ export default async function BuilderPage({
   const fields = normalizeFormFields(form.fields);
   const saveAction = updateFormFields.bind(null, form.id);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
-  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
+  const [uploadProvider, limits] = await Promise.all([
+    getResolvedUploadProvider(form.ownerId),
+    getUserEffectiveLimits(form.ownerId),
+  ]);
+  const disallowedLabels = disallowedFieldTypeLabels(limits, fields);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -100,9 +108,18 @@ export default async function BuilderPage({
           <GoogleDriveUploadWarning />
         ) : null}
 
+        {disallowedLabels.length > 0 ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            This form contains field types that are not included in your current
+            plan. Remove them or upgrade your plan. Disallowed field types:{" "}
+            {disallowedLabels.join(", ")}.
+          </p>
+        ) : null}
+
         <FormBuilderEditor
           formId={form.id}
           initialFields={fields}
+          allowedFieldTypes={limits.allowedFieldTypes}
           saveAction={saveAction}
         />
       </div>

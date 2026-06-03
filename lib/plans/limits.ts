@@ -1,6 +1,13 @@
 import "server-only";
 
 import { Prisma, StorageProvider } from "@prisma/client";
+import {
+  fieldTypeLabel,
+  isSupportedFieldType,
+  SUPPORTED_FIELD_TYPES,
+  type FormBuilderField,
+  type FormFieldType,
+} from "@/lib/forms/fields";
 import { prisma } from "@/lib/prisma";
 
 export type NumericLimit = number | null;
@@ -15,6 +22,7 @@ export type PlanLimits = {
   allowTemplates: boolean;
   allowQrCode: boolean;
   allowCustomBranding: boolean;
+  allowedFieldTypes: FormFieldType[] | null;
 };
 
 export type UserUsage = {
@@ -58,7 +66,38 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowTemplates: true,
   allowQrCode: true,
   allowCustomBranding: true,
+  allowedFieldTypes: null,
 };
+
+export const FREE_ALLOWED_FIELD_TYPES: FormFieldType[] = [
+  "text",
+  "textarea",
+  "email",
+  "phone",
+  "date",
+  "select",
+  "checkbox",
+  "section_heading",
+  "static_text",
+];
+
+export const STARTER_ALLOWED_FIELD_TYPES: FormFieldType[] = [
+  "text",
+  "textarea",
+  "email",
+  "phone",
+  "date",
+  "address",
+  "number",
+  "currency",
+  "select",
+  "checkbox",
+  "image_upload",
+  "signature",
+  "initials",
+  "section_heading",
+  "static_text",
+];
 
 export function getDefaultFreeLimits(): PlanLimits {
   return {
@@ -71,6 +110,7 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowTemplates: false,
     allowQrCode: true,
     allowCustomBranding: false,
+    allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
 }
 
@@ -107,6 +147,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: false,
+      allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
   },
   {
@@ -129,6 +170,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: false,
+      allowedFieldTypes: null,
     },
   },
   {
@@ -151,6 +193,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: true,
+      allowedFieldTypes: null,
     },
   },
 ] satisfies Array<{
@@ -184,6 +227,25 @@ function normalizeNumericLimit(value: unknown, fallback: NumericLimit): NumericL
   return Math.floor(numberValue);
 }
 
+function normalizeAllowedFieldTypes(
+  value: unknown,
+  fallback: FormFieldType[] | null,
+) {
+  if (value === null) {
+    return null;
+  }
+
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+
+  const allowedTypes = value
+    .map((fieldType) => String(fieldType))
+    .filter(isSupportedFieldType);
+
+  return [...new Set(allowedTypes)];
+}
+
 export function normalizePlanLimits(value: unknown): PlanLimits {
   const fallback = getDefaultFreeLimits();
   const source = isRecord(value) ? value : {};
@@ -196,6 +258,11 @@ export function normalizePlanLimits(value: unknown): PlanLimits {
   for (const key of BOOLEAN_LIMIT_KEYS) {
     limits[key] = typeof source[key] === "boolean" ? source[key] : fallback[key];
   }
+
+  limits.allowedFieldTypes = normalizeAllowedFieldTypes(
+    source.allowedFieldTypes,
+    fallback.allowedFieldTypes,
+  );
 
   return limits;
 }
@@ -226,6 +293,13 @@ export function mergeLimits(
     }
   }
 
+  if ("allowedFieldTypes" in overrideLimits) {
+    merged.allowedFieldTypes = normalizeAllowedFieldTypes(
+      overrideLimits.allowedFieldTypes,
+      merged.allowedFieldTypes,
+    );
+  }
+
   return merged;
 }
 
@@ -233,6 +307,48 @@ export async function seedDefaultPlansIfMissing() {
   const planCount = await prisma.subscriptionPlan.count();
 
   if (planCount > 0) {
+    const existingDefaultPlans = await prisma.subscriptionPlan.findMany({
+      where: {
+        slug: {
+          in: DEFAULT_PLAN_DEFINITIONS.map((plan) => plan.slug),
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+        limits: true,
+      },
+    });
+
+    await Promise.all(
+      existingDefaultPlans.map((plan) => {
+        if (
+          isRecord(plan.limits) &&
+          "allowedFieldTypes" in plan.limits
+        ) {
+          return Promise.resolve();
+        }
+
+        const defaults = DEFAULT_PLAN_DEFINITIONS.find(
+          (definition) => definition.slug === plan.slug,
+        );
+
+        if (!defaults) {
+          return Promise.resolve();
+        }
+
+        return prisma.subscriptionPlan.update({
+          where: { id: plan.id },
+          data: {
+            limits: {
+              ...(isRecord(plan.limits) ? plan.limits : {}),
+              allowedFieldTypes: defaults.limits.allowedFieldTypes,
+            } as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }),
+    );
+
     return;
   }
 
@@ -464,3 +580,56 @@ export function featureLabels(limits: PlanLimits) {
     { label: "Custom branding", allowed: limits.allowCustomBranding },
   ];
 }
+
+export function isFieldTypeAllowed(
+  effectiveLimits: Pick<PlanLimits, "allowedFieldTypes">,
+  fieldType: FormFieldType,
+) {
+  return (
+    effectiveLimits.allowedFieldTypes === null ||
+    effectiveLimits.allowedFieldTypes.includes(fieldType)
+  );
+}
+
+export function allowedFieldTypeLabels(limits: Pick<PlanLimits, "allowedFieldTypes">) {
+  if (limits.allowedFieldTypes === null) {
+    return "All field types";
+  }
+
+  if (limits.allowedFieldTypes.length === 0) {
+    return "No field types";
+  }
+
+  return limits.allowedFieldTypes.map(fieldTypeLabel).join(", ");
+}
+
+export function disallowedFieldTypeLabels(
+  limits: Pick<PlanLimits, "allowedFieldTypes">,
+  fields: Pick<FormBuilderField, "type">[],
+) {
+  const disallowedTypes = [
+    ...new Set(
+      fields
+        .map((field) => field.type)
+        .filter((fieldType) => !isFieldTypeAllowed(limits, fieldType)),
+    ),
+  ];
+
+  return disallowedTypes.map(fieldTypeLabel);
+}
+
+export async function assertCanUseFieldTypes(
+  userId: string,
+  fields: Pick<FormBuilderField, "type">[],
+) {
+  const limits = await getUserEffectiveLimits(userId);
+  const disallowedLabels = disallowedFieldTypeLabels(limits, fields);
+
+  if (disallowedLabels.length > 0) {
+    throw new Error(
+      `Your current plan does not allow these field types: ${disallowedLabels.join(", ")}.`,
+    );
+  }
+}
+
+export const ALL_SUPPORTED_FIELD_TYPES = SUPPORTED_FIELD_TYPES;
