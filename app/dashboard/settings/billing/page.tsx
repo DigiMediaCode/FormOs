@@ -12,6 +12,7 @@ type BillingPageProps = {
   searchParams: Promise<{
     checkout?: string;
     error?: string;
+    success?: string;
   }>;
 };
 
@@ -47,6 +48,14 @@ function statusLabel(status: string | null | undefined) {
   return status ? status.replaceAll("_", " ") : "Free";
 }
 
+function isActiveSubscribedStatus(status: string | null | undefined) {
+  return status === "ACTIVE" || status === "TRIALING";
+}
+
+function isManualStatus(status: string | null | undefined) {
+  return status === "MANUAL";
+}
+
 function isPaidPrice(value: unknown) {
   const amount = Number(value);
 
@@ -66,17 +75,19 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
     redirect("/login");
   }
 
-  const { checkout, error } = await searchParams;
+  const { checkout, error, success } = await searchParams;
   const [access, subscription, plans, override] = await Promise.all([
     getUserPlanAccess(user.id),
     prisma.userSubscription.findUnique({
       where: { userId: user.id },
       select: {
         status: true,
+        planId: true,
         billingProvider: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
         stripeCustomerId: true,
+        stripeSubscriptionId: true,
       },
     }),
     prisma.subscriptionPlan.findMany({
@@ -106,6 +117,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   ]);
   const subscriptionStatus = subscription?.status ?? access.plan.status ?? "FREE";
   const canManageBilling = Boolean(subscription?.stripeCustomerId);
+  const canManageStripeSubscription = Boolean(
+    subscription?.stripeSubscriptionId &&
+      subscription.billingProvider === "stripe" &&
+      subscriptionStatus !== "CANCELED",
+  );
 
   return (
     <main className="px-6 py-10">
@@ -131,6 +147,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
+          </p>
+        ) : null}
+        {success ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            {success}
           </p>
         ) : null}
 
@@ -219,7 +240,38 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                 A Stripe customer will be created when you start checkout.
               </p>
             ) : null}
+            {canManageBilling ? (
+              <p className="mt-2 max-w-xl text-xs leading-5 text-slate-500">
+                To cancel or update your subscription, open the Stripe billing
+                portal. If you do not see a cancel option in Stripe, enable
+                subscription cancellation in your Stripe Customer Portal settings.
+              </p>
+            ) : null}
           </form>
+
+          {canManageStripeSubscription ? (
+            <div className="flex flex-wrap gap-3">
+              {subscription?.cancelAtPeriodEnd ? (
+                <form action="/api/billing/resume" method="post">
+                  <SubmitButton
+                    className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                    pendingText="Resuming subscription..."
+                  >
+                    Resume Subscription
+                  </SubmitButton>
+                </form>
+              ) : (
+                <form action="/api/billing/cancel" method="post">
+                  <SubmitButton
+                    className="rounded-md border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+                    pendingText="Canceling subscription..."
+                  >
+                    Cancel Subscription
+                  </SubmitButton>
+                </form>
+              )}
+            </div>
+          ) : null}
         </section>
 
         <section className="grid gap-4">
@@ -227,69 +279,108 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             Upgrade or Change Plan
           </h2>
           <div className="grid gap-4 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <article
-                className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
-                key={plan.id}
-              >
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-950">
-                    {plan.name}
-                  </h3>
-                  <p className="mt-1 min-h-12 text-sm leading-6 text-slate-600">
-                    {plan.description}
-                  </p>
-                </div>
-                <div className="grid gap-2 text-sm text-slate-700">
-                  <p>
-                    Monthly:{" "}
-                    <strong>{formatMoney(plan.priceMonthly, plan.currency)}</strong>
-                  </p>
-                  <p>
-                    Yearly:{" "}
-                    <strong>{formatMoney(plan.priceYearly, plan.currency)}</strong>
-                  </p>
-                </div>
-                <div className="grid gap-2">
-                  <form action="/api/billing/checkout" method="post">
-                    <input name="planId" type="hidden" value={plan.id} />
-                    <input name="interval" type="hidden" value="monthly" />
-                    <SubmitButton
-                      className="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={
-                        !isPaidPrice(plan.priceMonthly) ||
-                        !plan.stripeMonthlyPriceId
-                      }
-                      pendingText="Redirecting to checkout..."
-                      showStatus={false}
-                    >
-                      Choose Monthly
-                    </SubmitButton>
-                  </form>
-                  <form action="/api/billing/checkout" method="post">
-                    <input name="planId" type="hidden" value={plan.id} />
-                    <input name="interval" type="hidden" value="yearly" />
-                    <SubmitButton
-                      className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={
-                        !isPaidPrice(plan.priceYearly) ||
-                        !plan.stripeYearlyPriceId
-                      }
-                      pendingText="Redirecting to checkout..."
-                      showStatus={false}
-                    >
-                      Choose Yearly
-                    </SubmitButton>
-                  </form>
-                  {(!isPaidPrice(plan.priceMonthly) || !plan.stripeMonthlyPriceId) &&
-                  (!isPaidPrice(plan.priceYearly) || !plan.stripeYearlyPriceId) ? (
-                    <p className="text-xs text-slate-500">
-                      Sync this plan to Stripe before users can subscribe.
+            {plans.map((plan) => {
+              const isCurrentActiveSubscribedPlan =
+                subscription?.planId === plan.id &&
+                isActiveSubscribedStatus(subscriptionStatus);
+              const isCurrentManualPlan =
+                subscription?.planId === plan.id && isManualStatus(subscriptionStatus);
+              const monthlyDisabled =
+                isCurrentActiveSubscribedPlan ||
+                isCurrentManualPlan ||
+                !isPaidPrice(plan.priceMonthly) ||
+                !plan.stripeMonthlyPriceId;
+              const yearlyDisabled =
+                isCurrentActiveSubscribedPlan ||
+                isCurrentManualPlan ||
+                !isPaidPrice(plan.priceYearly) ||
+                !plan.stripeYearlyPriceId;
+              const monthlyButtonText = isCurrentActiveSubscribedPlan
+                ? "Currently Subscribed"
+                : isCurrentManualPlan
+                  ? "Manually Assigned"
+                  : "Choose Monthly";
+              const yearlyButtonText = isCurrentActiveSubscribedPlan
+                ? "Currently Subscribed"
+                : isCurrentManualPlan
+                  ? "Manually Assigned"
+                  : "Choose Yearly";
+
+              return (
+                <article
+                  className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
+                  key={plan.id}
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold text-slate-950">
+                        {plan.name}
+                      </h3>
+                      {isCurrentActiveSubscribedPlan ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                          Current Plan
+                        </span>
+                      ) : null}
+                      {isCurrentManualPlan ? (
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                          Manually Assigned
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 min-h-12 text-sm leading-6 text-slate-600">
+                      {plan.description}
                     </p>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                    {isCurrentManualPlan ? (
+                      <p className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
+                        This plan was assigned by an administrator.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-2 text-sm text-slate-700">
+                    <p>
+                      Monthly:{" "}
+                      <strong>{formatMoney(plan.priceMonthly, plan.currency)}</strong>
+                    </p>
+                    <p>
+                      Yearly:{" "}
+                      <strong>{formatMoney(plan.priceYearly, plan.currency)}</strong>
+                    </p>
+                  </div>
+                  <div className="grid gap-2">
+                    <form action="/api/billing/checkout" method="post">
+                      <input name="planId" type="hidden" value={plan.id} />
+                      <input name="interval" type="hidden" value="monthly" />
+                      <SubmitButton
+                        className="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={monthlyDisabled}
+                        pendingText="Redirecting to checkout..."
+                        showStatus={false}
+                      >
+                        {monthlyButtonText}
+                      </SubmitButton>
+                    </form>
+                    <form action="/api/billing/checkout" method="post">
+                      <input name="planId" type="hidden" value={plan.id} />
+                      <input name="interval" type="hidden" value="yearly" />
+                      <SubmitButton
+                        className="w-full rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={yearlyDisabled}
+                        pendingText="Redirecting to checkout..."
+                        showStatus={false}
+                      >
+                        {yearlyButtonText}
+                      </SubmitButton>
+                    </form>
+                    {(!isPaidPrice(plan.priceMonthly) || !plan.stripeMonthlyPriceId) &&
+                    (!isPaidPrice(plan.priceYearly) || !plan.stripeYearlyPriceId) ? (
+                      <p className="text-xs text-slate-500">
+                        Sync this plan to Stripe before users can subscribe.
+                      </p>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </div>

@@ -478,6 +478,22 @@ export async function createCheckoutSession({
     throw new Error("This plan is not configured for Stripe Checkout yet.");
   }
 
+  const currentSubscription = await prisma.userSubscription.findUnique({
+    where: { userId },
+    select: {
+      planId: true,
+      status: true,
+    },
+  });
+  const currentStatus = currentSubscription?.status?.toUpperCase();
+
+  if (
+    currentSubscription?.planId === plan.id &&
+    (currentStatus === "ACTIVE" || currentStatus === "TRIALING")
+  ) {
+    throw new Error("You are already subscribed to this plan.");
+  }
+
   const customerId = await createOrGetStripeCustomer(userId);
   const appUrl = getAppUrl();
   const stripe = getStripeClient();
@@ -543,6 +559,94 @@ export async function createCheckoutSession({
 
     throw error;
   }
+}
+
+export async function cancelStripeSubscriptionAtPeriodEnd(userId: string) {
+  const subscription = await prisma.userSubscription.findUnique({
+    where: { userId },
+    select: {
+      stripeSubscriptionId: true,
+      stripeCustomerId: true,
+      status: true,
+    },
+  });
+
+  if (!subscription?.stripeSubscriptionId) {
+    throw new Error("No active Stripe subscription was found.");
+  }
+
+  if (subscription.status === "CANCELED") {
+    throw new Error("This subscription is already canceled.");
+  }
+
+  const updatedSubscription = await getStripeClient().subscriptions.update(
+    subscription.stripeSubscriptionId,
+    {
+      cancel_at_period_end: true,
+    },
+  );
+
+  await prisma.userSubscription.update({
+    where: { userId },
+    data: {
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: mapStripeSubscriptionStatus(updatedSubscription).currentPeriodEnd,
+    },
+  });
+
+  await createBillingEvent({
+    eventType: "subscription_cancel_at_period_end_set",
+    userId,
+    customerId: subscription.stripeCustomerId,
+    subscriptionId: subscription.stripeSubscriptionId,
+    status: "PROCESSED",
+    message: "Subscription will cancel at period end.",
+    processedAt: new Date(),
+  });
+}
+
+export async function resumeStripeSubscription(userId: string) {
+  const subscription = await prisma.userSubscription.findUnique({
+    where: { userId },
+    select: {
+      stripeSubscriptionId: true,
+      stripeCustomerId: true,
+      status: true,
+    },
+  });
+
+  if (!subscription?.stripeSubscriptionId) {
+    throw new Error("No active Stripe subscription was found.");
+  }
+
+  if (subscription.status === "CANCELED") {
+    throw new Error("Canceled subscriptions cannot be resumed here.");
+  }
+
+  const updatedSubscription = await getStripeClient().subscriptions.update(
+    subscription.stripeSubscriptionId,
+    {
+      cancel_at_period_end: false,
+    },
+  );
+
+  await prisma.userSubscription.update({
+    where: { userId },
+    data: {
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: mapStripeSubscriptionStatus(updatedSubscription).currentPeriodEnd,
+    },
+  });
+
+  await createBillingEvent({
+    eventType: "subscription_cancel_at_period_end_removed",
+    userId,
+    customerId: subscription.stripeCustomerId,
+    subscriptionId: subscription.stripeSubscriptionId,
+    status: "PROCESSED",
+    message: "Subscription cancellation was removed.",
+    processedAt: new Date(),
+  });
 }
 
 export async function createCustomerPortalSession(userId: string) {

@@ -49,3 +49,18 @@ This means production deployment:
 3. Builds the Next.js app.
 
 Do not use `prisma db push` for production deployments.
+
+## Stripe Customer Portal Cancellation
+
+FormOS uses the Stripe-hosted Customer Portal for billing management. To let
+users cancel from Stripe, enable subscription cancellation in Stripe:
+
+Stripe Dashboard -> Settings -> Billing -> Customer Portal -> Subscriptions ->
+Enable cancellation.
+
+The wording may vary slightly in Stripe Dashboard. Keep
+`STRIPE_BILLING_PORTAL_RETURN_URL` set to:
+
+```env
+STRIPE_BILLING_PORTAL_RETURN_URL=https://formos.com.au/dashboard/settings/billing
+```

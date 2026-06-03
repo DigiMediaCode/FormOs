@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 23: Stripe Billing Testing, Webhook Logs, and Subscription Sync Safety
+# CURRENT TASK — FormOS Milestone 23.1: Billing UX Fixes — Cancel Subscription + Current Plan Buttons
 
 ## Project Context
 
@@ -6,274 +6,234 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Stripe billing foundation has been implemented.
-* Super Admin can sync FormOS plans to Stripe.
-* Stripe products/prices can be created from FormOS plans.
-* User billing page exists or is being completed.
-* Stripe Checkout exists or is being completed.
-* Stripe Customer Portal exists or is being completed.
-* Stripe webhook endpoint exists or is being completed.
-* Dynamic plans and user quota overrides exist.
-* User quota overrides must always win over Stripe subscription state.
+* Stripe billing foundation works.
+* Plans sync to Stripe.
+* Checkout works.
+* Stripe webhook works.
+* Billing events work.
+* UserSubscription updates correctly after payment.
+* User quota overrides still work.
+* Billing page shows active plan.
 * Do not touch CommerceOS.
+
+## Problems
+
+### Problem 1 — No Cancel Subscription Option
+
+The user can see a Manage Billing button, but on Stripe Customer Portal there is no visible option to cancel/stop the subscription.
+
+This may require Stripe Customer Portal cancellation settings to be enabled in Stripe Dashboard.
+
+FormOS should also show clearer billing instructions and/or provide a direct cancellation action if appropriate.
+
+### Problem 2 — Active Plan Still Shows Subscribe Button
+
+After subscribing to a plan, the billing page correctly shows active plan at the top.
+
+But in the plan list, the same active plan still shows a Subscribe/Upgrade button.
+
+That is wrong.
+
+The active subscribed plan should show:
+
+Currently Subscribed
+
+The button should be disabled.
 
 ## Goal
 
-Add billing diagnostics and safety tools so Stripe billing can be tested reliably.
+Improve billing UX so users clearly understand their current plan and cannot subscribe again to the same active plan.
 
-This milestone should make it easy for Super Admin to inspect:
+Also add a safe way to handle subscription cancellation.
 
-* Stripe sync status
-* checkout session creation
-* webhook events received
-* webhook processing success/failure
-* subscription state
-* plan mapping
-* billing errors
+## Required Behaviour — Current Plan Button State
 
-## Why This Matters
+On /dashboard/settings/billing:
 
-Stripe billing can silently fail if:
+For each plan card:
 
-* webhook secret is wrong
-* webhook route is not reachable
-* Stripe price ID does not match a FormOS plan
-* Checkout succeeds but webhook does not update subscription
-* subscription status changes but FormOS does not sync
-* plan override logic breaks access
+If the plan is the user’s current active subscribed plan:
 
-We need visibility before relying on billing.
+* show badge: Current Plan
+* button text: Currently Subscribed
+* button disabled
+* do not allow checkout for the same active plan
 
-## Prisma Model
+If the plan is different from current plan:
 
-Add model:
+* show Subscribe / Upgrade / Change Plan button as appropriate
 
-```prisma
-model BillingEvent {
-  id             String   @id @default(cuid())
-  provider       String   @default("stripe")
-  eventId        String?  @unique
-  eventType      String
-  userId         String?
-  subscriptionId String?
-  customerId     String?
-  status         String   @default("RECEIVED")
-  message        String?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  processedAt    DateTime?
+If current subscription status is CANCELED:
 
-  @@index([provider])
-  @@index([eventType])
-  @@index([userId])
-  @@index([subscriptionId])
-  @@index([customerId])
-  @@index([status])
-}
-```
+* allow subscribing again
 
-Create migration:
+If current subscription status is ACTIVE or TRIALING:
 
-```bash
-npx prisma migrate dev --name add_billing_events
-```
+* disable checkout for same plan
 
-Do not use prisma db push.
+If user has MANUAL plan assignment:
 
-## Billing Event Logging
+* show badge: Manually Assigned
+* avoid showing misleading Stripe checkout actions for the same plan
+* if needed, show message:
+  This plan was assigned by an administrator.
 
-Log safe billing events for:
+If user has custom quota override:
 
-* checkout session created
-* checkout.session.completed
-* customer.subscription.created
-* customer.subscription.updated
-* customer.subscription.deleted
-* invoice.payment_succeeded
-* invoice.payment_failed
-* webhook signature failed
-* webhook processing failed
-* plan sync to Stripe succeeded
-* plan sync to Stripe failed
-* customer portal session created
+* show badge: Custom quota applied
 
-Do not log:
+If user has unlimited override:
 
-* Stripe secret key
-* webhook secret
-* payment method details
-* card details
-* full raw webhook payload if too large/sensitive
+* show badge: Unlimited access granted by admin
 
-Metadata should be safe and minimal.
+## Required Behaviour — Server-Side Checkout Guard
 
-## Webhook Idempotency
+Do not rely only on disabled UI.
 
-Webhook processing should avoid duplicate processing.
+Update checkout creation route/action.
 
-If Stripe event ID already exists:
+Before creating a Stripe Checkout Session:
 
-* do not process again
-* log or mark as duplicate safely
-* return success to Stripe if already processed
+* check current UserSubscription
+* if user already has ACTIVE/TRIALING subscription for the same plan and same interval if interval is tracked:
 
-Webhook route should still verify Stripe signature first.
+  * block checkout
+  * return friendly error:
+    You are already subscribed to this plan.
+* do not create duplicate checkout session for the same active plan
 
-## Super Admin Billing Events Page
+If interval is not tracked yet, compare by planId only for now.
 
-Create route:
+## Required Behaviour — Cancel Subscription
 
-```text
-/admin/billing/events
-```
+Add cancellation support in one of these ways.
 
-Add Super Admin navigation link:
+### Option A — Preferred MVP: Stripe Customer Portal
 
-```text
-Billing Events
-```
+Use Stripe Customer Portal for cancellation.
 
-Page should show:
+On billing page, near Manage Billing button, show helper text:
 
-* event type
-* status
-* related user if available
-* customer ID shortened
-* subscription ID shortened
-* message
-* created date
-* processed date
+To cancel or update your subscription, open the Stripe billing portal.
 
-Add simple filters if easy:
+Also add warning if portal cancellation may not be enabled:
 
-* status
-* event type
+If you do not see a cancel option in Stripe, enable subscription cancellation in your Stripe Customer Portal settings.
 
-No need for advanced search.
+No card/payment details should be stored in FormOS.
 
-## Super Admin User Billing Detail
+### Option B — Direct Cancel Button
 
-Update user detail or admin users table if practical.
+If simple and safe, add button:
 
-Show:
+Cancel Subscription
+
+Behaviour:
+
+* requires logged-in user
+* requires active Stripe subscription
+* calls Stripe API to set cancel_at_period_end = true
+* updates local UserSubscription.cancelAtPeriodEnd = true
+* keeps plan access until currentPeriodEnd
+* shows message:
+  Your subscription will cancel at the end of the current billing period.
+
+Also add optional button:
+
+Resume Subscription
+
+If cancelAtPeriodEnd is true:
+
+* call Stripe API to set cancel_at_period_end = false
+* update local record
+* show message:
+  Your subscription cancellation has been removed.
+
+Do not immediately delete/cancel subscription unless explicitly implemented and safe.
+
+Prefer cancel at period end.
+
+## Stripe Portal Configuration Note
+
+Add a note in DEPLOYMENT.md or BILLING.md:
+
+Stripe Customer Portal cancellation must be enabled in Stripe Dashboard.
+
+Instruction:
+
+Stripe Dashboard → Settings → Billing → Customer Portal → Subscriptions → Enable cancellation
+
+Wording may vary in Stripe Dashboard.
+
+## Billing Page UI
+
+Update /dashboard/settings/billing:
+
+Top current plan card should show:
 
 * current plan
-* subscription status
+* status
 * billing provider
-* Stripe customer ID shortened
-* Stripe subscription ID shortened
 * current period end
-* custom quota badge
-* unlimited override badge
+* cancel at period end status if true
+* Manage Billing button
+* Cancel Subscription button if active Stripe subscription exists
+* Resume Subscription button if cancelAtPeriodEnd is true
 
-## Billing Health Panel
+Plan cards should show correct button states.
 
-Add to `/admin` or `/admin/billing/events`:
+## Webhook Handling
 
-```text
-Billing Health
-```
+Ensure customer.subscription.updated updates:
 
-Show checklist:
+* cancelAtPeriodEnd
+* currentPeriodEnd
+* status
 
-* Stripe secret key configured: Yes/No
-* Stripe webhook secret configured: Yes/No
-* Stripe webhook endpoint path: /api/stripe/webhook
-* Number of failed billing events
-* Number of recent successful webhook events
-* Number of plans synced to Stripe
+If customer.subscription.deleted occurs:
 
-Do not expose actual secret values.
+* mark subscription CANCELED
+* fallback access logic remains as previously implemented
 
-## Checkout Safety
+## Security
 
-When user starts checkout:
-
-* log billing event: checkout_session_created
-* include safe metadata:
-  * planId
-  * interval
-  * priceId
-  * userId
-  * customerId
-
-If checkout fails:
-
-* log billing event: checkout_session_failed
-* show friendly error
-
-## Plan Sync Safety
-
-When Super Admin syncs plan to Stripe:
-
-* log billing event: stripe_plan_sync_succeeded
-* or stripe_plan_sync_failed
-
-Show sync errors in admin UI.
-
-## Webhook Processing Safety
-
-For every webhook:
-
-1. Verify signature.
-2. Store event record.
-3. Process event.
-4. Mark status PROCESSED or FAILED.
-5. Save safe message.
-6. Do not throw raw errors to public.
-
-## Manual Override Safety
-
-Confirm final effective limits remain:
-
-```text
-Default Free Limits + Stripe/Assigned Plan Limits + User Quota Overrides
-```
-
-User quota override must win.
-
-Add a small display on billing page/admin user view showing:
-
-```text
-Effective access is using custom override
-```
-
-when override exists.
+* only logged-in user can manage their own billing
+* user cannot cancel another user’s subscription
+* do not expose Stripe secret key
+* do not store card/payment method data
+* verify webhook signature as already implemented
+* Super Admin manual overrides must remain unaffected
 
 ## Out of Scope
 
-Do not build new billing provider.
 Do not build refunds.
 Do not build coupons.
 Do not build taxes.
 Do not build invoices.
-Do not build usage-based billing.
-Do not change checkout UI deeply.
-Do not change plan limit logic unless fixing bugs.
+Do not build custom card forms.
+Do not change plan limit logic except for current plan button/check guards.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 23 is complete when:
+This task is complete when:
 
-* BillingEvent model exists.
-* Prisma migration exists.
-* Stripe webhook events are logged safely.
-* Duplicate Stripe webhook events are handled idempotently.
-* Checkout session creation is logged.
-* Customer portal session creation is logged.
-* Stripe plan sync success/failure is logged.
-* Webhook failures are visible to Super Admin.
-* /admin/billing/events exists.
-* Super Admin can view billing events.
-* Billing Health panel exists.
-* Stripe secrets are never exposed.
-* Card/payment method data is never stored.
-* Existing checkout still works.
-* Existing customer portal still works.
-* Existing webhooks still update subscriptions.
+* Current active plan card shows Current Plan badge.
+* Current active plan button says Currently Subscribed.
+* Current active plan button is disabled.
+* Checkout route blocks duplicate checkout for same active plan.
+* Different plans can still be selected for upgrade/change.
+* Manage Billing helper text explains cancellation through Stripe Portal.
+* Stripe portal cancellation setup note is documented.
+* If direct cancel button is implemented:
+
+  * user can cancel at period end
+  * user can resume cancellation if cancelAtPeriodEnd is true
+  * local subscription updates safely
+* Webhook updates cancelAtPeriodEnd correctly.
 * User quota overrides still win.
+* Manual assignments still work.
+* No card/payment method data is stored.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev --name add_billing_events creates migration.
 * npm run build passes.
