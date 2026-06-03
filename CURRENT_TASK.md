@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 19.1: Plan-Based Field Type Controls
+# CURRENT TASK — FormOS Milestone 19.2: Delete / Deactivate Subscription Plans
 
 ## Project Context
 
@@ -6,348 +6,136 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Dynamic subscription plans are created in the backend.
+* Dynamic subscription plans exist.
 * Super Admin can create/edit plans.
-* User-specific quota overrides exist or are being added.
-* Basic plan/usage foundation exists.
-* Form builder supports multiple field types.
+* Plan limits and allowed field types work.
+* User quota overrides work.
+* Super Admin can assign plans to users.
 * Do not touch CommerceOS.
+
+## Problem
+
+Super Admin currently has no option to delete a subscription plan.
+
+This makes plan management incomplete.
 
 ## Goal
 
-Allow Super Admin to control which form field types are available for each subscription plan.
-
-Different plans should be able to allow or block specific field types.
-
-This lets FormOS create real package differences such as:
-
-* Free plan: basic fields only
-* Starter plan: basic fields + upload/signature
-* Pro plan: agreement fields + office fields
-* Business plan: all fields
+Add safe plan delete/deactivate controls for Super Admin.
 
-## Core Requirement
+## Important Rule
 
-Each subscription plan should support allowed field type limits.
+Do not blindly delete plans that are assigned to users.
 
-Add to plan limits JSON:
+If a plan has active or historical user subscriptions, hard delete should be blocked.
 
-allowedFieldTypes: string[] | null
+Super Admin should be able to deactivate the plan instead.
 
-Rules:
+## Required Behaviour
 
-* string array = only these field types are allowed
-* null = all field types allowed
+On `/admin/plans`, each plan should have:
 
-Example:
+* Edit
+* Deactivate / Activate
+* Delete
 
-{
-"maxForms": 5,
-"maxMonthlySubmissions": 100,
-"allowGoogleDrive": true,
-"allowDropbox": false,
-"allowPdfGeneration": true,
-"allowOfficeUseFields": false,
-"allowTemplates": true,
-"allowQrCode": true,
-"allowCustomBranding": false,
-"allowedFieldTypes": ["text", "textarea", "email", "phone", "date", "select", "checkbox"]
-}
+## Delete Rules
 
-## Supported Field Types
+### If plan has no UserSubscription records
 
-The system currently supports:
+Allow hard delete.
 
-* text
-* textarea
-* date
-* phone
-* email
-* address
-* number
-* currency
-* select
-* checkbox
-* image_upload
-* signature
-* initials
-* static_text
-* section_heading
-* html
+Show confirmation before delete:
 
-Use these exact internal values.
+"Are you sure you want to delete this plan? This cannot be undone."
 
-## Default Plan Field Controls
+After delete, show success message.
 
-Update default seeded plan limits.
+### If plan has UserSubscription records
 
-### Free
+Block hard delete.
 
-Allowed field types:
+Show friendly error:
 
-* text
-* textarea
-* email
-* phone
-* date
-* select
-* checkbox
-* section_heading
-* static_text
+"This plan is assigned to users and cannot be deleted. Deactivate it instead."
 
-### Starter
+Do not delete related subscriptions.
 
-Allowed field types:
+## Deactivate / Activate Rules
 
-* text
-* textarea
-* email
-* phone
-* date
-* address
-* number
-* currency
-* select
-* checkbox
-* image_upload
-* signature
-* initials
-* section_heading
-* static_text
+Super Admin can toggle `isActive`.
 
-### Pro
+If deactivated:
 
-Allowed field types:
+* plan remains in database
+* existing assigned users can keep the plan
+* plan should not be shown as assignable to new users unless specifically allowed by current UI
+* show badge: Inactive
 
-* all supported field types
+If activated:
 
-Set allowedFieldTypes to null or full array.
+* plan becomes available again
 
-### Business
+## UI Requirements
 
-Allowed field types:
+On `/admin/plans`:
 
-* all supported field types
+* show plan status badge:
 
-Set allowedFieldTypes to null.
+  * Active
+  * Inactive
+* add Deactivate / Activate button
+* add Delete button
+* disable or visually warn delete if users are assigned if count is available
+* show assigned users count if practical
 
-## Super Admin Plan UI
+## Server Action Requirements
 
-Update /admin/plans plan create/edit UI.
+Create or update server actions:
 
-Add a section:
+* deleteSubscriptionPlan(planId)
+* toggleSubscriptionPlanStatus(planId)
 
-Allowed Field Types
+Security:
 
-Show all supported field types as checkboxes with human-friendly labels:
+* require SUPER_ADMIN
+* normal users cannot delete/deactivate plans
+* validate plan exists
+* do not delete if subscriptions exist
 
-* Text
-* Long Text
-* Date
-* Phone
-* Email
-* Address
-* Number
-* Currency
-* Dropdown
-* Checkbox
-* File Upload
-* Signature
-* Initials
-* Static Text
-* Section Heading
-* HTML Content
+## Safety
 
-Add option:
+Do not delete default plans automatically.
 
-Allow all field types
+Do not seed duplicate default plans.
 
-If "Allow all field types" is enabled:
+Do not break existing user subscriptions.
 
-* save allowedFieldTypes as null
-* disable/hide individual field type checkboxes
-
-If disabled:
-
-* show individual field type checkboxes
-* require at least one field type to be selected
-
-## User Quota Override
-
-Update user quota override UI.
-
-Super Admin should be able to override allowed field types per user.
-
-Add:
-
-Allowed Field Types Override
-
-Options:
-
-* Use plan default
-* Allow all field types
-* Custom allowed field types
-
-Rules:
-
-* Use plan default = no override for allowedFieldTypes
-* Allow all field types = allowedFieldTypes: null in override
-* Custom allowed field types = array of selected field types
-
-If Unlimited Everything is enabled:
-
-* allowedFieldTypes should be null
-* hide/disable individual field type controls
-
-## Effective Limits Logic
-
-Update limits merging logic.
-
-Rules:
-
-* default free limits apply first
-* assigned plan limits override defaults
-* user quota override overrides plan limits
-* allowedFieldTypes follows the same merge rule
-
-If final allowedFieldTypes is null:
-
-* all field types are allowed
-
-If final allowedFieldTypes is array:
-
-* only those field types are allowed
-
-Create helper:
-
-isFieldTypeAllowed(effectiveLimits, fieldType)
-
-Create assertion:
-
-assertCanUseFieldTypes(userId, fields)
-
-This should check all fields being saved.
-
-## Enforcement
-
-Server-side enforcement is required.
-
-Update builder save action.
-
-When user saves form fields:
-
-1. Load user effective limits.
-2. Check every field type in submitted fields.
-3. If any field type is not allowed, block save.
-4. Return friendly error such as:
-
-Your current plan does not allow these field types: Signature, File Upload.
-
-Do not save partial fields.
-
-Do not rely only on hiding UI.
-
-## Builder UI
-
-Update form builder Add Field panel.
-
-If a field type is not allowed by the user’s effective plan:
-
-* disable that field type button
-* show small badge or message:
-  Upgrade required
-* optionally show helper:
-  This field type is not included in your current plan.
-
-Allowed fields should work normally.
-
-Existing forms:
-
-* If user already has disallowed fields due to downgrade, do not crash.
-* Show warning in builder:
-  This form contains field types that are not included in your current plan. You can remove them or upgrade your plan.
-* Prevent saving until disallowed fields are removed or plan is upgraded.
-
-## Template Creation
-
-Template creation must also respect allowed field types.
-
-Before creating Vehicle Hire Agreement template:
-
-* check whether all template field types are allowed
-* if not, block template creation with friendly error:
-  Your current plan does not include all field types required for this template.
-
-This is separate from allowTemplates.
-
-Both conditions must pass:
-
-* allowTemplates true
-* all template field types allowed
-
-## Public Submission Behaviour
-
-Public submissions for existing forms should not crash.
-
-Plan field type enforcement should mostly happen at builder/template creation time.
-
-Do not block public submission just because a field type later becomes disallowed, unless existing plan enforcement already requires it.
-
-## Dashboard Plan Display
-
-Update user dashboard plan/usage display if practical.
-
-Show:
-
-Field types available:
-
-* All field types
-
-or:
-
-Field types available:
-Text, Long Text, Email, Phone, Dropdown...
-
-Keep it simple.
-
-## Security
-
-* Only Super Admin can edit plan field type controls.
-* Only Super Admin can edit user field type overrides.
-* Server-side builder save enforcement is required.
-* Normal users cannot bypass limits by editing requests.
-* Do not expose admin controls to normal users.
+Do not change billing/payment logic.
 
 ## Out of Scope
 
 Do not build Stripe.
-Do not build billing.
 Do not build checkout.
-Do not build new field types.
-Do not change public form rendering unless needed for compatibility.
-Do not change Google Drive or Dropbox logic.
-Do not change PDF/email/audit logic.
+Do not build invoices.
+Do not build plan archive history.
+Do not build bulk reassignment.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 19.1 is complete when:
+This task is complete when:
 
-* Plan limits support allowedFieldTypes.
-* Super Admin can configure allowed field types for each plan.
-* Super Admin can choose Allow all field types for a plan.
-* User quota overrides can override allowed field types.
-* Unlimited Everything grants all field types.
-* Effective limit calculation includes allowedFieldTypes.
-* Builder disables disallowed field types in Add Field panel.
-* Builder save action blocks disallowed field types server-side.
-* Friendly error shows disallowed field names.
-* Existing forms with disallowed fields do not crash.
-* Template creation checks required field types.
-* Dashboard shows field type availability if practical.
-* Existing allowed field builder flow still works.
-* Existing public submissions still work.
-* Existing Google Drive/Dropbox/PDF/email/audit flows still work.
+* Super Admin can delete a plan with zero user subscriptions.
+* Super Admin cannot delete a plan assigned to users.
+* Super Admin sees friendly error when delete is blocked.
+* Super Admin can deactivate a plan.
+* Super Admin can reactivate a plan.
+* Inactive plans show an Inactive badge.
+* Assigned users are not broken when a plan is deactivated.
+* Normal users cannot access delete/deactivate actions.
+* Existing plan creation/editing still works.
+* Existing user plan assignment still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

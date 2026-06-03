@@ -164,3 +164,70 @@ export async function updatePlanAction(planId: string, formData: FormData) {
   revalidatePath(ADMIN_PLANS_PATH);
   redirectWith("success", "Plan updated.");
 }
+
+export async function toggleSubscriptionPlanStatus(planId: string) {
+  await requireSuperAdmin();
+
+  const plan = await prisma.subscriptionPlan.findUnique({
+    where: { id: planId },
+    select: {
+      id: true,
+      isActive: true,
+      name: true,
+    },
+  });
+
+  if (!plan) {
+    redirectWith("error", "Plan not found.");
+  }
+
+  const nextIsActive = !plan.isActive;
+
+  await prisma.subscriptionPlan.update({
+    where: { id: plan.id },
+    data: {
+      isActive: nextIsActive,
+    },
+  });
+
+  revalidatePath(ADMIN_PLANS_PATH);
+  redirectWith(
+    "success",
+    `${plan.name} ${nextIsActive ? "activated" : "deactivated"}.`,
+  );
+}
+
+export async function deleteSubscriptionPlan(planId: string) {
+  await requireSuperAdmin();
+
+  const plan = await prisma.subscriptionPlan.findUnique({
+    where: { id: planId },
+    select: {
+      id: true,
+      name: true,
+      _count: {
+        select: {
+          subscriptions: true,
+        },
+      },
+    },
+  });
+
+  if (!plan) {
+    redirectWith("error", "Plan not found.");
+  }
+
+  if (plan._count.subscriptions > 0) {
+    redirectWith(
+      "error",
+      "This plan is assigned to users and cannot be deleted. Deactivate it instead.",
+    );
+  }
+
+  await prisma.subscriptionPlan.delete({
+    where: { id: plan.id },
+  });
+
+  revalidatePath(ADMIN_PLANS_PATH);
+  redirectWith("success", `${plan.name} deleted.`);
+}

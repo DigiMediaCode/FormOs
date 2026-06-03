@@ -1,4 +1,11 @@
-import { createPlanAction, seedDefaultPlansAction, updatePlanAction } from "@/app/admin/plans/actions";
+import {
+  createPlanAction,
+  deleteSubscriptionPlan,
+  seedDefaultPlansAction,
+  toggleSubscriptionPlanStatus,
+  updatePlanAction,
+} from "@/app/admin/plans/actions";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import { fieldTypeLabel, SUPPORTED_FIELD_TYPES } from "@/lib/forms/fields";
@@ -202,6 +209,13 @@ export default async function AdminPlansPage({ searchParams }: AdminPlansPagePro
   const { error, success } = await searchParams;
   const plans = await prisma.subscriptionPlan.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: {
+      _count: {
+        select: {
+          subscriptions: true,
+        },
+      },
+    },
   });
   const starterDefaults = DEFAULT_PLAN_DEFINITIONS[1];
 
@@ -244,13 +258,68 @@ export default async function AdminPlansPage({ searchParams }: AdminPlansPagePro
         <section className="grid gap-4">
           <h3 className="text-xl font-semibold text-slate-950">Edit Plans</h3>
           {plans.map((plan) => (
-            <div className="grid gap-3" key={plan.id}>
-              <h4 className="text-lg font-semibold text-slate-950">{plan.name}</h4>
+            <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-4" key={plan.id}>
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-lg font-semibold text-slate-950">{plan.name}</h4>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        plan.isActive
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-200 text-slate-700"
+                      }`}
+                    >
+                      {plan.isActive ? "Active" : "Inactive"}
+                    </span>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                      {plan._count.subscriptions} assigned
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Edit plan details below, or use the controls on the right to
+                    activate, deactivate, or safely delete the plan.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                    href={`#plan-${plan.id}`}
+                  >
+                    Edit
+                  </a>
+                  <form action={toggleSubscriptionPlanStatus.bind(null, plan.id)}>
+                    <SubmitButton
+                      className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                      pendingText={plan.isActive ? "Deactivating plan..." : "Activating plan..."}
+                      showStatus={false}
+                    >
+                      {plan.isActive ? "Deactivate" : "Activate"}
+                    </SubmitButton>
+                  </form>
+                  <form action={deleteSubscriptionPlan.bind(null, plan.id)}>
+                    <ConfirmSubmitButton
+                      confirmMessage="Are you sure you want to delete this plan? This cannot be undone."
+                      disabled={plan._count.subscriptions > 0}
+                      pendingText="Deleting plan..."
+                    >
+                      Delete
+                    </ConfirmSubmitButton>
+                    {plan._count.subscriptions > 0 ? (
+                      <p className="mt-1 max-w-44 text-xs leading-5 text-slate-500">
+                        Assigned plans must be deactivated instead.
+                      </p>
+                    ) : null}
+                  </form>
+                </div>
+              </div>
+              <div id={`plan-${plan.id}`}>
               <PlanForm
                 action={updatePlanAction.bind(null, plan.id)}
                 defaults={plan}
                 submitLabel="Save Plan"
               />
+              </div>
             </div>
           ))}
         </section>

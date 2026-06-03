@@ -103,6 +103,7 @@ export default async function AdminUserDetailPage({
         id: true,
         name: true,
         slug: true,
+        isActive: true,
       },
     }),
     getUserPlanAccess(userId),
@@ -208,11 +209,14 @@ export default async function AdminUserDetailPage({
                 name="planId"
               >
                 <option value="">Free default</option>
-                {plans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name} ({plan.slug})
-                  </option>
-                ))}
+                {plans
+                  .filter((plan) => plan.isActive || plan.id === user.subscription?.planId)
+                  .map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} ({plan.slug}
+                      {plan.isActive ? "" : ", inactive"})
+                    </option>
+                  ))}
               </select>
             </label>
             <SubmitButton
