@@ -17,6 +17,7 @@ import {
   sendPasswordResetEmail,
 } from "@/lib/notifications/auth-token-notifications";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
 const FORGOT_PASSWORD_SUCCESS =
   "If an account exists for this email, a password reset link has been sent.";
@@ -42,6 +43,20 @@ export async function resendVerificationEmailAction() {
 
   if (user.emailVerifiedAt) {
     redirectWith("/dashboard", "success", "Your email is already verified.");
+  }
+
+  const rateLimit = checkRateLimit({
+    key: rateLimitKey("resend-verification", user.email),
+    limit: 3,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    redirectWith(
+      "/dashboard",
+      "success",
+      "A verification email was sent recently. Please check your inbox.",
+    );
   }
 
   if (
@@ -131,6 +146,16 @@ export async function forgotPasswordAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
 
   if (email) {
+    const rateLimit = checkRateLimit({
+      key: rateLimitKey("forgot-password", email),
+      limit: 3,
+      windowMs: 30 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      redirectWith("/forgot-password", "success", FORGOT_PASSWORD_SUCCESS);
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
       select: {

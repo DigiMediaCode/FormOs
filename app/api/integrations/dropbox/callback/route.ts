@@ -6,7 +6,7 @@ import {
   saveDropboxIntegration,
 } from "@/lib/integrations/dropbox/client";
 import { readDropboxOAuthState } from "@/lib/integrations/dropbox/oauth-state";
-import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { requireIntegrationOwner } from "@/lib/auth/permissions";
 
 const OAUTH_STATE_COOKIE = "formos_dropbox_oauth_state";
 
@@ -23,15 +23,7 @@ function redirectToIntegrations(
 }
 
 export async function GET(request: NextRequest) {
-  const context = await getWorkspaceContextForCurrentUser();
-
-  if (!context) {
-    return NextResponse.redirect(getAppRedirectUrl("/login"));
-  }
-
-  if (!context.isOwner) {
-    return redirectToIntegrations("error", "Only the workspace owner can manage integrations.");
-  }
+  const context = await requireIntegrationOwner();
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");

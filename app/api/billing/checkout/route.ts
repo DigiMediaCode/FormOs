@@ -4,7 +4,7 @@ import {
   createCheckoutSession,
   type BillingInterval,
 } from "@/lib/billing/stripe";
-import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { requireBillingOwner } from "@/lib/auth/permissions";
 
 function redirectToBilling(message: string) {
   return NextResponse.redirect(
@@ -20,15 +20,7 @@ function isBillingInterval(value: string): value is BillingInterval {
 }
 
 export async function POST(request: NextRequest) {
-  const context = await getWorkspaceContextForCurrentUser();
-
-  if (!context) {
-    return NextResponse.redirect(getAppRedirectUrl("/login"), { status: 303 });
-  }
-
-  if (!context.isOwner) {
-    return redirectToBilling("Only the workspace owner can manage billing.");
-  }
+  const context = await requireBillingOwner();
 
   const formData = await request.formData();
   const planId = String(formData.get("planId") ?? "").trim();

@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 24: Business Workspace + Staff Access Foundation
+# CURRENT TASK — FormOS Milestone 25: Full System Security Hardening
 
 ## Project Context
 
@@ -11,493 +11,405 @@ Current state:
 * Google + Lark OAuth login works.
 * Email verification/password reset works.
 * User Profile + Business/Billing Profile exists.
-* Dynamic plans and quota controls exist.
-* Field-type limits per plan exist.
+* Dynamic plans, quota overrides, and field type controls exist.
 * Stripe billing works.
 * Stripe plan sync works.
 * Stripe Checkout and Customer Portal work.
-* Billing events/webhook logs work.
+* Stripe webhook logs/billing events work.
+* Business workspace and staff access work.
+* Staff invite flow works.
 * Super Admin exists.
-* Forms, builder, submissions, storage, PDF, audit, and QR features work.
+* Forms, builder, public submissions, QR, storage integrations, office fields, PDF generation, email, and audit timeline work.
 * Google Drive and Dropbox uploads work.
+* Lark email notifications work.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add a simple Business Workspace and Staff Access foundation.
+Perform a full system security hardening pass across FormOS.
 
-Individual users can continue using FormOS alone.
+This milestone should reduce risk across authentication, authorization, billing, integrations, uploads, public forms, staff access, Super Admin, and server actions.
 
-Business-plan users can add staff members to help manage forms/submissions.
+Do not add flashy new features.
 
-This milestone should create the foundation only.
+This is a security and reliability milestone.
 
-Do not build complex team permissions yet.
+## Main Security Goals
 
-## Product Direction
+* Make authorization consistent.
+* Protect owner-only and Super Admin-only areas.
+* Prevent staff/workspace data leaks.
+* Prevent duplicate/unsafe actions where possible.
+* Harden OAuth and token flows.
+* Harden password reset and verification flows.
+* Harden public submission routes.
+* Harden file uploads.
+* Harden Stripe webhook handling.
+* Improve security headers.
+* Improve safe error handling.
+* Avoid logging secrets/sensitive data.
 
-Staff/team access should be available only if the user’s effective plan allows it.
+## 1. Centralize Authorization Helpers
 
-Add a new plan limit:
+Create or improve centralized permission helpers.
 
-allowTeamMembers: boolean
+Suggested locations:
 
-Add another limit:
+* lib/auth/permissions.ts
+* lib/workspaces/permissions.ts
+* lib/security/guards.ts
 
-maxTeamMembers: number | null
+Helpers should cover:
 
-Rules:
-
-* null = unlimited staff
-* number = maximum staff users allowed
-
-Default suggested limits:
-
-Free:
-
-* allowTeamMembers: false
-* maxTeamMembers: 0
-
-Starter:
-
-* allowTeamMembers: false
-* maxTeamMembers: 0
-
-Pro:
-
-* allowTeamMembers: false
-* maxTeamMembers: 0
-
-Business:
-
-* allowTeamMembers: true
-* maxTeamMembers: 5
-
-Custom quota override can override these.
-
-Unlimited Everything should include:
-
-* allowTeamMembers: true
-* maxTeamMembers: null
-
-## Workspace Concept
-
-Each main account owner should have a workspace.
-
-For now, keep it simple:
-
-* One owner user = one workspace
-* Owner can invite/add staff if plan allows
-* Forms belong to the owner/workspace
-* Staff can access owner’s workspace based on role
-
-Do not build multi-workspace switching yet unless absolutely necessary.
-
-## Staff Roles
-
-For this milestone, support simple roles:
-
-* OWNER
-* ADMIN
-* STAFF
-
-Owner:
-
-* the main account user
-* full access to their workspace
-* can manage staff
-
-Admin:
-
-* can view/manage forms and submissions
-* can complete office fields
-* can finalize submissions
-* cannot manage billing
-* cannot manage subscription plan
-* cannot delete owner account
-
-Staff:
-
-* can view forms and submissions
-* can complete office fields
-* can upload/download completed PDF if current owner permissions allow
-* cannot edit form builder unless simple and explicitly allowed
-* cannot manage billing
-* cannot manage staff
-* cannot manage integrations
-
-Keep permissions simple and server-side.
-
-## Prisma Schema
-
-Add models:
-
-```prisma
-Workspace {
-id        String   @id @default(cuid())
-ownerId   String   @unique
-name      String?
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
-
-owner     User     @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-members   WorkspaceMember[]
-}
-
-WorkspaceMember {
-id          String   @id @default(cuid())
-workspaceId String
-userId      String
-role        WorkspaceRole @default(STAFF)
-status      String @default("ACTIVE")
-invitedEmail String?
-invitedBy   String?
-createdAt   DateTime @default(now())
-updatedAt   DateTime @updatedAt
-
-workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-@@unique([workspaceId, userId])
-@@index([workspaceId])
-@@index([userId])
-}
-
-WorkspaceInvite {
-id          String   @id @default(cuid())
-workspaceId String
-email       String
-role        WorkspaceRole @default(STAFF)
-tokenHash   String
-expiresAt   DateTime
-acceptedAt  DateTime?
-invitedBy   String?
-createdAt   DateTime @default(now())
-
-workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-@@index([email])
-@@index([tokenHash])
-@@index([workspaceId])
-}
-
-enum WorkspaceRole {
-OWNER
-ADMIN
-STAFF
-}
-```
-
-Add User relations as needed.
-
-Create migration:
-
-```bash
-npx prisma migrate dev –name add_workspaces_and_staff
-```
-
-Do not use prisma db push.
-
-## Workspace Creation
-
-Create workspace automatically for owner users.
-
-Options:
-
-* create workspace on signup
-* create workspace lazily when user opens team settings
-* create workspace lazily when needed
-
-Preferred for safety:
-
-Create lazily if missing using helper:
-
-getOrCreateUserWorkspace(ownerId)
-
-Workspace name can default to:
-
-{BusinessProfile.companyName} Workspace
-
-or:
-
-{User.name}’s Workspace
-
-or:
-
-My Workspace
-
-## Team Settings Page
-
-Create route:
-
-/dashboard/settings/team
-
-Add dashboard navigation link:
-
-Team
-
-If user’s effective limits do not allow team members:
-
-Show upgrade message:
-
-Team access is available on Business plans.
-
-Show current plan and “Upgrade from Billing” button/link:
-
-/dashboard/settings/billing
-
-Do not show staff invite form.
-
-If user’s plan allows team members:
-
-Show:
-
-* workspace name
-* current team members
-* invite staff form
-* role selector: Admin / Staff
-* remove member button
-* change role button if simple
-
-## Invite Flow
-
-Owner/Admin sends invite by email.
-
-For this milestone, only OWNER can invite staff.
-
-Invite form:
-
-* email
-* role: Admin or Staff
-
-On submit:
-
-1. Check effective plan allows team members.
-2. Check current active staff count below maxTeamMembers.
-3. Create invite token.
-4. Store token hash only.
-5. Email invite link using existing Lark email provider.
-6. Show success message.
-
-Invite link:
-
-{APP_URL}/team/invite/accept?token={rawToken}
-
-Do not store raw token.
-
-Invite expiry:
-
-7 days.
-
-## Accept Invite Flow
-
-Create route:
-
-/team/invite/accept
-
-Behaviour:
-
-* read token
-* validate token
-* if logged out:
-    * ask user to login/signup first
-    * after login, user should be able to accept invite if email matches
-* if logged in:
-    * check logged-in user email matches invite email
-    * create WorkspaceMember
-    * mark invite acceptedAt
-    * redirect to /dashboard
-
-For this milestone, keep it simple:
-
-If user with invite email does not exist:
-
-* show message:
-    Please create an account with this email to accept the invite.
-* link to /signup
-
-Do not build complex post-signup invite continuation unless easy.
-
-## Staff Access Rules
-
-Staff/Admin should access the owner workspace data.
-
-This requires workspace-aware authorization helpers.
-
-Create helpers:
-
-* getCurrentWorkspaceContext
+* requireAuth
+* requireSuperAdmin
 * requireWorkspaceOwner
-* requireWorkspaceMember
 * requireWorkspaceAdminOrOwner
-* canManageWorkspaceForms
-* canViewWorkspaceSubmissions
-* canCompleteOfficeFields
+* requireWorkspaceMember
+* requireOwnerOrWorkspaceMemberForForm
+* requireOwnerOrWorkspaceMemberForSubmission
+* requireBillingOwner
+* requireIntegrationOwner
+* requireTeamOwner
 
-For this milestone:
+Use these helpers in pages, routes, and server actions.
 
-Owner:
+Do not rely only on hiding buttons in UI.
 
-* full access
+## 2. Workspace / Staff Access Hardening
 
-Admin:
+Review all workspace/staff routes and actions.
 
-* can view/manage forms and submissions
-* can save office fields
-* can finalize submissions
+Owner-only:
 
-Staff:
+* /dashboard/settings/billing
+* /dashboard/settings/integrations
+* /dashboard/settings/team
+* billing API routes/actions
+* integration connect/disconnect/config routes/actions
+* team invite/remove/role actions
 
-* can view forms and submissions
-* can save office fields
-* can finalize submissions only if simple, otherwise block and document
+OWNER should access all.
 
-If implementing full workspace scoping is too much, start with:
+ADMIN may access forms/submissions and builder only if already intended.
 
-* staff can view forms list
-* staff can view submissions
-* staff can save office fields
-* owner-only billing/integrations/team management
+STAFF should not access billing, integrations, team management, subscription controls, Super Admin, or owner private business settings.
 
-Do not break owner access.
+Use existing ownerId strategy:
 
-## Data Access Strategy
+* Form.ownerId is still source owner.
+* Staff access is allowed only if staff belongs to workspace where workspace.ownerId === form.ownerId.
 
-Existing forms use ownerId.
+Do not migrate forms to workspaceId in this milestone.
 
-For this milestone, do not rewrite all data models to workspaceId unless necessary.
+## 3. Super Admin Hardening
 
-Instead:
+Review all /admin routes and admin actions.
 
-* workspace.ownerId remains the owner of forms
-* staff access checks whether current user is a member of workspace whose ownerId matches form.ownerId
-* ownerId stays as the data owner
+Only SUPER_ADMIN can access:
 
-This avoids a risky migration across forms/submissions.
+* /admin
+* /admin/users
+* /admin/forms
+* /admin/plans
+* /admin/settings
+* /admin/billing/events
+* plan create/edit/delete/deactivate/sync
+* user quota override actions
+* user plan assignment actions
+* platform settings actions
 
-## Dashboard Behaviour for Staff
+Workspace OWNER/ADMIN/STAFF must never access Super Admin routes unless their User.role is SUPER_ADMIN.
 
-When staff logs in:
+## 4. Billing Security Hardening
 
-* dashboard should show workspace they belong to
-* show forms from workspace owner
-* hide billing/settings that staff cannot access
-* team/settings/billing/integrations should be owner-only unless explicitly allowed
+Review Stripe billing routes/actions:
 
-Keep UI simple.
+* checkout route/action
+* portal route/action
+* webhook route
+* plan sync action
+* cancel/resume subscription action
+* billing events page
 
-## Plan Enforcement
+Requirements:
 
-Add new limits to plan system:
+* checkout requires logged-in user
+* checkout only creates session for current user
+* portal only opens current user’s customer portal
+* cancel/resume only affects current user’s subscription
+* plan sync is Super Admin-only
+* webhook verifies Stripe signature before processing
+* webhook is idempotent using Stripe event ID
+* webhook never stores card/payment method data
+* Stripe secrets are never exposed
+* billing events never expose secrets
 
-* allowTeamMembers
-* maxTeamMembers
+## 5. OAuth Security Hardening
 
-Update plan editor UI:
+Review Google and Lark OAuth flows.
 
-* Allow team members toggle
-* Max team members numeric input with Unlimited toggle
+Requirements:
 
-Update user quota override UI:
+* OAuth state is generated securely
+* OAuth state is validated on callback
+* missing/invalid state is rejected
+* no open redirects
+* user email is required
+* users are matched by OAuth account first, then email
+* duplicate users are not created for same email
+* existing password is not overwritten
+* OAuth tokens are not logged
+* provider secrets are not exposed
+* Google auth scopes are only openid/email/profile
+* Google Drive OAuth remains separate from Google login OAuth
+* Lark login remains separate from Lark email provider
 
-* allowTeamMembers override
-* maxTeamMembers override
-* Unlimited Everything includes team access
+## 6. Auth Token Hardening
 
-Server-side checks required before sending invite.
+Review email verification and password reset flows.
 
-## Super Admin Visibility
+Requirements:
 
-Update Super Admin user view if practical:
+* raw tokens are never stored
+* token hash only stored
+* tokens expire
+* tokens are one-time use
+* password reset does not reveal whether email exists
+* passwords are hashed using existing password helper
+* login remains safe for existing users
+* Super Admin is not accidentally locked out
+* resend verification is not spammable if simple rate limit exists
 
-Show:
+## 7. Public Form Submission Hardening
 
-* workspace owner
-* team member count
-* plan allows team: yes/no
+Review public form route:
 
-Do not let Super Admin access private workspace submissions in this milestone.
+* /f/[formSlug]
 
-## Email Notification
+Requirements:
 
-Create invite email:
+* only published forms can be submitted
+* draft/archived/missing forms show friendly unavailable page
+* monthly submission limits are checked server-side
+* plan field restrictions do not break existing published forms
+* server-side validation remains source of truth
+* required fields are checked server-side
+* office-only fields are ignored by public submission
+* display-only fields are ignored by public submission
+* no owner private data is exposed
+* no tokens/secrets/storage credentials exposed
+* duplicate submit prevention still works
 
-Subject:
+## 8. File Upload Security Hardening
 
-You have been invited to FormOS
+Review Google Drive and Dropbox upload handling.
 
-Body:
+Requirements:
 
-You have been invited to join {workspaceName} on FormOS.
+* file type validation server-side
+* file size validation server-side
+* unsupported MIME types rejected
+* no file binary stored permanently on FormOS server
+* storage tokens never exposed to browser
+* uploaded file metadata is safe
+* public submitter cannot choose storage provider/path
+* active provider chosen by owner only
+* Dropbox paths are normalized and path traversal blocked
+* Google folder config remains owner-only
+* upload errors are friendly
 
-Button/link:
+## 9. PDF Generation Security
 
-Accept Invite
+Review completed PDF generation/download/email.
 
-Invite expires in 7 days.
+Requirements:
 
-Email failure should not create a broken state if possible.
+* only owner or permitted workspace role can generate/download PDF
+* Super Admin cannot access completed PDFs unless deliberately built later
+* public user cannot access arbitrary PDFs by ID
+* PDF does not expose storage links unless intended
+* PDF does not expose uploaded file metadata if current clean layout removed it
+* PDF generation errors do not leak stack traces
+* finalization cannot be double-run to spam emails
+* plan limits for PDF generation still apply
 
-If email fails after invite is created, show warning so owner can resend later if resend is implemented.
+## 10. Server Action Hardening
 
-Resend invite is optional.
+Review all server actions.
 
-## Security
+Actions should:
 
-* Only owner can invite/remove staff in this milestone.
-* Staff cannot manage billing.
-* Staff cannot change subscription plan.
-* Staff cannot edit user quota.
-* Staff cannot access Super Admin.
-* Staff cannot access another workspace.
-* Invite tokens are hashed.
-* Invite tokens expire.
-* Invite email must match accepting user email.
-* Server-side authorization required.
-* Do not rely only on hiding UI.
+* check logged-in user where required
+* check resource ownership/workspace permission
+* return friendly errors
+* not expose raw stack traces
+* not log sensitive data
+* prevent double/duplicate critical actions where practical
+
+Critical actions:
+
+* create form
+* create template
+* save builder fields
+* publish/unpublish/archive form
+* save office fields
+* finalize submission
+* download PDF
+* connect/disconnect integrations
+* save storage folder/path
+* set active storage provider
+* invite staff
+* remove staff
+* change staff role
+* assign plan
+* edit quota override
+* sync Stripe plan
+* create checkout
+* cancel/resume subscription
+
+## 11. Rate Limiting / Abuse Controls
+
+Add simple lightweight rate limiting where practical.
+
+Priority targets:
+
+* login attempts
+* forgot password
+* resend verification
+* public form submission
+* staff invite sending
+* OAuth callback abuse if practical
+
+Do not add Redis or heavy external infra in this milestone.
+
+Simple DB-based or in-memory rate limiting is acceptable if safe for current deployment.
+
+If rate limiting is too broad, at least add it to:
+
+* forgot password
+* resend verification
+* public form submission
+
+## 12. Security Headers
+
+Add security headers in Next config or middleware if practical.
+
+Recommended headers:
+
+* X-Frame-Options: DENY or SAMEORIGIN
+* X-Content-Type-Options: nosniff
+* Referrer-Policy: strict-origin-when-cross-origin
+* Permissions-Policy with limited permissions
+* Content-Security-Policy if simple and not breaking existing inline styles/scripts
+
+Be careful with CSP because it can break Stripe, OAuth, signatures, and scripts if done badly.
+
+If CSP is risky, skip CSP and add safer basic headers first.
+
+## 13. Error Handling
+
+Improve error handling where practical.
+
+Requirements:
+
+* public users see friendly errors
+* admin/internal errors do not expose stack traces
+* API routes return safe JSON errors
+* webhook route returns appropriate status
+* sensitive logs avoided
+
+Do not silence critical logs completely. Log safe messages.
+
+## 14. Logging / Sensitive Data Review
+
+Search for unsafe logging.
+
+Remove or sanitize logs containing:
+
+* passwords
+* raw auth tokens
+* token hashes if unnecessary
+* OAuth access/refresh tokens
+* Google Drive tokens
+* Dropbox tokens
+* Stripe secret/webhook secret
+* Lark app secrets/tokens
+* uploaded file contents
+* full submitted answers where avoidable
+
+## 15. Access Denied UX
+
+Create or improve reusable access denied UI.
+
+Text:
+
+Access denied
+
+You do not have permission to access this area.
+
+Button:
+
+Back to Dashboard
+
+Use this for blocked dashboard/admin/staff routes where appropriate.
+
+## 16. Security Test Checklist
+
+Add a SECURITY_CHECKLIST.md or update DEPLOYMENT.md with manual checks:
+
+* normal user cannot access /admin
+* staff cannot access billing
+* staff cannot access integrations
+* staff cannot access another user’s form
+* unauthenticated user cannot access dashboard
+* draft form cannot be submitted publicly
+* Stripe webhook rejects invalid signature
+* forgot password does not reveal email existence
+* OAuth state rejects invalid callback
+* storage tokens are not visible in HTML
+* public form does not expose owner private data
 
 ## Out of Scope
 
-Do not build multiple workspaces per user.
-Do not build team billing seats.
+Do not build a full audit compliance system.
+Do not build SOC2.
+Do not build MFA.
+Do not build CAPTCHA unless simple and already available.
 Do not build per-form permissions.
-Do not build granular role editor.
-Do not build audit logs for staff actions unless existing audit helper can be reused simply.
-Do not migrate forms to workspaceId unless absolutely necessary.
-Do not build CommerceOS integration.
-Do not change Stripe billing except plan limits.
+Do not build multiple workspaces.
+Do not rewrite data models to workspaceId.
+Do not change billing plan logic except security fixes.
+Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 24 is complete when:
+Milestone 25 is complete when:
 
-* Workspace model exists.
-* WorkspaceMember model exists.
-* WorkspaceInvite model exists.
-* WorkspaceRole enum exists.
-* Prisma migration exists.
-* Users can have/get a workspace.
-* Plan limits include allowTeamMembers and maxTeamMembers.
-* Business/unlimited users can invite staff.
-* Non-business users see upgrade message instead of invite form.
-* Staff invite email sends.
-* Invite token is hashed.
-* Invite token expires.
-* Invite can be accepted by matching email user.
-* WorkspaceMember is created on accept.
-* Owner can see team members.
-* Owner can remove staff member.
-* Owner can change staff role if implemented.
-* Staff cannot access billing.
-* Staff cannot manage integrations.
-* Staff cannot manage team.
-* Staff can access permitted workspace forms/submissions according to role.
-* Server-side access checks protect workspace data.
-* Existing owner access still works.
-* Existing forms/submissions still work.
-* Existing billing/plans still work.
-* Existing Google Drive/Dropbox/PDF/email/audit flows still work.
+* Authorization helpers are centralized or improved.
+* Super Admin routes/actions are protected.
+* Workspace owner/admin/staff permissions are enforced server-side.
+* Staff cannot access billing/integrations/team management.
+* Staff cannot access another workspace.
+* Billing routes/actions are protected.
+* Stripe webhook remains signature verified and idempotent.
+* OAuth state validation is confirmed.
+* Email verification/password reset token flows are hardened.
+* Public submission route is hardened.
+* File upload validation is server-side and safe.
+* PDF generation/download is permission-protected.
+* Critical server actions have ownership/permission checks.
+* Basic rate limiting exists for priority abuse routes or is documented if deferred.
+* Basic security headers are added where safe.
+* Unsafe logging is removed/sanitized.
+* Access denied UI exists.
+* Security checklist document exists.
+* Existing owner workflow still works.
+* Existing staff workflow still works.
+* Existing Super Admin workflow still works.
+* Existing Stripe billing still works.
+* Existing Google Drive/Dropbox upload flow still works.
+* Existing PDF/email/audit flow still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev –name add_workspaces_and_staff creates migration.
 * npm run build passes.

@@ -8,6 +8,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { sendWorkspaceInviteNotification } from "@/lib/notifications/team-notifications";
 import { getUserPlanAccess } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 import {
   getOrCreateUserWorkspace,
   requireWorkspaceOwner,
@@ -92,6 +93,19 @@ export async function inviteWorkspaceMember(formData: FormData) {
 
   if (email === context.user.email.toLowerCase()) {
     redirectWith("error", "You are already the workspace owner.");
+  }
+
+  const rateLimit = checkRateLimit({
+    key: rateLimitKey("staff-invite", context.user.id),
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    redirectWith(
+      "error",
+      `Too many invites sent. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
+    );
   }
 
   try {

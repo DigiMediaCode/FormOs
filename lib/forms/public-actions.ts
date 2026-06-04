@@ -32,6 +32,7 @@ import {
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
+import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
 const SIGNATURE_FIELD_TYPES = ["signature", "initials"];
 const UPLOAD_FIELD_TYPES = ["image_upload"];
@@ -279,6 +280,21 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     errorRedirect(formId, "This form is not available.");
   }
 
+  const headerStore = await headers();
+  const ipAddress = getIpAddress(headerStore) ?? "unknown";
+  const rateLimit = checkRateLimit({
+    key: rateLimitKey("public-submit", `${form.id}:${ipAddress}`),
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    errorRedirect(
+      form.id,
+      `Too many submissions from this connection. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
+    );
+  }
+
   try {
     await assertCanReceiveSubmission(form.ownerId);
   } catch (error) {
@@ -309,7 +325,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     formId: form.id,
     uploadFieldsEnabled: uploadsAvailable,
     activeProvider: uploadProvider.activeProvider,
-    connectedProviders: uploadProvider.connectedProviders,
+    connectedProviderCount: uploadProvider.connectedProviders.length,
   });
 
   for (const field of formSnapshot.fields) {
@@ -416,7 +432,6 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     submittedData[field.id] = value;
   }
 
-  const headerStore = await headers();
   const successMessage = successMessageFor(formSnapshot.settings);
 
   const submission = await prisma.formSubmission.create({
@@ -429,7 +444,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       signatures: submittedSignatures,
       metadata: {
         userAgent: headerStore.get("user-agent"),
-        ipAddress: getIpAddress(headerStore),
+        ipAddress,
         submittedAt: new Date().toISOString(),
       },
     },
@@ -500,11 +515,8 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         logUploadDiagnostic("Google Drive upload folders ready.", {
           formId: form.id,
           submissionId: submission.id,
-          parentFolderId: parentFolder.id,
           parentFolderName: parentFolder.name,
-          formFolderId: formFolder.id,
           formFolderName: formFolder.name,
-          submissionFolderId: submissionFolder.id,
           submissionFolderName: submissionFolder.name,
         });
 
@@ -517,7 +529,6 @@ export async function submitPublicForm(formId: string, formData: FormData) {
             fileName: uploadRequest.file.name,
             mimeType: uploadRequest.file.type,
             size: uploadRequest.file.size,
-            targetFolderId: submissionFolder.id,
           });
 
           const uploadedFile = await uploadFileToDrive(driveClient, {
@@ -600,7 +611,6 @@ export async function submitPublicForm(formId: string, formData: FormData) {
             fileName: uploadRequest.file.name,
             mimeType: uploadRequest.file.type,
             size: uploadRequest.file.size,
-            parentPath,
           });
 
           const uploadedFile = await uploadFileToDropbox(dropboxClient, {

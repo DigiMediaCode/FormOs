@@ -3,24 +3,12 @@ import { NextResponse } from "next/server";
 import { getAppRedirectUrl } from "@/lib/app-url";
 import { getDropboxOAuthUrl } from "@/lib/integrations/dropbox/client";
 import { createDropboxOAuthState } from "@/lib/integrations/dropbox/oauth-state";
-import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { requireIntegrationOwner } from "@/lib/auth/permissions";
 
 const OAUTH_STATE_COOKIE = "formos_dropbox_oauth_state";
 
 export async function GET() {
-  const context = await getWorkspaceContextForCurrentUser();
-
-  if (!context) {
-    return NextResponse.redirect(getAppRedirectUrl("/login"));
-  }
-
-  if (!context.isOwner) {
-    return NextResponse.redirect(
-      getAppRedirectUrl(
-        "/dashboard?error=Only%20the%20workspace%20owner%20can%20manage%20integrations.",
-      ),
-    );
-  }
+  const context = await requireIntegrationOwner();
 
   const state = createDropboxOAuthState(context.user.id);
   const authUrl = getDropboxOAuthUrl(state);

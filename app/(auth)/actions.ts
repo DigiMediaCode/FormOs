@@ -11,6 +11,7 @@ import {
 } from "@/lib/notifications/auth-notifications";
 import { sendEmailVerificationEmail } from "@/lib/notifications/auth-token-notifications";
 import { AuthTokenType } from "@prisma/client";
+import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -88,6 +89,19 @@ export async function loginAction(formData: FormData) {
 
   if (!email || !password) {
     errorRedirect("/login", "Email and password are required.");
+  }
+
+  const rateLimit = checkRateLimit({
+    key: rateLimitKey("login", email),
+    limit: 8,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    errorRedirect(
+      "/login",
+      `Too many login attempts. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
+    );
   }
 
   const user = await prisma.user.findUnique({

@@ -4,24 +4,12 @@ import { NextResponse } from "next/server";
 import { getAppRedirectUrl } from "@/lib/app-url";
 import { getGoogleDriveAuthUrl } from "@/lib/integrations/google-drive/client";
 import { createGoogleDriveOAuthState } from "@/lib/integrations/google-drive/oauth-state";
-import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { requireIntegrationOwner } from "@/lib/auth/permissions";
 
 const OAUTH_STATE_COOKIE = "formos_google_drive_oauth_state";
 
 export async function GET(request: NextRequest) {
-  const context = await getWorkspaceContextForCurrentUser();
-
-  if (!context) {
-    return NextResponse.redirect(getAppRedirectUrl("/login"));
-  }
-
-  if (!context.isOwner) {
-    return NextResponse.redirect(
-      getAppRedirectUrl(
-        "/dashboard?error=Only%20the%20workspace%20owner%20can%20manage%20integrations.",
-      ),
-    );
-  }
+  const context = await requireIntegrationOwner();
 
   const state = createGoogleDriveOAuthState(context.user.id);
   const authUrl = getGoogleDriveAuthUrl(state);

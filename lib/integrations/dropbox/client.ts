@@ -506,7 +506,6 @@ async function ensureDropboxFolder(client: DropboxClient, path: string) {
   logDropboxError("Dropbox folder creation failed.", {
     status: response.status,
     message,
-    path,
   });
   throw new Error("Unable to create a Dropbox folder.");
 }
@@ -603,7 +602,6 @@ export async function uploadFileToDropbox(
       fileName: input.fileName,
       mimeType: input.mimeType,
       size: input.file.size,
-      path: paths.path,
     });
     throw new Error("Unable to upload file to Dropbox.");
   }

@@ -208,7 +208,7 @@ export async function requireWorkspaceOwner() {
   const context = await requireWorkspaceMember();
 
   if (!context.isOwner) {
-    redirect("/dashboard?error=Only the workspace owner can access that area.");
+    redirect("/access-denied");
   }
 
   return context;
@@ -218,7 +218,7 @@ export async function requireWorkspaceAdminOrOwner() {
   const context = await requireWorkspaceMember();
 
   if (!context.isAdmin) {
-    redirect("/dashboard?error=You do not have permission to manage forms.");
+    redirect("/access-denied");
   }
 
   return context;
