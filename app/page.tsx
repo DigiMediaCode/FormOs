@@ -1,8 +1,26 @@
 import Link from "next/link";
+import {
+  Activity,
+  Car,
+  ClipboardCheck,
+  CloudUpload,
+  FileOutput,
+  FileSignature,
+  FolderInput,
+  Handshake,
+  LayoutTemplate,
+  Lock,
+  PenTool,
+  QrCode,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { PackageCarousel } from "@/components/public/package-carousel";
+import { LandingActionLink } from "@/components/public/landing-action-link";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PlatformBrand } from "@/components/ui/platform-brand";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { getSessionUserId } from "@/lib/auth/session";
 import {
   DEFAULT_PLAN_DEFINITIONS,
   featureLabels,
@@ -15,46 +33,82 @@ import { prisma } from "@/lib/prisma";
 
 const features = [
   {
+    icon: LayoutTemplate,
     title: "Form Builder",
     description: "Create clean forms for intake, agreements, bookings, and approvals.",
   },
   {
+    icon: PenTool,
     title: "eSignatures and Initials",
     description: "Collect signatures and initials directly inside public forms.",
   },
   {
+    icon: CloudUpload,
     title: "File Uploads",
     description: "Send uploaded files to Google Drive or Dropbox without storing them in FormOS.",
   },
   {
+    icon: Lock,
     title: "Office Use Only Fields",
     description: "Let staff complete internal details after the public submission arrives.",
   },
   {
+    icon: FileOutput,
     title: "Completed PDF Delivery",
     description: "Finalize submissions and email completed PDFs to owners and submitters.",
   },
   {
+    icon: QrCode,
     title: "QR Code Form Sharing",
     description: "Share public forms with links or downloadable QR codes.",
   },
   {
+    icon: Activity,
     title: "Activity Timeline",
     description: "Track key submission actions with a simple owner-visible timeline.",
   },
   {
+    icon: FileSignature,
     title: "Templates",
     description: "Start quickly with ready-to-edit workflow templates.",
   },
 ];
 
-const useCases = [
-  "Vehicle hire agreements",
-  "Client intake forms",
-  "Consent forms",
-  "Service agreements",
-  "Onboarding forms",
-  "Document collection forms",
+const useCases: Array<{
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}> = [
+  {
+    icon: Car,
+    title: "Vehicle hire agreements",
+    description: "Signed rentals with file uploads",
+  },
+  {
+    icon: UserPlus,
+    title: "Client intake forms",
+    description: "Onboard clients smoothly",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Consent forms",
+    description: "Capture clear permissions",
+  },
+  {
+    icon: Handshake,
+    title: "Service agreements",
+    description: "Lock in terms with signatures",
+  },
+  {
+    icon: Users,
+    title: "Onboarding forms",
+    description: "Collect details and documents",
+  },
+  {
+    icon: FolderInput,
+    title: "Document collection forms",
+    description: "Gather files in one place",
+  },
 ];
 
 const steps = [
@@ -180,12 +234,13 @@ async function getLandingPlans() {
 }
 
 export default async function HomePage() {
-  const [user, settings, plans] = await Promise.all([
-    getCurrentUser(),
+  const [userId, settings, plans] = await Promise.all([
+    getSessionUserId(),
     getPlatformSettings(),
     getLandingPlans(),
   ]);
-  const packageHref = user ? "/dashboard/settings/billing" : "/signup";
+  const isLoggedIn = Boolean(userId);
+  const packageHref = isLoggedIn ? "/dashboard/settings/billing" : "/signup";
   const appUrl = safeAppUrl();
   const structuredData = {
     "@context": "https://schema.org",
@@ -242,7 +297,7 @@ export default async function HomePage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
-            {user ? (
+            {isLoggedIn ? (
               <Link
                 className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
                 href="/dashboard"
@@ -251,18 +306,22 @@ export default async function HomePage() {
               </Link>
             ) : (
               <>
-                <Link
+                <LandingActionLink
                   className="hidden rounded-md border border-blue-100 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 sm:inline-flex"
                   href="/login"
+                  icon="user"
+                  pendingText="Opening login..."
                 >
                   Login
-                </Link>
-                <Link
-                  className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                </LandingActionLink>
+                <LandingActionLink
+                  className="inline-flex rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
                   href="/signup"
+                  icon="rocket"
+                  pendingText="Opening signup..."
                 >
                   Get Started
-                </Link>
+                </LandingActionLink>
               </>
             )}
           </div>
@@ -285,18 +344,22 @@ export default async function HomePage() {
               PDFs automatically.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                className="rounded-md bg-blue-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              <LandingActionLink
+                className="inline-flex rounded-md bg-blue-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                 href="/signup"
+                icon="rocket"
+                pendingText="Opening signup..."
               >
                 Get Started Free
-              </Link>
-              <Link
-                className="rounded-md border border-blue-100 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+              </LandingActionLink>
+              <LandingActionLink
+                className="inline-flex rounded-md border border-blue-100 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
                 href="/login"
+                icon="user"
+                pendingText="Opening login..."
               >
                 Login
-              </Link>
+              </LandingActionLink>
             </div>
             <p className="mt-5 text-sm font-medium text-slate-600">
               No code required. Works with Google Drive and Dropbox.
@@ -346,7 +409,10 @@ export default async function HomePage() {
               className="rounded-xl border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5 transition hover:border-blue-200 hover:shadow-md"
               key={feature.title}
             >
-              <h3 className="text-base font-semibold text-[#071124]">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <feature.icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <h3 className="mt-5 text-base font-semibold text-[#071124]">
                 {feature.title}
               </h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -370,10 +436,20 @@ export default async function HomePage() {
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {useCases.map((useCase) => (
               <div
-                className="rounded-xl border border-blue-100 bg-white px-5 py-4 text-sm font-medium text-slate-800 shadow-sm shadow-blue-950/5"
-                key={useCase}
+                className="flex items-center gap-4 rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-950/5"
+                key={useCase.title}
               >
-                {useCase}
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <useCase.icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">
+                    {useCase.title}
+                  </span>
+                  <span className="mt-1 block text-xs font-medium text-slate-500">
+                    {useCase.description}
+                  </span>
+                </span>
               </div>
             ))}
           </div>
@@ -482,16 +558,18 @@ export default async function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  <Link
+                  <LandingActionLink
                     className={`mt-6 inline-flex w-full justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition ${
                       isHighlighted
                         ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "border border-blue-100 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50"
                     }`}
                     href={packageHref}
+                    icon="rocket"
+                    pendingText={isLoggedIn ? "Opening billing..." : "Opening signup..."}
                   >
-                    {user ? "Manage Package" : "Get Started"}
-                  </Link>
+                    {isLoggedIn ? "Manage Package" : "Get Started"}
+                  </LandingActionLink>
                 </article>
               );
             })}
@@ -516,12 +594,14 @@ export default async function HomePage() {
             Start with a blank form or use a template, then share a public link
             or QR code when you are ready.
           </p>
-          <Link
+          <LandingActionLink
             className="mt-8 inline-flex rounded-md bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
             href="/signup"
+            icon="rocket"
+            pendingText="Opening signup..."
           >
             Create Free Account
-          </Link>
+          </LandingActionLink>
         </div>
       </section>
 
