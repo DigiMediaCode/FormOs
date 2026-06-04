@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppRedirectUrl } from "@/lib/app-url";
-import { getSessionUserId } from "@/lib/auth/session";
 import {
   createCheckoutSession,
   type BillingInterval,
 } from "@/lib/billing/stripe";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 function redirectToBilling(message: string) {
   return NextResponse.redirect(
@@ -20,10 +20,14 @@ function isBillingInterval(value: string): value is BillingInterval {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = await getSessionUserId();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.redirect(getAppRedirectUrl("/login"), { status: 303 });
+  }
+
+  if (!context.isOwner) {
+    return redirectToBilling("Only the workspace owner can manage billing.");
   }
 
   const formData = await request.formData();
@@ -35,7 +39,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const session = await createCheckoutSession({ userId, planId, interval });
+    const session = await createCheckoutSession({
+      userId: context.user.id,
+      planId,
+      interval,
+    });
 
     if (!session.url) {
       return redirectToBilling("Stripe Checkout did not return a redirect URL.");

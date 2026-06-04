@@ -1,20 +1,28 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth/session";
 import { getAppRedirectUrl } from "@/lib/app-url";
 import { getDropboxOAuthUrl } from "@/lib/integrations/dropbox/client";
 import { createDropboxOAuthState } from "@/lib/integrations/dropbox/oauth-state";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 const OAUTH_STATE_COOKIE = "formos_dropbox_oauth_state";
 
 export async function GET() {
-  const userId = await getSessionUserId();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
-  const state = createDropboxOAuthState(userId);
+  if (!context.isOwner) {
+    return NextResponse.redirect(
+      getAppRedirectUrl(
+        "/dashboard?error=Only%20the%20workspace%20owner%20can%20manage%20integrations.",
+      ),
+    );
+  }
+
+  const state = createDropboxOAuthState(context.user.id);
   const authUrl = getDropboxOAuthUrl(state);
 
   if (!authUrl) {

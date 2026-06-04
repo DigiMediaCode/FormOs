@@ -4,6 +4,7 @@ import { DashboardNav } from "@/components/ui/dashboard-nav";
 import { PlatformBrand } from "@/components/ui/platform-brand";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 export default async function DashboardLayout({
   children,
@@ -16,13 +17,19 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const workspaceContext = await getWorkspaceContextForCurrentUser();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
             <LinkLogo />
-            <DashboardNav />
+            <DashboardNav
+              canManageOwnerSettings={
+                workspaceContext?.canManageOwnerSettings ?? true
+              }
+            />
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

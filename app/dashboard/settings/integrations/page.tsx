@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { StorageProvider, UserRole } from "@prisma/client";
-import { redirect } from "next/navigation";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { GOOGLE_DRIVE_SCOPE, getGoogleDriveIntegrationStatus } from "@/lib/integrations/google-drive/client";
 import { DROPBOX_SCOPE, getDropboxIntegrationStatus } from "@/lib/integrations/dropbox/client";
 import { LARK_MAIL_SCOPE, getLarkMailIntegrationStatus } from "@/lib/integrations/lark-mail/client";
 import { getUserUploadStorageStatus } from "@/lib/integrations/upload-settings";
+import { requireWorkspaceOwner } from "@/lib/workspaces/access";
 import {
   clearDropboxUploadFolderAction,
   clearGoogleDriveUploadFolderAction,
@@ -37,11 +36,8 @@ function formatDate(date: Date | null) {
 export default async function IntegrationsPage({
   searchParams,
 }: IntegrationsPageProps) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const context = await requireWorkspaceOwner();
+  const user = context.user;
 
   const { error, success } = await searchParams;
   const [googleDrive, dropbox, uploadStorage] = await Promise.all([

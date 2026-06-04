@@ -3,7 +3,6 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { generateUniqueSlug } from "@/lib/forms/actions";
 import {
   getVehicleHireAgreementFields,
@@ -15,18 +14,15 @@ import {
   assertCanUseTemplate,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 
 export async function createVehicleHireAgreementTemplate() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const context = await requireWorkspaceAdminOrOwner();
 
   try {
-    await assertCanUseTemplate(user.id);
-    await assertCanUseFieldTypes(user.id, getVehicleHireAgreementFields());
-    await assertCanCreateForm(user.id);
+    await assertCanUseTemplate(context.ownerId);
+    await assertCanUseFieldTypes(context.ownerId, getVehicleHireAgreementFields());
+    await assertCanCreateForm(context.ownerId);
   } catch (error) {
     redirect(
       `/dashboard/forms/new?error=${encodeURIComponent(
@@ -42,9 +38,9 @@ export async function createVehicleHireAgreementTemplate() {
 
   const form = await prisma.form.create({
     data: {
-      ownerId: user.id,
+      ownerId: context.ownerId,
       title: VEHICLE_HIRE_AGREEMENT_TEMPLATE.title,
-      slug: await generateUniqueSlug(user.id, VEHICLE_HIRE_AGREEMENT_TEMPLATE.title),
+      slug: await generateUniqueSlug(context.ownerId, VEHICLE_HIRE_AGREEMENT_TEMPLATE.title),
       description: VEHICLE_HIRE_AGREEMENT_TEMPLATE.description,
       mode: VEHICLE_HIRE_AGREEMENT_TEMPLATE.mode,
       status: VEHICLE_HIRE_AGREEMENT_TEMPLATE.status,

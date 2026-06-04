@@ -33,6 +33,7 @@ const booleanLimitFields = [
   ["allowTemplates", "Templates"],
   ["allowQrCode", "QR codes"],
   ["allowCustomBranding", "Custom branding"],
+  ["allowTeamMembers", "Team members"],
 ] as const;
 
 function moneyValue(value: unknown) {
@@ -53,7 +54,7 @@ function formatDate(date: Date | null | undefined) {
 function LimitInputs({ limits }: { limits: PlanLimits }) {
   return (
     <div className="grid gap-4">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
           Max forms
           <input
@@ -81,6 +82,24 @@ function LimitInputs({ limits }: { limits: PlanLimits }) {
             <input
               defaultChecked={limits.maxMonthlySubmissions === null}
               name="maxMonthlySubmissionsUnlimited"
+              type="checkbox"
+            />
+            Unlimited
+          </span>
+        </label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+          Team members
+          <input
+            className="rounded-md border border-slate-300 px-3 py-2"
+            defaultValue={limits.maxTeamMembers ?? ""}
+            min={0}
+            name="maxTeamMembers"
+            type="number"
+          />
+          <span className="flex items-center gap-2 text-xs font-normal text-slate-600">
+            <input
+              defaultChecked={limits.maxTeamMembers === null}
+              name="maxTeamMembersUnlimited"
               type="checkbox"
             />
             Unlimited

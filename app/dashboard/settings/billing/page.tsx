@@ -1,12 +1,11 @@
-import { redirect } from "next/navigation";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   getUserPlanAccess,
   limitLabel,
   UNLIMITED_EVERYTHING_LIMITS,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspaceOwner } from "@/lib/workspaces/access";
 
 type BillingPageProps = {
   searchParams: Promise<{
@@ -69,11 +68,8 @@ function isUnlimitedOverride(limits: unknown) {
 }
 
 export default async function BillingPage({ searchParams }: BillingPageProps) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const context = await requireWorkspaceOwner();
+  const user = context.user;
 
   const { checkout, error, success } = await searchParams;
   const [access, subscription, plans, override] = await Promise.all([

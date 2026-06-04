@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createForm } from "@/lib/forms/actions";
 import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
+import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 
 type NewFormPageProps = {
   searchParams: Promise<{
@@ -11,6 +12,7 @@ type NewFormPageProps = {
 };
 
 export default async function NewFormPage({ searchParams }: NewFormPageProps) {
+  await requireWorkspaceAdminOrOwner();
   const { error } = await searchParams;
 
   return (

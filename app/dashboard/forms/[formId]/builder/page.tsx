@@ -8,6 +8,7 @@ import {
   disallowedFieldTypeLabels,
   getUserEffectiveLimits,
 } from "@/lib/plans/limits";
+import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 
 type BuilderPageProps = {
   params: Promise<{
@@ -37,6 +38,7 @@ export default async function BuilderPage({
 }: BuilderPageProps) {
   const { formId } = await params;
   const { error, success } = await searchParams;
+  await requireWorkspaceAdminOrOwner();
   const form = await getUserFormById(formId);
   const fields = normalizeFormFields(form.fields);
   const saveAction = updateFormFields.bind(null, form.id);

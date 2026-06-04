@@ -14,6 +14,10 @@ import {
 import { normalizeFormFields } from "@/lib/forms/fields";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { getUserEffectiveLimits } from "@/lib/plans/limits";
+import {
+  canManageWorkspaceForms,
+  requireWorkspaceMember,
+} from "@/lib/workspaces/access";
 
 type FormDetailPageProps = {
   params: Promise<{
@@ -39,6 +43,8 @@ export default async function FormDetailPage({
 }: FormDetailPageProps) {
   const { formId } = await params;
   const { error, success } = await searchParams;
+  const context = await requireWorkspaceMember();
+  const canManageForms = canManageWorkspaceForms(context);
   const form = await getUserFormById(formId);
   const publicPath = `/f/${form.id}`;
   const publicFormUrl = `${getAppUrl()}${publicPath}`;
@@ -132,10 +138,11 @@ export default async function FormDetailPage({
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <form
-            action={updateForm.bind(null, form.id)}
-            className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6"
-          >
+          {canManageForms ? (
+            <form
+              action={updateForm.bind(null, form.id)}
+              className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6"
+            >
             <div>
               <h2 className="text-xl font-semibold text-slate-950">
                 Basic details
@@ -184,12 +191,24 @@ export default async function FormDetailPage({
             >
               Save changes
             </SubmitButton>
-          </form>
+            </form>
+          ) : (
+            <section className="rounded-md border border-slate-200 bg-white p-6">
+              <h2 className="text-xl font-semibold text-slate-950">
+                Basic details
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                You can view this form and its submissions. Editing is available
+                to workspace owners and admins.
+              </p>
+            </section>
+          )}
 
           <aside className="flex flex-col gap-4">
             <section className="rounded-md border border-slate-200 bg-white p-5">
               <h2 className="text-lg font-semibold text-slate-950">Status</h2>
               <div className="mt-4 flex flex-wrap gap-2">
+                {canManageForms ? (
                 <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
                   <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -199,6 +218,8 @@ export default async function FormDetailPage({
                     {isPublished ? "Unpublish" : "Publish"}
                   </SubmitButton>
                 </form>
+                ) : null}
+                {canManageForms ? (
                 <form action={archiveForm.bind(null, form.id)}>
                   <SubmitButton
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -208,18 +229,26 @@ export default async function FormDetailPage({
                     Archive
                   </SubmitButton>
                 </form>
+                ) : null}
+                {!canManageForms ? (
+                  <p className="text-sm leading-6 text-slate-600">
+                    Status changes are available to workspace owners and admins.
+                  </p>
+                ) : null}
               </div>
             </section>
 
             <section className="rounded-md border border-slate-200 bg-white p-5">
               <h2 className="text-lg font-semibold text-slate-950">Next</h2>
               <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                  href={`/dashboard/forms/${form.id}/builder`}
-                >
-                  Builder
-                </Link>
+                {canManageForms ? (
+                  <Link
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                    href={`/dashboard/forms/${form.id}/builder`}
+                  >
+                    Builder
+                  </Link>
+                ) : null}
                 <Link
                   className="rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:bg-slate-50"
                   href={`/dashboard/forms/${form.id}/submissions`}

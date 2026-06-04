@@ -1,7 +1,6 @@
 import "server-only";
 
-import { notFound, redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import { notFound } from "next/navigation";
 import {
   DISPLAY_ONLY_FIELD_TYPES,
   isOfficeField,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/forms/fields";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspaceMember } from "@/lib/workspaces/access";
 
 type SnapshotLike = {
   id?: unknown;
@@ -86,16 +86,6 @@ const OFFICE_SUPPORTED_FIELD_TYPES = [
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-async function requireCurrentUser() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  return user;
 }
 
 function normalizeSnapshot(value: unknown) {
@@ -327,11 +317,11 @@ export function buildSubmissionPreview(fields: FormBuilderField[], data: unknown
 }
 
 export async function getFormSubmissions(formId: string) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceMember();
   const form = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -347,7 +337,7 @@ export async function getFormSubmissions(formId: string) {
   const submissions = await prisma.formSubmission.findMany({
     where: {
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     orderBy: {
       createdAt: "desc",
@@ -381,11 +371,11 @@ export async function getFormSubmissions(formId: string) {
 }
 
 export async function getFormSubmissionById(formId: string, submissionId: string) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceMember();
   const form = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -402,7 +392,7 @@ export async function getFormSubmissionById(formId: string, submissionId: string
     where: {
       id: submissionId,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,

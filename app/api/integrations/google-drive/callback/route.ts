@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth/session";
 import { getAppRedirectUrl } from "@/lib/app-url";
 import {
   exchangeGoogleDriveCode,
   saveGoogleDriveIntegration,
 } from "@/lib/integrations/google-drive/client";
 import { readGoogleDriveOAuthState } from "@/lib/integrations/google-drive/oauth-state";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 const OAUTH_STATE_COOKIE = "formos_google_drive_oauth_state";
 
@@ -23,10 +23,14 @@ function redirectToIntegrations(
 }
 
 export async function GET(request: NextRequest) {
-  const userId = await getSessionUserId();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.redirect(getAppRedirectUrl("/login"));
+  }
+
+  if (!context.isOwner) {
+    return redirectToIntegrations("error", "Only the workspace owner can manage integrations.");
   }
 
   const code = request.nextUrl.searchParams.get("code");
@@ -42,13 +46,13 @@ export async function GET(request: NextRequest) {
 
   const statePayload = readGoogleDriveOAuthState(state);
 
-  if (!statePayload || statePayload.userId !== userId) {
+  if (!statePayload || statePayload.userId !== context.user.id) {
     return redirectToIntegrations("error", "Google Drive connection could not be verified.");
   }
 
   try {
     const tokenResponse = await exchangeGoogleDriveCode(code);
-    await saveGoogleDriveIntegration(userId, tokenResponse);
+    await saveGoogleDriveIntegration(context.user.id, tokenResponse);
   } catch {
     return redirectToIntegrations("error", "Google Drive connection failed.");
   }

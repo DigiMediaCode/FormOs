@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   clearGoogleDriveUploadFolder,
   saveGoogleDriveUploadFolder,
@@ -12,6 +11,7 @@ import {
 } from "@/lib/integrations/dropbox/client";
 import { setActiveUploadProvider } from "@/lib/integrations/upload-settings";
 import { StorageProvider } from "@prisma/client";
+import { requireWorkspaceOwner } from "@/lib/workspaces/access";
 
 function redirectToIntegrations(messageType: "error" | "success", message: string): never {
   redirect(
@@ -20,13 +20,8 @@ function redirectToIntegrations(messageType: "error" | "success", message: strin
 }
 
 async function requireUser() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  return user;
+  const context = await requireWorkspaceOwner();
+  return context.user;
 }
 
 export async function saveGoogleDriveUploadFolderAction(formData: FormData) {

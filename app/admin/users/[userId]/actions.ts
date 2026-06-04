@@ -73,6 +73,7 @@ function readQuotaOverride(formData: FormData) {
     formData,
     "maxMonthlySubmissions",
   );
+  const maxTeamMembers = readOverrideNumericLimit(formData, "maxTeamMembers");
 
   if (maxForms !== undefined) {
     limits.maxForms = maxForms;
@@ -80,6 +81,10 @@ function readQuotaOverride(formData: FormData) {
 
   if (maxMonthlySubmissions !== undefined) {
     limits.maxMonthlySubmissions = maxMonthlySubmissions;
+  }
+
+  if (maxTeamMembers !== undefined) {
+    limits.maxTeamMembers = maxTeamMembers;
   }
 
   for (const key of [
@@ -90,6 +95,7 @@ function readQuotaOverride(formData: FormData) {
     "allowTemplates",
     "allowQrCode",
     "allowCustomBranding",
+    "allowTeamMembers",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

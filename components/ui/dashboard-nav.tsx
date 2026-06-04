@@ -18,6 +18,7 @@ const NAV_ITEMS = [
     href: "/dashboard/settings/integrations",
     label: "Settings / Integrations",
     section: "settings",
+    ownerOnly: true,
   },
   {
     href: "/dashboard/settings/profile",
@@ -28,6 +29,13 @@ const NAV_ITEMS = [
     href: "/dashboard/settings/billing",
     label: "Billing",
     section: "settings",
+    ownerOnly: true,
+  },
+  {
+    href: "/dashboard/settings/team",
+    label: "Team",
+    section: "settings",
+    ownerOnly: true,
   },
 ];
 
@@ -43,13 +51,19 @@ function activeSection(pathname: string) {
   return "dashboard";
 }
 
-export function DashboardNav() {
+export function DashboardNav({
+  canManageOwnerSettings = true,
+}: {
+  canManageOwnerSettings?: boolean;
+}) {
   const pathname = usePathname();
   const currentSection = activeSection(pathname);
 
   return (
     <nav className="flex flex-wrap gap-2" aria-label="Dashboard navigation">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter(
+        (item) => canManageOwnerSettings || !item.ownerOnly,
+      ).map((item) => {
         const isActive = item.section === currentSection;
 
         return (

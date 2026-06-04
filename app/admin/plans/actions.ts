@@ -82,6 +82,7 @@ function readLimits(formData: FormData): PlanLimits {
   return normalizePlanLimits({
     maxForms: readNumericLimit(formData, "maxForms"),
     maxMonthlySubmissions: readNumericLimit(formData, "maxMonthlySubmissions"),
+    maxTeamMembers: readNumericLimit(formData, "maxTeamMembers"),
     allowGoogleDrive: readBoolean(formData, "allowGoogleDrive"),
     allowDropbox: readBoolean(formData, "allowDropbox"),
     allowPdfGeneration: readBoolean(formData, "allowPdfGeneration"),
@@ -89,6 +90,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowTemplates: readBoolean(formData, "allowTemplates"),
     allowQrCode: readBoolean(formData, "allowQrCode"),
     allowCustomBranding: readBoolean(formData, "allowCustomBranding"),
+    allowTeamMembers: readBoolean(formData, "allowTeamMembers"),
     allowedFieldTypes,
   });
 }

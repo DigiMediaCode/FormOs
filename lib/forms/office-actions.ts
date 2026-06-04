@@ -3,13 +3,16 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, normalizeFormFields, type FormBuilderField } from "@/lib/forms/fields";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { sendCompletedSubmissionPdfNotifications } from "@/lib/notifications/form-notifications";
 import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import { assertCanGeneratePdf } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import {
+  requireWorkspaceAdminOrOwner,
+  requireWorkspaceMember,
+} from "@/lib/workspaces/access";
 
 const OFFICE_SUPPORTED_FIELD_TYPES = [
   "text",
@@ -26,16 +29,6 @@ const OFFICE_SUPPORTED_FIELD_TYPES = [
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-async function requireCurrentUser() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  return user;
 }
 
 function readOfficeValue(field: FormBuilderField, formData: FormData) {
@@ -59,12 +52,12 @@ export async function saveOfficeFields(
   submissionId: string,
   formData: FormData,
 ) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceMember();
   const submission = await prisma.formSubmission.findFirst({
     where: {
       id: submissionId,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -104,7 +97,7 @@ export async function saveOfficeFields(
   await createSubmissionEvent({
     submissionId: submission.id,
     formId,
-    ownerId: user.id,
+    ownerId: context.ownerId,
     type: "office_fields_saved",
     message: "Office fields saved",
   });
@@ -116,12 +109,12 @@ export async function saveOfficeFields(
 }
 
 export async function markOfficeCompleted(formId: string, submissionId: string) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceAdminOrOwner();
   const submission = await prisma.formSubmission.findFirst({
     where: {
       id: submissionId,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -157,7 +150,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
   }
 
   try {
-    await assertCanGeneratePdf(user.id);
+    await assertCanGeneratePdf(context.ownerId);
   } catch (error) {
     redirect(
       `${detailPath}?error=${encodeURIComponent(
@@ -176,7 +169,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
     },
     data: {
       officeCompletedAt: completedAt,
-      officeCompletedById: user.id,
+      officeCompletedById: context.user.id,
     },
     select: {
       id: true,
@@ -194,7 +187,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
   await createSubmissionEvent({
     submissionId: completedSubmission.id,
     formId,
-    ownerId: user.id,
+    ownerId: context.ownerId,
     type: "submission_finalized",
     message: "Submission finalized",
   });
@@ -216,7 +209,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
     await createSubmissionEvent({
       submissionId: completedSubmission.id,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
       type: "pdf_generated",
       message: "Completed PDF generated",
     });
@@ -239,7 +232,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       await createSubmissionEvent({
         submissionId: completedSubmission.id,
         formId,
-        ownerId: user.id,
+        ownerId: context.ownerId,
         type: "pdf_emailed_to_owner",
         message: "Completed PDF emailed to owner",
       });
@@ -249,7 +242,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       await createSubmissionEvent({
         submissionId: completedSubmission.id,
         formId,
-        ownerId: user.id,
+        ownerId: context.ownerId,
         type: "pdf_email_failed",
         message: "Completed PDF email failed",
         metadata: {
@@ -262,7 +255,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       await createSubmissionEvent({
         submissionId: completedSubmission.id,
         formId,
-        ownerId: user.id,
+        ownerId: context.ownerId,
         type: "pdf_emailed_to_submitter",
         message: "Completed PDF emailed to submitter",
       });
@@ -272,7 +265,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       await createSubmissionEvent({
         submissionId: completedSubmission.id,
         formId,
-        ownerId: user.id,
+        ownerId: context.ownerId,
         type: "pdf_email_failed",
         message: "Completed PDF email failed",
         metadata: {
@@ -284,7 +277,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
     await createSubmissionEvent({
       submissionId: completedSubmission.id,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
       type: "pdf_email_failed",
       message: "Completed PDF email failed",
       metadata: {

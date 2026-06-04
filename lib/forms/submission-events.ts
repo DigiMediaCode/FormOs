@@ -1,9 +1,8 @@
 import "server-only";
 
 import { Prisma } from "@prisma/client";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspaceMember } from "@/lib/workspaces/access";
 
 type SubmissionEventInput = {
   submissionId: string;
@@ -93,17 +92,13 @@ export async function createSubmissionEvent(input: SubmissionEventInput) {
 }
 
 export async function getSubmissionEvents(formId: string, submissionId: string) {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const context = await requireWorkspaceMember();
 
   return prisma.submissionEvent.findMany({
     where: {
       formId,
       submissionId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     orderBy: {
       createdAt: "desc",

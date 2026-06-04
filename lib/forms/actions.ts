@@ -3,7 +3,6 @@
 import { FormMode, FormStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
 import {
   assertCanCreateForm,
@@ -11,6 +10,10 @@ import {
   assertCanUseOfficeFields,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import {
+  requireWorkspaceAdminOrOwner,
+  requireWorkspaceMember,
+} from "@/lib/workspaces/access";
 
 const DEFAULT_FORM_SETTINGS = {
   submitButtonText: "Submit",
@@ -18,16 +21,6 @@ const DEFAULT_FORM_SETTINGS = {
 };
 
 const VALID_FORM_MODES = new Set<string>(Object.values(FormMode));
-
-async function requireCurrentUser() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  return user;
-}
 
 function normalizeTitle(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -86,11 +79,11 @@ export async function generateUniqueSlug(ownerId: string, title: string) {
 }
 
 export async function getUserForms() {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceMember();
 
   return prisma.form.findMany({
     where: {
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     orderBy: {
       updatedAt: "desc",
@@ -109,12 +102,12 @@ export async function getUserForms() {
 }
 
 export async function getUserFormById(formId: string) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceMember();
 
   const form = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -140,7 +133,7 @@ export async function getUserFormById(formId: string) {
 }
 
 export async function createForm(formData: FormData) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceAdminOrOwner();
   const title = normalizeTitle(formData.get("title"));
   const description = normalizeDescription(formData.get("description"));
   const mode = parseFormMode(formData.get("mode"));
@@ -154,7 +147,7 @@ export async function createForm(formData: FormData) {
   }
 
   try {
-    await assertCanCreateForm(user.id);
+    await assertCanCreateForm(context.ownerId);
   } catch (error) {
     errorRedirect(
       "/dashboard/forms/new",
@@ -164,9 +157,9 @@ export async function createForm(formData: FormData) {
 
   const form = await prisma.form.create({
     data: {
-      ownerId: user.id,
+      ownerId: context.ownerId,
       title,
-      slug: await generateUniqueSlug(user.id, title),
+      slug: await generateUniqueSlug(context.ownerId, title),
       description,
       mode,
       fields: [],
@@ -183,7 +176,7 @@ export async function createForm(formData: FormData) {
 }
 
 export async function updateForm(formId: string, formData: FormData) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceAdminOrOwner();
   const title = normalizeTitle(formData.get("title"));
   const description = normalizeDescription(formData.get("description"));
   const mode = parseFormMode(formData.get("mode"));
@@ -200,7 +193,7 @@ export async function updateForm(formId: string, formData: FormData) {
   const existingForm = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -228,11 +221,11 @@ export async function updateForm(formId: string, formData: FormData) {
 }
 
 async function updateFormStatus(formId: string, status: FormStatus) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceAdminOrOwner();
   const existingForm = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -269,7 +262,7 @@ export async function archiveForm(formId: string) {
 }
 
 export async function updateFormFields(formId: string, formData: FormData) {
-  const user = await requireCurrentUser();
+  const context = await requireWorkspaceAdminOrOwner();
   const errorPath = `/dashboard/forms/${formId}/builder`;
   const fieldsJson = String(formData.get("fields") ?? "");
 
@@ -288,7 +281,7 @@ export async function updateFormFields(formId: string, formData: FormData) {
   }
 
   try {
-    await assertCanUseFieldTypes(user.id, validation.fields);
+    await assertCanUseFieldTypes(context.ownerId, validation.fields);
   } catch (error) {
     errorRedirect(
       errorPath,
@@ -300,7 +293,7 @@ export async function updateFormFields(formId: string, formData: FormData) {
 
   if (validation.fields.some(isOfficeField)) {
     try {
-      await assertCanUseOfficeFields(user.id);
+      await assertCanUseOfficeFields(context.ownerId);
     } catch (error) {
       errorRedirect(
         errorPath,
@@ -314,7 +307,7 @@ export async function updateFormFields(formId: string, formData: FormData) {
   const existingForm = await prisma.form.findFirst({
     where: {
       id: formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,

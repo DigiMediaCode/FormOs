@@ -8,6 +8,10 @@ import {
   unpublishForm,
 } from "@/lib/forms/actions";
 import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
+import {
+  canManageWorkspaceForms,
+  requireWorkspaceMember,
+} from "@/lib/workspaces/access";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en", {
@@ -32,6 +36,8 @@ function StatusBadge({ status }: { status: FormStatus }) {
 }
 
 export default async function FormsPage() {
+  const context = await requireWorkspaceMember();
+  const canManageForms = canManageWorkspaceForms(context);
   const forms = await getUserForms();
 
   return (
@@ -45,14 +51,17 @@ export default async function FormsPage() {
             <h1 className="mt-3 text-3xl font-semibold text-slate-950">Forms</h1>
           </div>
 
-          <Link
-            className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-            href="/dashboard/forms/new"
-          >
-            Create Form
-          </Link>
+          {canManageForms ? (
+            <Link
+              className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              href="/dashboard/forms/new"
+            >
+              Create Form
+            </Link>
+          ) : null}
         </header>
 
+        {canManageForms ? (
         <section className="rounded-md border border-slate-200 bg-white p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -77,6 +86,7 @@ export default async function FormsPage() {
             </form>
           </div>
         </section>
+        ) : null}
 
         {forms.length === 0 ? (
           <section className="rounded-md border border-dashed border-slate-300 bg-white p-8">
@@ -86,12 +96,14 @@ export default async function FormsPage() {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
               Create your first form foundation. The builder comes later.
             </p>
-            <Link
-              className="mt-5 inline-flex rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-              href="/dashboard/forms/new"
-            >
-              Create Form
-            </Link>
+            {canManageForms ? (
+              <Link
+                className="mt-5 inline-flex rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                href="/dashboard/forms/new"
+              >
+                Create Form
+              </Link>
+            ) : null}
           </section>
         ) : (
           <section className="overflow-hidden rounded-md border border-slate-200 bg-white">
@@ -145,6 +157,7 @@ export default async function FormsPage() {
                         Manage
                       </Link>
 
+                      {canManageForms ? (
                       <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
                         <SubmitButton
                           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -155,7 +168,9 @@ export default async function FormsPage() {
                           {isPublished ? "Unpublish" : "Publish"}
                         </SubmitButton>
                       </form>
+                      ) : null}
 
+                      {canManageForms ? (
                       <form action={archiveForm.bind(null, form.id)}>
                         <SubmitButton
                           className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -166,6 +181,7 @@ export default async function FormsPage() {
                           Archive
                         </SubmitButton>
                       </form>
+                      ) : null}
                     </div>
                   </article>
                 );

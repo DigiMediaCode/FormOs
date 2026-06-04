@@ -2,7 +2,6 @@ import Link from "next/link";
 import { UserRole } from "@prisma/client";
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import {
   allowedFieldTypeLabels,
@@ -10,6 +9,7 @@ import {
   getUserPlanAccess,
   limitLabel,
 } from "@/lib/plans/limits";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -20,12 +20,14 @@ type DashboardPageProps = {
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const { error, success } = await searchParams;
-  const user = await getCurrentUser();
-  const [access, businessProfile] = user
+  const workspaceContext = await getWorkspaceContextForCurrentUser();
+  const user = workspaceContext?.user ?? null;
+  const ownerId = workspaceContext?.ownerId ?? user?.id;
+  const [access, businessProfile] = ownerId
     ? await Promise.all([
-        getUserPlanAccess(user.id),
+        getUserPlanAccess(ownerId),
         prisma.businessProfile.findUnique({
-          where: { userId: user.id },
+          where: { userId: ownerId },
           select: { companyName: true },
         }),
       ])
@@ -33,7 +35,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const shouldShowVerificationBanner =
     user && !user.emailVerifiedAt && user.role !== UserRole.SUPER_ADMIN;
   const shouldShowBusinessProfilePrompt =
-    user && (!businessProfile || !businessProfile.companyName);
+    user &&
+    workspaceContext?.isOwner &&
+    (!businessProfile || !businessProfile.companyName);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -49,6 +53,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <p className="mt-3 text-base text-slate-700">
               Signed in as {user?.name ? `${user.name} (${user.email})` : user?.email}.
             </p>
+            {workspaceContext && !workspaceContext.isOwner ? (
+              <p className="mt-2 text-sm text-slate-600">
+                Workspace: {workspaceContext.workspace.name || "My Workspace"} -{" "}
+                Role: {workspaceContext.role}
+              </p>
+            ) : null}
           </div>
         </header>
 

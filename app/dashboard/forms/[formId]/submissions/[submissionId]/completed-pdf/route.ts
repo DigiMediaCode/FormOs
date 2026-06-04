@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import { assertCanGeneratePdf } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 type CompletedPdfRouteProps = {
   params: Promise<{
@@ -15,9 +15,9 @@ export async function GET(
   request: NextRequest,
   { params }: CompletedPdfRouteProps,
 ) {
-  const user = await getCurrentUser();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!user) {
+  if (!context) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -26,7 +26,7 @@ export async function GET(
     where: {
       id: submissionId,
       formId,
-      ownerId: user.id,
+      ownerId: context.ownerId,
     },
     select: {
       id: true,
@@ -55,7 +55,7 @@ export async function GET(
   }
 
   try {
-    await assertCanGeneratePdf(user.id);
+    await assertCanGeneratePdf(context.ownerId);
   } catch (error) {
     return new NextResponse(
       error instanceof Error

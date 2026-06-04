@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppRedirectUrl } from "@/lib/app-url";
-import { getSessionUserId } from "@/lib/auth/session";
 import { cancelStripeSubscriptionAtPeriodEnd } from "@/lib/billing/stripe";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 function redirectToBilling(messageType: "error" | "success", message: string) {
   return NextResponse.redirect(
@@ -13,14 +13,18 @@ function redirectToBilling(messageType: "error" | "success", message: string) {
 }
 
 export async function POST() {
-  const userId = await getSessionUserId();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.redirect(getAppRedirectUrl("/login"), { status: 303 });
   }
 
+  if (!context.isOwner) {
+    return redirectToBilling("error", "Only the workspace owner can manage billing.");
+  }
+
   try {
-    await cancelStripeSubscriptionAtPeriodEnd(userId);
+    await cancelStripeSubscriptionAtPeriodEnd(context.user.id);
   } catch (error) {
     return redirectToBilling(
       "error",

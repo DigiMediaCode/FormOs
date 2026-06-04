@@ -31,6 +31,7 @@ type AdminUserDetailPageProps = {
 const numericOverrideFields = [
   ["maxForms", "Max forms"],
   ["maxMonthlySubmissions", "Monthly submissions"],
+  ["maxTeamMembers", "Team members"],
 ] as const;
 
 const booleanOverrideFields = [
@@ -41,6 +42,7 @@ const booleanOverrideFields = [
   ["allowTemplates", "Templates"],
   ["allowQrCode", "QR codes"],
   ["allowCustomBranding", "Custom branding"],
+  ["allowTeamMembers", "Team members"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -153,6 +155,16 @@ export default async function AdminUserDetailPage({
             currentPeriodEnd: true,
           },
         },
+        ownedWorkspace: {
+          select: {
+            name: true,
+            _count: {
+              select: {
+                members: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.subscriptionPlan.findMany({
@@ -219,6 +231,12 @@ export default async function AdminUserDetailPage({
               </p>
             </div>
             <div className="rounded-md border border-slate-200 p-4">
+              <p className="text-sm text-slate-500">Team members</p>
+              <p className="mt-1 font-semibold text-slate-950">
+                {limitLabel(access.limits.maxTeamMembers)}
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 p-4">
               <p className="text-sm text-slate-500">This month submissions</p>
               <p className="mt-1 font-semibold text-slate-950">
                 {access.usage.monthlySubmissionsUsed} / {limitLabel(access.limits.maxMonthlySubmissions)}
@@ -261,6 +279,26 @@ export default async function AdminUserDetailPage({
             Profile Summary
           </h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <p className="text-sm text-slate-500">Workspace</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.ownedWorkspace?.name || "Not created yet"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Team members</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.ownedWorkspace
+                  ? Math.max(user.ownedWorkspace._count.members - 1, 0)
+                  : 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Plan allows team</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {access.limits.allowTeamMembers ? "Yes" : "No"}
+              </p>
+            </div>
             <div>
               <p className="text-sm text-slate-500">First name</p>
               <p className="mt-1 text-sm font-medium text-slate-950">

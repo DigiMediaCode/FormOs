@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 23.1: Billing UX Fixes — Cancel Subscription + Current Plan Buttons
+# CURRENT TASK — FormOS Milestone 24: Business Workspace + Staff Access Foundation
 
 ## Project Context
 
@@ -6,234 +6,498 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* Stripe billing foundation works.
-* Plans sync to Stripe.
-* Checkout works.
-* Stripe webhook works.
-* Billing events work.
-* UserSubscription updates correctly after payment.
-* User quota overrides still work.
-* Billing page shows active plan.
+* FormOS MVP foundation is live and working.
+* Auth/signup/login works.
+* Google + Lark OAuth login works.
+* Email verification/password reset works.
+* User Profile + Business/Billing Profile exists.
+* Dynamic plans and quota controls exist.
+* Field-type limits per plan exist.
+* Stripe billing works.
+* Stripe plan sync works.
+* Stripe Checkout and Customer Portal work.
+* Billing events/webhook logs work.
+* Super Admin exists.
+* Forms, builder, submissions, storage, PDF, audit, and QR features work.
+* Google Drive and Dropbox uploads work.
 * Do not touch CommerceOS.
-
-## Problems
-
-### Problem 1 — No Cancel Subscription Option
-
-The user can see a Manage Billing button, but on Stripe Customer Portal there is no visible option to cancel/stop the subscription.
-
-This may require Stripe Customer Portal cancellation settings to be enabled in Stripe Dashboard.
-
-FormOS should also show clearer billing instructions and/or provide a direct cancellation action if appropriate.
-
-### Problem 2 — Active Plan Still Shows Subscribe Button
-
-After subscribing to a plan, the billing page correctly shows active plan at the top.
-
-But in the plan list, the same active plan still shows a Subscribe/Upgrade button.
-
-That is wrong.
-
-The active subscribed plan should show:
-
-Currently Subscribed
-
-The button should be disabled.
 
 ## Goal
 
-Improve billing UX so users clearly understand their current plan and cannot subscribe again to the same active plan.
+Add a simple Business Workspace and Staff Access foundation.
 
-Also add a safe way to handle subscription cancellation.
+Individual users can continue using FormOS alone.
 
-## Required Behaviour — Current Plan Button State
+Business-plan users can add staff members to help manage forms/submissions.
 
-On /dashboard/settings/billing:
+This milestone should create the foundation only.
 
-For each plan card:
+Do not build complex team permissions yet.
 
-If the plan is the user’s current active subscribed plan:
+## Product Direction
 
-* show badge: Current Plan
-* button text: Currently Subscribed
-* button disabled
-* do not allow checkout for the same active plan
+Staff/team access should be available only if the user’s effective plan allows it.
 
-If the plan is different from current plan:
+Add a new plan limit:
 
-* show Subscribe / Upgrade / Change Plan button as appropriate
+allowTeamMembers: boolean
 
-If current subscription status is CANCELED:
+Add another limit:
 
-* allow subscribing again
+maxTeamMembers: number | null
 
-If current subscription status is ACTIVE or TRIALING:
+Rules:
 
-* disable checkout for same plan
+* null = unlimited staff
+* number = maximum staff users allowed
 
-If user has MANUAL plan assignment:
+Default suggested limits:
 
-* show badge: Manually Assigned
-* avoid showing misleading Stripe checkout actions for the same plan
-* if needed, show message:
-  This plan was assigned by an administrator.
+Free:
 
-If user has custom quota override:
+* allowTeamMembers: false
+* maxTeamMembers: 0
 
-* show badge: Custom quota applied
+Starter:
 
-If user has unlimited override:
+* allowTeamMembers: false
+* maxTeamMembers: 0
 
-* show badge: Unlimited access granted by admin
+Pro:
 
-## Required Behaviour — Server-Side Checkout Guard
+* allowTeamMembers: false
+* maxTeamMembers: 0
 
-Do not rely only on disabled UI.
+Business:
 
-Update checkout creation route/action.
+* allowTeamMembers: true
+* maxTeamMembers: 5
 
-Before creating a Stripe Checkout Session:
+Custom quota override can override these.
 
-* check current UserSubscription
-* if user already has ACTIVE/TRIALING subscription for the same plan and same interval if interval is tracked:
+Unlimited Everything should include:
 
-  * block checkout
-  * return friendly error:
-    You are already subscribed to this plan.
-* do not create duplicate checkout session for the same active plan
+* allowTeamMembers: true
+* maxTeamMembers: null
 
-If interval is not tracked yet, compare by planId only for now.
+## Workspace Concept
 
-## Required Behaviour — Cancel Subscription
+Each main account owner should have a workspace.
 
-Add cancellation support in one of these ways.
+For now, keep it simple:
 
-### Option A — Preferred MVP: Stripe Customer Portal
+* One owner user = one workspace
+* Owner can invite/add staff if plan allows
+* Forms belong to the owner/workspace
+* Staff can access owner’s workspace based on role
 
-Use Stripe Customer Portal for cancellation.
+Do not build multi-workspace switching yet unless absolutely necessary.
 
-On billing page, near Manage Billing button, show helper text:
+## Staff Roles
 
-To cancel or update your subscription, open the Stripe billing portal.
+For this milestone, support simple roles:
 
-Also add warning if portal cancellation may not be enabled:
+* OWNER
+* ADMIN
+* STAFF
 
-If you do not see a cancel option in Stripe, enable subscription cancellation in your Stripe Customer Portal settings.
+Owner:
 
-No card/payment details should be stored in FormOS.
+* the main account user
+* full access to their workspace
+* can manage staff
 
-### Option B — Direct Cancel Button
+Admin:
 
-If simple and safe, add button:
+* can view/manage forms and submissions
+* can complete office fields
+* can finalize submissions
+* cannot manage billing
+* cannot manage subscription plan
+* cannot delete owner account
 
-Cancel Subscription
+Staff:
+
+* can view forms and submissions
+* can complete office fields
+* can upload/download completed PDF if current owner permissions allow
+* cannot edit form builder unless simple and explicitly allowed
+* cannot manage billing
+* cannot manage staff
+* cannot manage integrations
+
+Keep permissions simple and server-side.
+
+## Prisma Schema
+
+Add models:
+
+```prisma
+Workspace {
+id        String   @id @default(cuid())
+ownerId   String   @unique
+name      String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+owner     User     @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+members   WorkspaceMember[]
+}
+
+WorkspaceMember {
+id          String   @id @default(cuid())
+workspaceId String
+userId      String
+role        WorkspaceRole @default(STAFF)
+status      String @default("ACTIVE")
+invitedEmail String?
+invitedBy   String?
+createdAt   DateTime @default(now())
+updatedAt   DateTime @updatedAt
+
+workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+@@unique([workspaceId, userId])
+@@index([workspaceId])
+@@index([userId])
+}
+
+WorkspaceInvite {
+id          String   @id @default(cuid())
+workspaceId String
+email       String
+role        WorkspaceRole @default(STAFF)
+tokenHash   String
+expiresAt   DateTime
+acceptedAt  DateTime?
+invitedBy   String?
+createdAt   DateTime @default(now())
+
+workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+@@index([email])
+@@index([tokenHash])
+@@index([workspaceId])
+}
+
+enum WorkspaceRole {
+OWNER
+ADMIN
+STAFF
+}
+```
+
+Add User relations as needed.
+
+Create migration:
+
+```bash
+npx prisma migrate dev –name add_workspaces_and_staff
+```
+
+Do not use prisma db push.
+
+## Workspace Creation
+
+Create workspace automatically for owner users.
+
+Options:
+
+* create workspace on signup
+* create workspace lazily when user opens team settings
+* create workspace lazily when needed
+
+Preferred for safety:
+
+Create lazily if missing using helper:
+
+getOrCreateUserWorkspace(ownerId)
+
+Workspace name can default to:
+
+{BusinessProfile.companyName} Workspace
+
+or:
+
+{User.name}’s Workspace
+
+or:
+
+My Workspace
+
+## Team Settings Page
+
+Create route:
+
+/dashboard/settings/team
+
+Add dashboard navigation link:
+
+Team
+
+If user’s effective limits do not allow team members:
+
+Show upgrade message:
+
+Team access is available on Business plans.
+
+Show current plan and “Upgrade from Billing” button/link:
+
+/dashboard/settings/billing
+
+Do not show staff invite form.
+
+If user’s plan allows team members:
+
+Show:
+
+* workspace name
+* current team members
+* invite staff form
+* role selector: Admin / Staff
+* remove member button
+* change role button if simple
+
+## Invite Flow
+
+Owner/Admin sends invite by email.
+
+For this milestone, only OWNER can invite staff.
+
+Invite form:
+
+* email
+* role: Admin or Staff
+
+On submit:
+
+1. Check effective plan allows team members.
+2. Check current active staff count below maxTeamMembers.
+3. Create invite token.
+4. Store token hash only.
+5. Email invite link using existing Lark email provider.
+6. Show success message.
+
+Invite link:
+
+{APP_URL}/team/invite/accept?token={rawToken}
+
+Do not store raw token.
+
+Invite expiry:
+
+7 days.
+
+## Accept Invite Flow
+
+Create route:
+
+/team/invite/accept
 
 Behaviour:
 
-* requires logged-in user
-* requires active Stripe subscription
-* calls Stripe API to set cancel_at_period_end = true
-* updates local UserSubscription.cancelAtPeriodEnd = true
-* keeps plan access until currentPeriodEnd
-* shows message:
-  Your subscription will cancel at the end of the current billing period.
+* read token
+* validate token
+* if logged out:
+    * ask user to login/signup first
+    * after login, user should be able to accept invite if email matches
+* if logged in:
+    * check logged-in user email matches invite email
+    * create WorkspaceMember
+    * mark invite acceptedAt
+    * redirect to /dashboard
 
-Also add optional button:
+For this milestone, keep it simple:
 
-Resume Subscription
+If user with invite email does not exist:
 
-If cancelAtPeriodEnd is true:
-
-* call Stripe API to set cancel_at_period_end = false
-* update local record
 * show message:
-  Your subscription cancellation has been removed.
+    Please create an account with this email to accept the invite.
+* link to /signup
 
-Do not immediately delete/cancel subscription unless explicitly implemented and safe.
+Do not build complex post-signup invite continuation unless easy.
 
-Prefer cancel at period end.
+## Staff Access Rules
 
-## Stripe Portal Configuration Note
+Staff/Admin should access the owner workspace data.
 
-Add a note in DEPLOYMENT.md or BILLING.md:
+This requires workspace-aware authorization helpers.
 
-Stripe Customer Portal cancellation must be enabled in Stripe Dashboard.
+Create helpers:
 
-Instruction:
+* getCurrentWorkspaceContext
+* requireWorkspaceOwner
+* requireWorkspaceMember
+* requireWorkspaceAdminOrOwner
+* canManageWorkspaceForms
+* canViewWorkspaceSubmissions
+* canCompleteOfficeFields
 
-Stripe Dashboard → Settings → Billing → Customer Portal → Subscriptions → Enable cancellation
+For this milestone:
 
-Wording may vary in Stripe Dashboard.
+Owner:
 
-## Billing Page UI
+* full access
 
-Update /dashboard/settings/billing:
+Admin:
 
-Top current plan card should show:
+* can view/manage forms and submissions
+* can save office fields
+* can finalize submissions
 
-* current plan
-* status
-* billing provider
-* current period end
-* cancel at period end status if true
-* Manage Billing button
-* Cancel Subscription button if active Stripe subscription exists
-* Resume Subscription button if cancelAtPeriodEnd is true
+Staff:
 
-Plan cards should show correct button states.
+* can view forms and submissions
+* can save office fields
+* can finalize submissions only if simple, otherwise block and document
 
-## Webhook Handling
+If implementing full workspace scoping is too much, start with:
 
-Ensure customer.subscription.updated updates:
+* staff can view forms list
+* staff can view submissions
+* staff can save office fields
+* owner-only billing/integrations/team management
 
-* cancelAtPeriodEnd
-* currentPeriodEnd
-* status
+Do not break owner access.
 
-If customer.subscription.deleted occurs:
+## Data Access Strategy
 
-* mark subscription CANCELED
-* fallback access logic remains as previously implemented
+Existing forms use ownerId.
+
+For this milestone, do not rewrite all data models to workspaceId unless necessary.
+
+Instead:
+
+* workspace.ownerId remains the owner of forms
+* staff access checks whether current user is a member of workspace whose ownerId matches form.ownerId
+* ownerId stays as the data owner
+
+This avoids a risky migration across forms/submissions.
+
+## Dashboard Behaviour for Staff
+
+When staff logs in:
+
+* dashboard should show workspace they belong to
+* show forms from workspace owner
+* hide billing/settings that staff cannot access
+* team/settings/billing/integrations should be owner-only unless explicitly allowed
+
+Keep UI simple.
+
+## Plan Enforcement
+
+Add new limits to plan system:
+
+* allowTeamMembers
+* maxTeamMembers
+
+Update plan editor UI:
+
+* Allow team members toggle
+* Max team members numeric input with Unlimited toggle
+
+Update user quota override UI:
+
+* allowTeamMembers override
+* maxTeamMembers override
+* Unlimited Everything includes team access
+
+Server-side checks required before sending invite.
+
+## Super Admin Visibility
+
+Update Super Admin user view if practical:
+
+Show:
+
+* workspace owner
+* team member count
+* plan allows team: yes/no
+
+Do not let Super Admin access private workspace submissions in this milestone.
+
+## Email Notification
+
+Create invite email:
+
+Subject:
+
+You have been invited to FormOS
+
+Body:
+
+You have been invited to join {workspaceName} on FormOS.
+
+Button/link:
+
+Accept Invite
+
+Invite expires in 7 days.
+
+Email failure should not create a broken state if possible.
+
+If email fails after invite is created, show warning so owner can resend later if resend is implemented.
+
+Resend invite is optional.
 
 ## Security
 
-* only logged-in user can manage their own billing
-* user cannot cancel another user’s subscription
-* do not expose Stripe secret key
-* do not store card/payment method data
-* verify webhook signature as already implemented
-* Super Admin manual overrides must remain unaffected
+* Only owner can invite/remove staff in this milestone.
+* Staff cannot manage billing.
+* Staff cannot change subscription plan.
+* Staff cannot edit user quota.
+* Staff cannot access Super Admin.
+* Staff cannot access another workspace.
+* Invite tokens are hashed.
+* Invite tokens expire.
+* Invite email must match accepting user email.
+* Server-side authorization required.
+* Do not rely only on hiding UI.
 
 ## Out of Scope
 
-Do not build refunds.
-Do not build coupons.
-Do not build taxes.
-Do not build invoices.
-Do not build custom card forms.
-Do not change plan limit logic except for current plan button/check guards.
-Do not integrate CommerceOS.
+Do not build multiple workspaces per user.
+Do not build team billing seats.
+Do not build per-form permissions.
+Do not build granular role editor.
+Do not build audit logs for staff actions unless existing audit helper can be reused simply.
+Do not migrate forms to workspaceId unless absolutely necessary.
+Do not build CommerceOS integration.
+Do not change Stripe billing except plan limits.
 
 ## Acceptance Criteria
 
-This task is complete when:
+Milestone 24 is complete when:
 
-* Current active plan card shows Current Plan badge.
-* Current active plan button says Currently Subscribed.
-* Current active plan button is disabled.
-* Checkout route blocks duplicate checkout for same active plan.
-* Different plans can still be selected for upgrade/change.
-* Manage Billing helper text explains cancellation through Stripe Portal.
-* Stripe portal cancellation setup note is documented.
-* If direct cancel button is implemented:
-
-  * user can cancel at period end
-  * user can resume cancellation if cancelAtPeriodEnd is true
-  * local subscription updates safely
-* Webhook updates cancelAtPeriodEnd correctly.
-* User quota overrides still win.
-* Manual assignments still work.
-* No card/payment method data is stored.
+* Workspace model exists.
+* WorkspaceMember model exists.
+* WorkspaceInvite model exists.
+* WorkspaceRole enum exists.
+* Prisma migration exists.
+* Users can have/get a workspace.
+* Plan limits include allowTeamMembers and maxTeamMembers.
+* Business/unlimited users can invite staff.
+* Non-business users see upgrade message instead of invite form.
+* Staff invite email sends.
+* Invite token is hashed.
+* Invite token expires.
+* Invite can be accepted by matching email user.
+* WorkspaceMember is created on accept.
+* Owner can see team members.
+* Owner can remove staff member.
+* Owner can change staff role if implemented.
+* Staff cannot access billing.
+* Staff cannot manage integrations.
+* Staff cannot manage team.
+* Staff can access permitted workspace forms/submissions according to role.
+* Server-side access checks protect workspace data.
+* Existing owner access still works.
+* Existing forms/submissions still work.
+* Existing billing/plans still work.
+* Existing Google Drive/Dropbox/PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev –name add_workspaces_and_staff creates migration.
 * npm run build passes.

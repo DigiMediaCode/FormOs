@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/auth/session";
 import { getAppRedirectUrl } from "@/lib/app-url";
 import { disconnectGoogleDrive } from "@/lib/integrations/google-drive/client";
+import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
 export async function POST(request: NextRequest) {
-  const userId = await getSessionUserId();
+  const context = await getWorkspaceContextForCurrentUser();
 
-  if (!userId) {
+  if (!context) {
     return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
-  await disconnectGoogleDrive(userId);
+  if (!context.isOwner) {
+    return NextResponse.redirect(
+      getAppRedirectUrl(
+        "/dashboard?error=Only%20the%20workspace%20owner%20can%20manage%20integrations.",
+      ),
+      { status: 303 },
+    );
+  }
+
+  await disconnectGoogleDrive(context.user.id);
 
   return NextResponse.redirect(
     getAppRedirectUrl(

@@ -22,6 +22,8 @@ export type PlanLimits = {
   allowTemplates: boolean;
   allowQrCode: boolean;
   allowCustomBranding: boolean;
+  allowTeamMembers: boolean;
+  maxTeamMembers: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
 };
 
@@ -48,7 +50,11 @@ export type UserPlanAccess = {
   isUnlimitedEverything: boolean;
 };
 
-const NUMERIC_LIMIT_KEYS = ["maxForms", "maxMonthlySubmissions"] as const;
+const NUMERIC_LIMIT_KEYS = [
+  "maxForms",
+  "maxMonthlySubmissions",
+  "maxTeamMembers",
+] as const;
 const BOOLEAN_LIMIT_KEYS = [
   "allowGoogleDrive",
   "allowDropbox",
@@ -57,6 +63,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowTemplates",
   "allowQrCode",
   "allowCustomBranding",
+  "allowTeamMembers",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -69,6 +76,8 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowTemplates: true,
   allowQrCode: true,
   allowCustomBranding: true,
+  allowTeamMembers: true,
+  maxTeamMembers: null,
   allowedFieldTypes: null,
 };
 
@@ -113,6 +122,8 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowTemplates: false,
     allowQrCode: true,
     allowCustomBranding: false,
+    allowTeamMembers: false,
+    maxTeamMembers: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
 }
@@ -150,6 +161,8 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: false,
+      allowTeamMembers: false,
+      maxTeamMembers: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
   },
@@ -173,6 +186,8 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: false,
+      allowTeamMembers: false,
+      maxTeamMembers: 0,
       allowedFieldTypes: null,
     },
   },
@@ -196,6 +211,8 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowTemplates: true,
       allowQrCode: true,
       allowCustomBranding: true,
+      allowTeamMembers: true,
+      maxTeamMembers: 5,
       allowedFieldTypes: null,
     },
   },
@@ -344,7 +361,9 @@ export async function seedDefaultPlansIfMissing() {
       existingDefaultPlans.map((plan) => {
         if (
           isRecord(plan.limits) &&
-          "allowedFieldTypes" in plan.limits
+          "allowedFieldTypes" in plan.limits &&
+          "allowTeamMembers" in plan.limits &&
+          "maxTeamMembers" in plan.limits
         ) {
           return Promise.resolve();
         }
@@ -363,6 +382,8 @@ export async function seedDefaultPlansIfMissing() {
             limits: {
               ...(isRecord(plan.limits) ? plan.limits : {}),
               allowedFieldTypes: defaults.limits.allowedFieldTypes,
+              allowTeamMembers: defaults.limits.allowTeamMembers,
+              maxTeamMembers: defaults.limits.maxTeamMembers,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -611,6 +632,7 @@ export function featureLabels(limits: PlanLimits) {
     { label: "Templates", allowed: limits.allowTemplates },
     { label: "QR codes", allowed: limits.allowQrCode },
     { label: "Custom branding", allowed: limits.allowCustomBranding },
+    { label: "Team members", allowed: limits.allowTeamMembers },
   ];
 }
 
