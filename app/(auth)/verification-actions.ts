@@ -1,15 +1,14 @@
 "use server";
 
 import { AuthTokenType } from "@prisma/client";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   createAuthToken,
   findValidAuthToken,
+  hashAuthToken,
   hasRecentAuthToken,
   invalidateUnusedAuthTokens,
-  markAuthTokenUsed,
 } from "@/lib/auth/tokens";
 import { hashPassword } from "@/lib/auth/password";
 import {
@@ -89,12 +88,52 @@ export async function resendVerificationEmailAction() {
 }
 
 export async function verifyEmailToken(rawToken: string) {
+  const trimmedToken = rawToken.trim();
   const token = await findValidAuthToken(
-    rawToken,
+    trimmedToken,
     AuthTokenType.EMAIL_VERIFICATION,
   );
 
   if (!token) {
+    const usedToken = trimmedToken
+      ? await prisma.authToken.findFirst({
+          where: {
+            tokenHash: hashAuthToken(trimmedToken),
+            type: AuthTokenType.EMAIL_VERIFICATION,
+            usedAt: {
+              not: null,
+            },
+          },
+          select: {
+            email: true,
+            userId: true,
+          },
+        })
+      : null;
+
+    if (usedToken) {
+      const verifiedUser = await prisma.user.findFirst({
+        where: {
+          emailVerifiedAt: {
+            not: null,
+          },
+          OR: usedToken.userId
+            ? [{ id: usedToken.userId }, { email: usedToken.email }]
+            : [{ email: usedToken.email }],
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (verifiedUser) {
+        return {
+          ok: true,
+          message: "Your email address is already verified.",
+        };
+      }
+    }
+
     return {
       ok: false,
       message: "This verification link is invalid, expired, or already used.",
@@ -126,15 +165,16 @@ export async function verifyEmailToken(rawToken: string) {
         emailVerifiedAt: new Date(),
       },
     }),
-    prisma.authToken.update({
-      where: { id: token.id },
+    prisma.authToken.updateMany({
+      where: {
+        id: token.id,
+        usedAt: null,
+      },
       data: {
         usedAt: new Date(),
       },
     }),
   ]);
-
-  revalidatePath("/dashboard");
 
   return {
     ok: true,
