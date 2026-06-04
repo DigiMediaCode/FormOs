@@ -168,6 +168,29 @@ export async function inviteWorkspaceMember(formData: FormData) {
   redirectWith("success", "Staff invite sent.");
 }
 
+export async function updateWorkspaceSettings(formData: FormData) {
+  const context = await requireWorkspaceOwner();
+  const workspace = await getOrCreateUserWorkspace(context.ownerId);
+  const name = readString(formData, "workspaceName");
+
+  if (!name) {
+    redirectWith("error", "Workspace name is required.");
+  }
+
+  if (name.length > 80) {
+    redirectWith("error", "Workspace name must be 80 characters or fewer.");
+  }
+
+  await prisma.workspace.update({
+    where: { id: workspace.id },
+    data: { name },
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath(TEAM_PATH);
+  redirectWith("success", "Workspace settings saved.");
+}
+
 export async function removeWorkspaceMember(memberId: string) {
   const context = await requireWorkspaceOwner();
   const workspace = await getOrCreateUserWorkspace(context.ownerId);

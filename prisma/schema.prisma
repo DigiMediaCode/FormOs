@@ -119,6 +119,7 @@ model Workspace {
   id        String            @id @default(cuid())
   ownerId   String            @unique
   name      String?
+  metadata  Json?
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 

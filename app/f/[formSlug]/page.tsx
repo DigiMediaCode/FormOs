@@ -265,10 +265,27 @@ function Message({
   );
 }
 
-function PoweredByFooter() {
+function PoweredByFooter({
+  branding,
+}: {
+  branding?: {
+    publicFooterText: string;
+    hidePoweredBy: boolean;
+    primaryColor: string;
+  } | null;
+}) {
+  const footerText = branding?.publicFooterText.trim();
+
+  if (!footerText && branding?.hidePoweredBy) {
+    return null;
+  }
+
   return (
-    <footer className="py-8 text-center text-xs font-medium uppercase tracking-wide text-slate-400">
-      Powered by FormOS
+    <footer
+      className="py-8 text-center text-xs font-medium uppercase tracking-wide text-slate-400"
+      style={branding?.primaryColor ? { color: branding.primaryColor } : undefined}
+    >
+      {footerText || "Powered by FormOS"}
     </footer>
   );
 }
@@ -283,7 +300,7 @@ export default async function PublicFormPage({
     getPublishedFormForPublicView(formSlug),
     getPlatformSettings(),
   ]);
-  const logoUrl = getRenderablePlatformLogoUrl(platformSettings);
+  const logoUrl = form?.branding?.logoUrl || getRenderablePlatformLogoUrl(platformSettings);
 
   if (!form) {
     return (
@@ -329,7 +346,14 @@ export default async function PublicFormPage({
           )}
         </div>
 
-        <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header
+          className="overflow-hidden rounded-2xl border border-t-4 border-slate-200 bg-white shadow-sm"
+          style={
+            form.branding?.primaryColor
+              ? { borderTopColor: form.branding.primaryColor }
+              : undefined
+          }
+        >
           <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-6 py-8 text-center sm:px-8">
             <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
               {form.title}
@@ -371,7 +395,7 @@ export default async function PublicFormPage({
           </section>
         </form>
       </section>
-      <PoweredByFooter />
+      <PoweredByFooter branding={form.branding} />
     </main>
   );
 }

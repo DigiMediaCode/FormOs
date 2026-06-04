@@ -37,6 +37,12 @@ const NAV_ITEMS = [
     section: "settings",
     ownerOnly: true,
   },
+  {
+    href: "/dashboard/settings/branding",
+    label: "Branding",
+    section: "settings",
+    ownerOnly: true,
+  },
 ];
 
 function activeSection(pathname: string) {

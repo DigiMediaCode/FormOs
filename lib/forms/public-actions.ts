@@ -33,6 +33,10 @@ import {
 import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
+import {
+  getPublicWorkspaceBranding,
+  type WorkspaceBranding,
+} from "@/lib/workspaces/branding";
 
 const SIGNATURE_FIELD_TYPES = ["signature", "initials"];
 const UPLOAD_FIELD_TYPES = ["image_upload"];
@@ -77,6 +81,7 @@ type PublicFormSnapshot = {
 type PublicFormView = PublicFormSnapshot & {
   uploadsAvailable: boolean;
   uploadProvider: StorageProvider | null;
+  branding: WorkspaceBranding | null;
 };
 
 type UploadRequest = {
@@ -235,7 +240,10 @@ export async function getPublishedFormForPublicView(formId: string) {
   }
 
   const snapshot = buildSnapshot(form);
-  const uploadProvider = await getResolvedUploadProvider(form.ownerId);
+  const [uploadProvider, branding] = await Promise.all([
+    getResolvedUploadProvider(form.ownerId),
+    getPublicWorkspaceBranding(form.ownerId),
+  ]);
   let uploadsAvailable = uploadProvider.uploadsAvailable;
 
   if (uploadProvider.activeProvider) {
@@ -250,6 +258,7 @@ export async function getPublishedFormForPublicView(formId: string) {
     ...snapshot,
     uploadsAvailable,
     uploadProvider: uploadProvider.activeProvider,
+    branding,
   } satisfies PublicFormView;
 }
 

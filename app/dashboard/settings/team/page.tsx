@@ -4,6 +4,7 @@ import {
   inviteWorkspaceMember,
   removeWorkspaceMember,
   updateWorkspaceMemberRole,
+  updateWorkspaceSettings,
 } from "@/app/dashboard/settings/team/actions";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -101,6 +102,35 @@ export default async function TeamSettingsPage({
             {error}
           </p>
         ) : null}
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">
+              Workspace Settings
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              This name is used inside FormOS to identify your business workspace.
+            </p>
+          </div>
+          <form action={updateWorkspaceSettings} className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+            <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
+              Workspace name
+              <input
+                className="rounded-md border border-slate-300 px-3 py-2"
+                defaultValue={workspace.name || "My Workspace"}
+                maxLength={80}
+                name="workspaceName"
+                required
+              />
+            </label>
+            <SubmitButton
+              className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              pendingText="Saving workspace..."
+            >
+              Save Workspace
+            </SubmitButton>
+          </form>
+        </section>
 
         {!allowed ? (
           <section className="rounded-md border border-amber-200 bg-amber-50 p-6">
