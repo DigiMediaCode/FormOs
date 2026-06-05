@@ -29,6 +29,20 @@ export function SignatureCanvasBootstrapScript() {
         let mode = null;
         let context = null;
         let ratio = 1;
+        let previousBodyOverflow = "";
+        let previousBodyOverscroll = "";
+
+        function lockPageScroll() {
+          previousBodyOverflow = document.body.style.overflow;
+          previousBodyOverscroll = document.body.style.overscrollBehavior;
+          document.body.style.overflow = "hidden";
+          document.body.style.overscrollBehavior = "none";
+        }
+
+        function unlockPageScroll() {
+          document.body.style.overflow = previousBodyOverflow;
+          document.body.style.overscrollBehavior = previousBodyOverscroll;
+        }
 
         function sizeCanvas() {
           const existingValue = hidden.value;
@@ -88,6 +102,7 @@ export function SignatureCanvasBootstrapScript() {
           if (!context) return;
 
           const p = point(clientX, clientY);
+          lockPageScroll();
           drawing = true;
           context.beginPath();
           context.moveTo(p.x, p.y);
@@ -107,6 +122,17 @@ export function SignatureCanvasBootstrapScript() {
           drawing = false;
           mode = null;
           persistValue();
+          unlockPageScroll();
+        }
+
+        function clear() {
+          if (!context) sizeCanvas();
+          if (!context) return;
+
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          hidden.value = "";
+          hidden.dispatchEvent(new Event("input", { bubbles: true }));
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
         }
 
         function pointerDown(event) {
@@ -130,7 +156,11 @@ export function SignatureCanvasBootstrapScript() {
 
         function touchStart(event) {
           const touch = event.touches[0] || event.changedTouches[0];
-          if (!touch || mode === "pointer") return;
+          if (!touch) return;
+          if (mode === "pointer") {
+            event.preventDefault();
+            return;
+          }
           event.preventDefault();
           mode = "touch";
           start(touch.clientX, touch.clientY);
@@ -138,6 +168,10 @@ export function SignatureCanvasBootstrapScript() {
 
         function touchMove(event) {
           const touch = event.touches[0] || event.changedTouches[0];
+          if (mode === "pointer" && drawing) {
+            event.preventDefault();
+            return;
+          }
           if (!touch || mode !== "touch") return;
           event.preventDefault();
           move(touch.clientX, touch.clientY);
@@ -177,7 +211,18 @@ export function SignatureCanvasBootstrapScript() {
         canvas.addEventListener("mousedown", mouseDown, { passive: false });
         window.addEventListener("mousemove", mouseMove, { passive: false });
         window.addEventListener("mouseup", mouseStop);
+        document.addEventListener("touchmove", touchMove, { passive: false });
+        document.addEventListener("touchend", touchStop, { passive: false });
+        document.addEventListener("touchcancel", touchStop, { passive: false });
+        document.addEventListener("pointermove", pointerMove, { passive: false });
+        document.addEventListener("pointerup", pointerStop, { passive: false });
+        document.addEventListener("pointercancel", pointerStop, { passive: false });
         window.addEventListener("resize", sizeCanvas);
+        document
+          .querySelectorAll('[data-signature-clear-id="' + fieldId + '"]')
+          .forEach((button) => {
+            button.addEventListener("click", clear);
+          });
         window.addEventListener("formos:restore-signature", (event) => {
           if (event.detail?.fieldId === fieldId && event.detail?.value) {
             hidden.value = event.detail.value;

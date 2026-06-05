@@ -398,6 +398,7 @@ export function SignaturePadField({
           ) : null}
           <button
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+            data-signature-clear-id={fieldId}
             onClick={clearCanvas}
             type="button"
           >
