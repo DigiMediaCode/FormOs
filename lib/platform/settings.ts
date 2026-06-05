@@ -276,7 +276,7 @@ export async function updatePlatformSettings(input: PlatformSettings) {
 
   validatePlainTextSettings(nextSettings);
 
-  await prisma.$transaction(
+  await Promise.all(
     PLATFORM_SETTING_KEYS.map((key) =>
       prisma.platformSetting.upsert({
         where: {
