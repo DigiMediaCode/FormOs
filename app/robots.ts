@@ -26,7 +26,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: publicCrawlers.map((userAgent) => ({
       userAgent,
-      allow: "/",
+      allow: ["/", "/Ads.txt", "/ads.txt"],
       disallow: ["/admin", "/dashboard", "/api"],
     })),
     sitemap: `${appUrl}/sitemap.xml`,
