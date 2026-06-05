@@ -14,6 +14,7 @@ function safeAppUrl() {
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPlatformSettings();
   const appUrl = safeAppUrl();
+  const adsenseClientId = settings.adsenseClientId.trim();
 
   return {
     metadataBase: new URL(appUrl),
@@ -60,6 +61,11 @@ export async function generateMetadata(): Promise<Metadata> {
       },
     },
     icons: settings.faviconUrl ? [{ url: settings.faviconUrl }] : undefined,
+    other: adsenseClientId
+      ? {
+          "google-adsense-account": adsenseClientId,
+        }
+      : undefined,
   };
 }
 

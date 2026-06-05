@@ -14,6 +14,8 @@ export default function robots(): MetadataRoute.Robots {
   const publicCrawlers = [
     "*",
     "Googlebot",
+    "Mediapartners-Google",
+    "AdsBot-Google",
     "Bingbot",
     "GPTBot",
     "ChatGPT-User",
