@@ -9,6 +9,7 @@ type ConfirmSubmitButtonProps = {
   pendingText: string;
   className?: string;
   disabled?: boolean;
+  title?: string;
 };
 
 export function ConfirmSubmitButton({
@@ -17,6 +18,7 @@ export function ConfirmSubmitButton({
   confirmMessage,
   disabled = false,
   pendingText,
+  title,
 }: ConfirmSubmitButtonProps) {
   const { pending } = useFormStatus();
 
@@ -29,6 +31,7 @@ export function ConfirmSubmitButton({
           event.preventDefault();
         }
       }}
+      title={title}
       type="submit"
     >
       {pending ? pendingText : children}

@@ -10,6 +10,7 @@ type SubmitButtonProps = {
   disabled?: boolean;
   statusMessage?: string;
   showStatus?: boolean;
+  title?: string;
 };
 
 const defaultClassName =
@@ -22,6 +23,7 @@ export function SubmitButton({
   disabled = false,
   statusMessage,
   showStatus = true,
+  title,
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
 
@@ -35,6 +37,7 @@ export function SubmitButton({
       <button
         className={`${className} disabled:cursor-not-allowed disabled:opacity-60`}
         disabled={disabled || pending}
+        title={title}
         type="submit"
       >
         {pending ? pendingText : children}

@@ -79,23 +79,32 @@ export default async function AdminSupportBuilderPage({
   const disallowedLabels = disallowedFieldTypeLabels(limits, fields);
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <header className="rounded-lg border border-amber-200 bg-amber-50 p-6 shadow-sm">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-amber-800">
-                Super Admin Support Builder
+    <main className="min-h-screen bg-slate-50">
+      <header className="sticky top-0 z-20 border-b border-amber-200 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-[96rem] flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+            <Link href="/admin">
+              <img
+                alt="FormOS"
+                className="h-auto max-w-[108px] object-contain"
+                src="/formos-logo.png"
+              />
+            </Link>
+            <div className="hidden h-8 w-px bg-slate-200 sm:block" />
+            <Link
+              className="text-sm font-semibold text-slate-500 transition hover:text-slate-950"
+              href={`/admin/forms/${form.id}`}
+            >
+              Back to admin form view
+            </Link>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Support Builder
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-950">
+              <h1 className="truncate text-lg font-semibold text-slate-950">
                 {form.title}
               </h1>
-              <p className="mt-3 text-sm leading-6 text-slate-700">
-                Editing as Super Admin support for owner{" "}
-                <span className="font-medium">{form.owner.name || form.owner.email}</span>.
-                Changes still use the owner&apos;s plan limits and field validation.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className={`rounded-md border px-2 py-1 text-xs font-medium ${statusBadgeClass(form.status)}`}>
                   {form.status}
                 </span>
@@ -107,42 +116,44 @@ export default async function AdminSupportBuilderPage({
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                href={`/admin/forms/${form.id}`}
-              >
-                Back to Admin Form View
-              </Link>
-              <Link
-                className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                href={`/f/${form.id}`}
-                target="_blank"
-              >
-                Preview Public Form
-              </Link>
-            </div>
           </div>
-        </header>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="max-w-md text-xs leading-5 text-slate-600">
+              Editing for {form.owner.name || form.owner.email}. Owner plan
+              limits and validation still apply.
+            </p>
+            <Link
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              href={`/f/${form.id}`}
+              target="_blank"
+            >
+              Preview Public Form
+            </Link>
+          </div>
+        </div>
+      </header>
 
+      <div className="mx-auto flex max-w-[96rem] flex-col">
         {success ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <p className="mx-5 mt-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {success}
           </p>
         ) : null}
 
         {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="mx-5 mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </p>
         ) : null}
 
         {hasUploadFields && !uploadProvider.uploadsAvailable ? (
-          <GoogleDriveUploadWarning />
+          <div className="mx-5 mt-5">
+            <GoogleDriveUploadWarning />
+          </div>
         ) : null}
 
         {disallowedLabels.length > 0 ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+          <p className="mx-5 mt-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
             This form contains field types that are not included in the owner&apos;s
             current plan. Remove them or update the owner&apos;s plan before saving.
             Disallowed field types: {disallowedLabels.join(", ")}.
