@@ -1,6 +1,6 @@
-# CURRENT TASK — FormOS Milestone 25: Full System Security Hardening
+CURRENT TASK — FormOS Milestone 26: User Onboarding + Setup Checklist
 
-## Project Context
+Project Context
 
 FormOS is a standalone SaaS-style form builder project.
 
@@ -13,403 +13,320 @@ Current state:
 * User Profile + Business/Billing Profile exists.
 * Dynamic plans, quota overrides, and field type controls exist.
 * Stripe billing works.
-* Stripe plan sync works.
-* Stripe Checkout and Customer Portal work.
-* Stripe webhook logs/billing events work.
 * Business workspace and staff access work.
-* Staff invite flow works.
-* Super Admin exists.
+* Full system security hardening has been completed.
 * Forms, builder, public submissions, QR, storage integrations, office fields, PDF generation, email, and audit timeline work.
 * Google Drive and Dropbox uploads work.
-* Lark email notifications work.
+* Super Admin exists.
 * Do not touch CommerceOS.
 
-## Goal
+Goal
 
-Perform a full system security hardening pass across FormOS.
+Add a user onboarding and setup checklist so new users know what to do after signing up.
 
-This milestone should reduce risk across authentication, authorization, billing, integrations, uploads, public forms, staff access, Super Admin, and server actions.
+FormOS has many powerful features now, but new users need clear guidance.
 
-Do not add flashy new features.
+The onboarding should help users complete the important first steps without overwhelming them.
 
-This is a security and reliability milestone.
+Main UX
 
-## Main Security Goals
+On /dashboard, show a setup checklist card for users who have not completed onboarding.
 
-* Make authorization consistent.
-* Protect owner-only and Super Admin-only areas.
-* Prevent staff/workspace data leaks.
-* Prevent duplicate/unsafe actions where possible.
-* Harden OAuth and token flows.
-* Harden password reset and verification flows.
-* Harden public submission routes.
-* Harden file uploads.
-* Harden Stripe webhook handling.
-* Improve security headers.
-* Improve safe error handling.
-* Avoid logging secrets/sensitive data.
+Checklist items:
 
-## 1. Centralize Authorization Helpers
+1. Verify your email
+2. Complete your business profile
+3. Choose or confirm your plan
+4. Connect Google Drive or Dropbox
+5. Create your first form
+6. Publish your form
+7. Copy your public link or QR code
+8. Submit a test response
+9. Finalize a submission and send PDF
 
-Create or improve centralized permission helpers.
+Each item should show:
 
-Suggested locations:
+* completed / not completed state
+* short explanation
+* action button/link
 
-* lib/auth/permissions.ts
-* lib/workspaces/permissions.ts
-* lib/security/guards.ts
+Example:
 
-Helpers should cover:
+Verify your email
+Protect your account and receive important notifications.
+Button: Resend Verification / Verified
 
-* requireAuth
-* requireSuperAdmin
-* requireWorkspaceOwner
-* requireWorkspaceAdminOrOwner
-* requireWorkspaceMember
-* requireOwnerOrWorkspaceMemberForForm
-* requireOwnerOrWorkspaceMemberForSubmission
-* requireBillingOwner
-* requireIntegrationOwner
-* requireTeamOwner
+Checklist Logic
 
-Use these helpers in pages, routes, and server actions.
+Checklist completion should be calculated from existing data where possible.
 
-Do not rely only on hiding buttons in UI.
+1. Verify your email
 
-## 2. Workspace / Staff Access Hardening
+Complete if:
 
-Review all workspace/staff routes and actions.
+* user.emailVerifiedAt exists
 
-Owner-only:
+Action:
+
+* resend verification email if not verified
+
+2. Complete business profile
+
+Complete if BusinessProfile exists and has at least:
+
+* companyName
+    or
+* billingName
+
+Action:
+
+* /dashboard/settings/profile
+
+3. Choose or confirm plan
+
+Complete if:
+
+* UserSubscription exists
+    or
+* user has default Free plan shown
+
+Since default Free exists, this can be marked as complete but still show action:
 
 * /dashboard/settings/billing
+
+Label:
+
+Current plan: {planName}
+
+4. Connect storage
+
+Complete if:
+
+* active upload provider is configured
+    or
+* Google Drive/Dropbox integration exists and active provider is selected
+
+Action:
+
 * /dashboard/settings/integrations
-* /dashboard/settings/team
-* billing API routes/actions
-* integration connect/disconnect/config routes/actions
-* team invite/remove/role actions
 
-OWNER should access all.
+If current plan does not allow storage integrations:
 
-ADMIN may access forms/submissions and builder only if already intended.
+Show:
 
-STAFF should not access billing, integrations, team management, subscription controls, Super Admin, or owner private business settings.
+Storage uploads are available on paid plans.
 
-Use existing ownerId strategy:
+Action:
 
-* Form.ownerId is still source owner.
-* Staff access is allowed only if staff belongs to workspace where workspace.ownerId === form.ownerId.
+* /dashboard/settings/billing
 
-Do not migrate forms to workspaceId in this milestone.
+5. Create first form
 
-## 3. Super Admin Hardening
+Complete if:
 
-Review all /admin routes and admin actions.
+* user/workspace has at least one form
 
-Only SUPER_ADMIN can access:
+Action:
 
-* /admin
-* /admin/users
-* /admin/forms
-* /admin/plans
-* /admin/settings
-* /admin/billing/events
-* plan create/edit/delete/deactivate/sync
-* user quota override actions
-* user plan assignment actions
-* platform settings actions
-
-Workspace OWNER/ADMIN/STAFF must never access Super Admin routes unless their User.role is SUPER_ADMIN.
+* /dashboard/forms/new
 
-## 4. Billing Security Hardening
+6. Publish form
 
-Review Stripe billing routes/actions:
+Complete if:
 
-* checkout route/action
-* portal route/action
-* webhook route
-* plan sync action
-* cancel/resume subscription action
-* billing events page
+* user/workspace has at least one published form
 
-Requirements:
-
-* checkout requires logged-in user
-* checkout only creates session for current user
-* portal only opens current user’s customer portal
-* cancel/resume only affects current user’s subscription
-* plan sync is Super Admin-only
-* webhook verifies Stripe signature before processing
-* webhook is idempotent using Stripe event ID
-* webhook never stores card/payment method data
-* Stripe secrets are never exposed
-* billing events never expose secrets
+Action:
 
-## 5. OAuth Security Hardening
+* /dashboard/forms
 
-Review Google and Lark OAuth flows.
+7. Copy public link or QR code
 
-Requirements:
+Complete if:
 
-* OAuth state is generated securely
-* OAuth state is validated on callback
-* missing/invalid state is rejected
-* no open redirects
-* user email is required
-* users are matched by OAuth account first, then email
-* duplicate users are not created for same email
-* existing password is not overwritten
-* OAuth tokens are not logged
-* provider secrets are not exposed
-* Google auth scopes are only openid/email/profile
-* Google Drive OAuth remains separate from Google login OAuth
-* Lark login remains separate from Lark email provider
-
-## 6. Auth Token Hardening
-
-Review email verification and password reset flows.
-
-Requirements:
-
-* raw tokens are never stored
-* token hash only stored
-* tokens expire
-* tokens are one-time use
-* password reset does not reveal whether email exists
-* passwords are hashed using existing password helper
-* login remains safe for existing users
-* Super Admin is not accidentally locked out
-* resend verification is not spammable if simple rate limit exists
-
-## 7. Public Form Submission Hardening
-
-Review public form route:
-
-* /f/[formSlug]
-
-Requirements:
-
-* only published forms can be submitted
-* draft/archived/missing forms show friendly unavailable page
-* monthly submission limits are checked server-side
-* plan field restrictions do not break existing published forms
-* server-side validation remains source of truth
-* required fields are checked server-side
-* office-only fields are ignored by public submission
-* display-only fields are ignored by public submission
-* no owner private data is exposed
-* no tokens/secrets/storage credentials exposed
-* duplicate submit prevention still works
+* user has at least one published form
 
-## 8. File Upload Security Hardening
-
-Review Google Drive and Dropbox upload handling.
+Since tracking actual copy/download is not required, this can be suggested after publish.
 
-Requirements:
+Action:
 
-* file type validation server-side
-* file size validation server-side
-* unsupported MIME types rejected
-* no file binary stored permanently on FormOS server
-* storage tokens never exposed to browser
-* uploaded file metadata is safe
-* public submitter cannot choose storage provider/path
-* active provider chosen by owner only
-* Dropbox paths are normalized and path traversal blocked
-* Google folder config remains owner-only
-* upload errors are friendly
+* open latest published form detail page if easy
+* otherwise /dashboard/forms
 
-## 9. PDF Generation Security
+8. Submit test response
 
-Review completed PDF generation/download/email.
+Complete if:
 
-Requirements:
+* user/workspace has at least one submission
 
-* only owner or permitted workspace role can generate/download PDF
-* Super Admin cannot access completed PDFs unless deliberately built later
-* public user cannot access arbitrary PDFs by ID
-* PDF does not expose storage links unless intended
-* PDF does not expose uploaded file metadata if current clean layout removed it
-* PDF generation errors do not leak stack traces
-* finalization cannot be double-run to spam emails
-* plan limits for PDF generation still apply
+Action:
 
-## 10. Server Action Hardening
+* /dashboard/forms
 
-Review all server actions.
+9. Finalize submission and send PDF
 
-Actions should:
+Complete if:
 
-* check logged-in user where required
-* check resource ownership/workspace permission
-* return friendly errors
-* not expose raw stack traces
-* not log sensitive data
-* prevent double/duplicate critical actions where practical
+* user/workspace has at least one submission with officeCompletedAt or finalized/completed status
 
-Critical actions:
+Action:
 
-* create form
-* create template
-* save builder fields
-* publish/unpublish/archive form
-* save office fields
-* finalize submission
-* download PDF
-* connect/disconnect integrations
-* save storage folder/path
-* set active storage provider
-* invite staff
-* remove staff
-* change staff role
-* assign plan
-* edit quota override
-* sync Stripe plan
-* create checkout
-* cancel/resume subscription
+* /dashboard/forms
 
-## 11. Rate Limiting / Abuse Controls
+Optional Tracking
 
-Add simple lightweight rate limiting where practical.
+If simple, add model:
 
-Priority targets:
+UserOnboardingState {
+id          String   @id @default(cuid())
+userId      String   @unique
+dismissedAt DateTime?
+completedAt DateTime?
+metadata    Json?
+createdAt   DateTime @default(now())
+updatedAt   DateTime @updatedAt
 
-* login attempts
-* forgot password
-* resend verification
-* public form submission
-* staff invite sending
-* OAuth callback abuse if practical
+user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-Do not add Redis or heavy external infra in this milestone.
+Create migration:
 
-Simple DB-based or in-memory rate limiting is acceptable if safe for current deployment.
+npx prisma migrate dev –name add_user_onboarding_state
 
-If rate limiting is too broad, at least add it to:
+If avoiding schema change is preferred, calculate checklist only and store no state.
 
-* forgot password
-* resend verification
-* public form submission
+Preferred:
 
-## 12. Security Headers
+Add UserOnboardingState so user can dismiss the checklist.
 
-Add security headers in Next config or middleware if practical.
+Dismiss Behaviour
 
-Recommended headers:
+User should be able to click:
 
-* X-Frame-Options: DENY or SAMEORIGIN
-* X-Content-Type-Options: nosniff
-* Referrer-Policy: strict-origin-when-cross-origin
-* Permissions-Policy with limited permissions
-* Content-Security-Policy if simple and not breaking existing inline styles/scripts
+Hide setup checklist
 
-Be careful with CSP because it can break Stripe, OAuth, signatures, and scripts if done badly.
+If dismissed:
 
-If CSP is risky, skip CSP and add safer basic headers first.
+* store dismissedAt
+* hide checklist from main dashboard
+* show smaller link/card:
+    Show setup checklist
 
-## 13. Error Handling
+If all checklist items are complete:
 
-Improve error handling where practical.
+* set completedAt if using UserOnboardingState
+* show small success card:
+    Your FormOS workspace is ready.
 
-Requirements:
+Dashboard Integration
 
-* public users see friendly errors
-* admin/internal errors do not expose stack traces
-* API routes return safe JSON errors
-* webhook route returns appropriate status
-* sensitive logs avoided
+Update /dashboard.
 
-Do not silence critical logs completely. Log safe messages.
+Add onboarding card near the top.
 
-## 14. Logging / Sensitive Data Review
+It should not replace existing dashboard stats.
 
-Search for unsafe logging.
+It should look modern and clean:
 
-Remove or sanitize logs containing:
+* progress bar
+* completed count
+* checklist rows
+* action buttons
+* dismiss option
 
-* passwords
-* raw auth tokens
-* token hashes if unnecessary
-* OAuth access/refresh tokens
-* Google Drive tokens
-* Dropbox tokens
-* Stripe secret/webhook secret
-* Lark app secrets/tokens
-* uploaded file contents
-* full submitted answers where avoidable
+Example:
 
-## 15. Access Denied UX
+Setup Progress: 5 / 9 completed
 
-Create or improve reusable access denied UI.
+Staff Behaviour
 
-Text:
+Staff users should not see owner onboarding checklist.
 
-Access denied
+If current user is workspace STAFF or ADMIN but not owner:
 
-You do not have permission to access this area.
+* hide onboarding checklist
+* show normal staff dashboard
 
-Button:
+Only workspace owner should see setup checklist.
 
-Back to Dashboard
+Super Admin Behaviour
 
-Use this for blocked dashboard/admin/staff routes where appropriate.
+Super Admin should not be forced through onboarding.
 
-## 16. Security Test Checklist
+If Super Admin is also using FormOS as a normal user, showing checklist is acceptable but not required.
 
-Add a SECURITY_CHECKLIST.md or update DEPLOYMENT.md with manual checks:
+Do not show onboarding inside /admin.
 
-* normal user cannot access /admin
-* staff cannot access billing
-* staff cannot access integrations
-* staff cannot access another user’s form
-* unauthenticated user cannot access dashboard
-* draft form cannot be submitted publicly
-* Stripe webhook rejects invalid signature
-* forgot password does not reveal email existence
-* OAuth state rejects invalid callback
-* storage tokens are not visible in HTML
-* public form does not expose owner private data
+Plan Awareness
 
-## Out of Scope
+Checklist should respect plan limits.
 
-Do not build a full audit compliance system.
-Do not build SOC2.
-Do not build MFA.
-Do not build CAPTCHA unless simple and already available.
-Do not build per-form permissions.
-Do not build multiple workspaces.
-Do not rewrite data models to workspaceId.
-Do not change billing plan logic except security fixes.
+Examples:
+
+If user’s plan does not allow Google Drive/Dropbox:
+
+* storage checklist item should show upgrade message, not broken action
+
+If user’s plan does not allow PDF generation:
+
+* final PDF checklist item should show upgrade message if relevant
+
+Do not break anything if user is on Free plan.
+
+UI Requirements
+
+Use Tailwind only.
+
+Checklist should include:
+
+* progress bar
+* icons or simple status dots
+* completed badge/checkmark
+* action buttons
+* dismiss button
+* mobile-friendly layout
+
+Do not add a heavy UI library.
+
+Security
+
+* user sees only their own onboarding data
+* staff does not see owner-only setup actions
+* no secrets exposed
+* no private data exposed
+* all linked pages already keep their own authorization checks
+
+Out of Scope
+
+Do not build product tours.
+Do not build tooltips everywhere.
+Do not build onboarding emails.
+Do not build video tutorials.
+Do not build AI assistant.
+Do not change billing logic.
+Do not change form submission logic.
 Do not integrate CommerceOS.
 
-## Acceptance Criteria
+Acceptance Criteria
 
-Milestone 25 is complete when:
+Milestone 26 is complete when:
 
-* Authorization helpers are centralized or improved.
-* Super Admin routes/actions are protected.
-* Workspace owner/admin/staff permissions are enforced server-side.
-* Staff cannot access billing/integrations/team management.
-* Staff cannot access another workspace.
-* Billing routes/actions are protected.
-* Stripe webhook remains signature verified and idempotent.
-* OAuth state validation is confirmed.
-* Email verification/password reset token flows are hardened.
-* Public submission route is hardened.
-* File upload validation is server-side and safe.
-* PDF generation/download is permission-protected.
-* Critical server actions have ownership/permission checks.
-* Basic rate limiting exists for priority abuse routes or is documented if deferred.
-* Basic security headers are added where safe.
-* Unsafe logging is removed/sanitized.
-* Access denied UI exists.
-* Security checklist document exists.
-* Existing owner workflow still works.
-* Existing staff workflow still works.
-* Existing Super Admin workflow still works.
-* Existing Stripe billing still works.
-* Existing Google Drive/Dropbox upload flow still works.
-* Existing PDF/email/audit flow still works.
+* Dashboard shows onboarding checklist for workspace owner.
+* Checklist tracks email verification.
+* Checklist tracks business profile completion.
+* Checklist shows current plan.
+* Checklist tracks storage setup where applicable.
+* Checklist tracks first form creation.
+* Checklist tracks published form.
+* Checklist tracks first submission.
+* Checklist tracks finalized submission/PDF completion.
+* Checklist has progress display.
+* Checklist action links work.
+* User can dismiss checklist if UserOnboardingState is implemented.
+* Staff users do not see owner onboarding checklist.
+* Super Admin/admin pages are unaffected.
+* Existing dashboard still works.
+* Existing forms/submissions/storage/billing/team/security flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.
