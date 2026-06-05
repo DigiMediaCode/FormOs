@@ -32,6 +32,10 @@ export default function PrivacyPolicyPage() {
         <p className="mt-2">FormOS uses cookies for session authentication and account access. Users should protect their login credentials and sign out on shared devices.</p>
       </section>
       <section>
+        <h2 className="text-lg font-semibold text-slate-950">Third-party advertising</h2>
+        <p className="mt-2">FormOS may display third-party advertising on public pages or free-plan public forms. Ad providers may use cookies or similar technologies subject to their own policies.</p>
+      </section>
+      <section>
         <h2 className="text-lg font-semibold text-slate-950">Data retention and contact</h2>
         <p className="mt-2">Data is retained while accounts and forms remain active, unless deleted or changed by the form owner. Contact support@example.com for privacy questions.</p>
       </section>

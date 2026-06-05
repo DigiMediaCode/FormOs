@@ -96,6 +96,7 @@ function readQuotaOverride(formData: FormData) {
     "allowQrCode",
     "allowCustomBranding",
     "allowTeamMembers",
+    "allowAdFreeForms",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

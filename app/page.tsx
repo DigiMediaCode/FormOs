@@ -16,6 +16,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { AdUnit } from "@/components/ads/ad-unit";
+import { GoogleAdSenseScript } from "@/components/ads/google-adsense-script";
 import { PackageCarousel } from "@/components/public/package-carousel";
 import { LandingActionLink } from "@/components/public/landing-action-link";
 import { PublicFooter } from "@/components/public/public-footer";
@@ -271,6 +273,10 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-white text-[#071124]">
+      <GoogleAdSenseScript
+        adsEnabled={settings.adsEnabled && settings.showLandingPageAds}
+        clientId={settings.adsenseClientId}
+      />
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         type="application/ld+json"
@@ -394,6 +400,20 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {settings.adsEnabled &&
+      settings.showLandingPageAds &&
+      settings.adsenseClientId &&
+      settings.landingTopAdSlot ? (
+        <section className="mx-auto max-w-5xl px-6 py-8">
+          <AdUnit
+            adsEnabled
+            clientId={settings.adsenseClientId}
+            label="Sponsored"
+            slotId={settings.landingTopAdSlot}
+          />
+        </section>
+      ) : null}
+
       <section className="mx-auto max-w-7xl px-6 py-20" id="features">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
@@ -422,6 +442,20 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {settings.adsEnabled &&
+      settings.showLandingPageAds &&
+      settings.adsenseClientId &&
+      settings.landingMiddleAdSlot ? (
+        <section className="mx-auto max-w-5xl px-6 py-8">
+          <AdUnit
+            adsEnabled
+            clientId={settings.adsenseClientId}
+            label="Sponsored"
+            slotId={settings.landingMiddleAdSlot}
+          />
+        </section>
+      ) : null}
 
       <section className="bg-gradient-to-b from-slate-50 to-blue-50/50" id="use-cases">
         <div className="mx-auto max-w-7xl px-6 py-20">
@@ -582,6 +616,20 @@ export default async function HomePage() {
               View full pricing details
             </Link>
           </div>
+        </section>
+      ) : null}
+
+      {settings.adsEnabled &&
+      settings.showLandingPageAds &&
+      settings.adsenseClientId &&
+      settings.landingBottomAdSlot ? (
+        <section className="mx-auto max-w-5xl px-6 py-8">
+          <AdUnit
+            adsEnabled
+            clientId={settings.adsenseClientId}
+            label="Sponsored"
+            slotId={settings.landingBottomAdSlot}
+          />
         </section>
       ) : null}
 

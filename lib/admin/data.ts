@@ -82,6 +82,8 @@ export async function getAdminUsers() {
         email: true,
         passwordHash: true,
         role: true,
+        suspendedAt: true,
+        suspendedReason: true,
         createdAt: true,
         businessProfile: {
           select: {
@@ -113,6 +115,13 @@ export async function getAdminUsers() {
             id: true,
           },
         },
+        ownedWorkspace: {
+          select: {
+            _count: {
+              select: { members: true },
+            },
+          },
+        },
         oauthAccounts: {
           select: {
             provider: true,
@@ -137,6 +146,8 @@ export async function getAdminUsers() {
     phone: user.phone,
     email: user.email,
     role: user.role,
+    suspendedAt: user.suspendedAt,
+    suspendedReason: user.suspendedReason,
     authMethods: formatAuthMethods(user),
     createdAt: user.createdAt,
     companyName: user.businessProfile?.companyName ?? null,
@@ -151,6 +162,9 @@ export async function getAdminUsers() {
     stripeCustomerId: maskStripeId(user.subscription?.stripeCustomerId),
     stripeSubscriptionId: maskStripeId(user.subscription?.stripeSubscriptionId),
     hasQuotaOverride: Boolean(user.quotaOverride),
+    teamMembersCount: user.ownedWorkspace
+      ? Math.max(user.ownedWorkspace._count.members - 1, 0)
+      : 0,
   }));
 }
 

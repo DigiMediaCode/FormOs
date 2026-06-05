@@ -4,6 +4,12 @@ import {
   clearUserQuotaOverrideAction,
   saveUserQuotaOverrideAction,
 } from "@/app/admin/users/[userId]/actions";
+import {
+  deleteUserAction,
+  reactivateUserAction,
+  suspendUserAction,
+} from "@/app/admin/users/actions";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import { fieldTypeLabel, SUPPORTED_FIELD_TYPES } from "@/lib/forms/fields";
@@ -43,6 +49,7 @@ const booleanOverrideFields = [
   ["allowQrCode", "QR codes"],
   ["allowCustomBranding", "Custom branding"],
   ["allowTeamMembers", "Team members"],
+  ["allowAdFreeForms", "Ad-free public forms"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -129,6 +136,8 @@ export default async function AdminUserDetailPage({
         email: true,
         passwordHash: true,
         role: true,
+        suspendedAt: true,
+        suspendedReason: true,
         oauthAccounts: {
           select: {
             provider: true,
@@ -212,10 +221,53 @@ export default async function AdminUserDetailPage({
           <p className="mt-2 text-sm text-slate-600">
             {user.name || "No name"} · {user.role}
           </p>
+          {user.suspendedAt ? (
+            <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              Suspended: {user.suspendedReason || "No reason provided."}
+            </p>
+          ) : null}
         </header>
 
         {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{success}</p> : null}
         {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
+          <h3 className="text-xl font-semibold text-slate-950">Admin Safety Actions</h3>
+          <div className="flex flex-wrap gap-3">
+            {user.suspendedAt ? (
+              <form action={reactivateUserAction.bind(null, user.id)}>
+                <SubmitButton
+                  className="rounded-md border border-emerald-200 bg-white px-4 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50"
+                  pendingText="Reactivating user..."
+                >
+                  Reactivate User
+                </SubmitButton>
+              </form>
+            ) : (
+              <form action={suspendUserAction.bind(null, user.id)} className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  name="suspendedReason"
+                  placeholder="Suspension reason"
+                />
+                <ConfirmSubmitButton
+                  confirmMessage="Suspend this user?"
+                  pendingText="Suspending user..."
+                >
+                  Suspend User
+                </ConfirmSubmitButton>
+              </form>
+            )}
+            <form action={deleteUserAction.bind(null, user.id)}>
+              <ConfirmSubmitButton
+                confirmMessage="Delete this user? Active billing and linked data will block deletion."
+                pendingText="Deleting user..."
+              >
+                Delete User
+              </ConfirmSubmitButton>
+            </form>
+          </div>
+        </section>
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
           <h3 className="text-xl font-semibold text-slate-950">Current Access</h3>

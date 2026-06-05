@@ -16,6 +16,10 @@ export async function requireAuth() {
     redirect("/login");
   }
 
+  if (user.suspendedAt) {
+    redirect("/account-suspended");
+  }
+
   return user;
 }
 

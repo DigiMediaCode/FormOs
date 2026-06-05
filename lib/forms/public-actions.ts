@@ -29,10 +29,12 @@ import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifica
 import {
   assertCanReceiveSubmission,
   assertCanUseStorageProvider,
+  getUserEffectiveLimits,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import {
   getPublicWorkspaceBranding,
   type WorkspaceBranding,
@@ -82,6 +84,13 @@ type PublicFormView = PublicFormSnapshot & {
   uploadsAvailable: boolean;
   uploadProvider: StorageProvider | null;
   branding: WorkspaceBranding | null;
+  publicAds: {
+    enabled: boolean;
+    adsenseClientId: string;
+    publicFormAdSlot: string;
+    publicFormAdFrequency: number;
+    publicFormAdLabel: string;
+  };
 };
 
 type UploadRequest = {
@@ -240,9 +249,11 @@ export async function getPublishedFormForPublicView(formId: string) {
   }
 
   const snapshot = buildSnapshot(form);
-  const [uploadProvider, branding] = await Promise.all([
+  const [uploadProvider, branding, limits, platformSettings] = await Promise.all([
     getResolvedUploadProvider(form.ownerId),
     getPublicWorkspaceBranding(form.ownerId),
+    getUserEffectiveLimits(form.ownerId),
+    getPlatformSettings(),
   ]);
   let uploadsAvailable = uploadProvider.uploadsAvailable;
 
@@ -259,6 +270,18 @@ export async function getPublishedFormForPublicView(formId: string) {
     uploadsAvailable,
     uploadProvider: uploadProvider.activeProvider,
     branding,
+    publicAds: {
+      enabled:
+        platformSettings.adsEnabled &&
+        platformSettings.showPublicFormAds &&
+        Boolean(platformSettings.adsenseClientId) &&
+        Boolean(platformSettings.publicFormAdSlot) &&
+        !limits.allowAdFreeForms,
+      adsenseClientId: platformSettings.adsenseClientId,
+      publicFormAdSlot: platformSettings.publicFormAdSlot,
+      publicFormAdFrequency: platformSettings.publicFormAdFrequency,
+      publicFormAdLabel: platformSettings.publicFormAdLabel,
+    },
   } satisfies PublicFormView;
 }
 

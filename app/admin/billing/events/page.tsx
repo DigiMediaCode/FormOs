@@ -148,8 +148,8 @@ export default async function AdminBillingEventsPage({
           </form>
         </section>
 
-        <section className="overflow-hidden rounded-md border border-slate-200 bg-white">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <section className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+          <table className="min-w-[1100px] divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
                 <th className="px-4 py-3 font-medium">Event Type</th>

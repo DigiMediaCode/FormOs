@@ -1,4 +1,4 @@
-CURRENT TASK — FormOS Milestone 26: User Onboarding + Setup Checklist
+CURRENT TASK — FormOS Milestone 27.1: Super Admin Form View + Assisted Edit
 
 Project Context
 
@@ -6,327 +6,203 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS MVP foundation is live and working.
-* Auth/signup/login works.
-* Google + Lark OAuth login works.
-* Email verification/password reset works.
-* User Profile + Business/Billing Profile exists.
-* Dynamic plans, quota overrides, and field type controls exist.
-* Stripe billing works.
-* Business workspace and staff access work.
-* Full system security hardening has been completed.
-* Forms, builder, public submissions, QR, storage integrations, office fields, PDF generation, email, and audit timeline work.
-* Google Drive and Dropbox uploads work.
 * Super Admin exists.
+* Super Admin settings have been expanded successfully.
+* Super Admin can view users/forms at a high level.
+* Forms, builder, public forms, submissions, storage, PDF, audit, billing, plans, workspace, and staff access all work.
 * Do not touch CommerceOS.
+
+Problem
+
+On the Super Admin Forms page, clicking View currently shows only form name and description.
+
+This is not useful enough.
+
+Super Admin should be able to inspect the actual form structure and help customers if they need support.
 
 Goal
 
-Add a user onboarding and setup checklist so new users know what to do after signing up.
+Improve Super Admin form view so Super Admin can:
 
-FormOS has many powerful features now, but new users need clear guidance.
+* view complete form details
+* inspect actual fields
+* preview how the form looks publicly
+* access owner/customer context
+* optionally edit the form if needed for customer support
 
-The onboarding should help users complete the important first steps without overwhelming them.
+Important Direction
 
-Main UX
+Super Admin support access must be controlled and safe.
 
-On /dashboard, show a setup checklist card for users who have not completed onboarding.
+Do not expose uploaded files or private submission answers in this milestone.
 
-Checklist items:
+Do not give Super Admin direct PDF/download access unless intentionally built later.
 
-1. Verify your email
-2. Complete your business profile
-3. Choose or confirm your plan
-4. Connect Google Drive or Dropbox
-5. Create your first form
-6. Publish your form
-7. Copy your public link or QR code
-8. Submit a test response
-9. Finalize a submission and send PDF
+Do not break owner/staff permissions.
 
-Each item should show:
+Do not integrate CommerceOS.
 
-* completed / not completed state
-* short explanation
-* action button/link
+Required Route
 
-Example:
+Create or improve:
 
-Verify your email
-Protect your account and receive important notifications.
-Button: Resend Verification / Verified
+/admin/forms/[formId]
 
-Checklist Logic
+This page should show a complete Super Admin form detail view.
 
-Checklist completion should be calculated from existing data where possible.
+Form Detail Page Should Show
 
-1. Verify your email
+Form Summary
 
-Complete if:
+* form title
+* description
+* owner name/email
+* owner plan
+* status: Draft / Published / Archived
+* mode
+* created date
+* updated date
+* version
+* submissions count
+* fields count
+* public form link if published
+* QR/public link card if already available and safe
 
-* user.emailVerifiedAt exists
+Field Structure
 
-Action:
+Show the actual form fields in order.
 
-* resend verification email if not verified
+For each field show:
 
-2. Complete business profile
+* order
+* label
+* type
+* required status
+* visibility: Public / Office Use Only
+* display-only status if applicable
+* options count for dropdown/select
+* short content preview for static/html/section fields
 
-Complete if BusinessProfile exists and has at least:
+Do not show uploaded user files here.
 
-* companyName
-    or
-* billingName
+Do not show private submission answers here.
 
-Action:
+Public Preview
 
-* /dashboard/settings/profile
+Add a preview section that shows approximately how the form appears publicly.
 
-3. Choose or confirm plan
+This can reuse existing field rendering style if safe.
 
-Complete if:
+Preview should:
 
-* UserSubscription exists
-    or
-* user has default Free plan shown
+* show public fields
+* hide office-only fields or show them with Office Use Only badge in admin preview
+* show signatures/file upload placeholders only
+* not submit anything
+* not upload files
+* not create submissions
 
-Since default Free exists, this can be marked as complete but still show action:
+Owner Context
 
-* /dashboard/settings/billing
+Show owner summary:
 
-Label:
+* owner name
+* owner email
+* current plan
+* business profile/company if available
+* storage provider status if available
 
-Current plan: {planName}
+No secrets/tokens.
 
-4. Connect storage
+Assisted Edit
 
-Complete if:
-
-* active upload provider is configured
-    or
-* Google Drive/Dropbox integration exists and active provider is selected
-
-Action:
-
-* /dashboard/settings/integrations
-
-If current plan does not allow storage integrations:
-
-Show:
-
-Storage uploads are available on paid plans.
-
-Action:
-
-* /dashboard/settings/billing
-
-5. Create first form
-
-Complete if:
-
-* user/workspace has at least one form
-
-Action:
-
-* /dashboard/forms/new
-
-6. Publish form
-
-Complete if:
-
-* user/workspace has at least one published form
-
-Action:
-
-* /dashboard/forms
-
-7. Copy public link or QR code
-
-Complete if:
-
-* user has at least one published form
-
-Since tracking actual copy/download is not required, this can be suggested after publish.
-
-Action:
-
-* open latest published form detail page if easy
-* otherwise /dashboard/forms
-
-8. Submit test response
-
-Complete if:
-
-* user/workspace has at least one submission
-
-Action:
-
-* /dashboard/forms
-
-9. Finalize submission and send PDF
-
-Complete if:
-
-* user/workspace has at least one submission with officeCompletedAt or finalized/completed status
-
-Action:
-
-* /dashboard/forms
-
-Optional Tracking
-
-If simple, add model:
-
-UserOnboardingState {
-id          String   @id @default(cuid())
-userId      String   @unique
-dismissedAt DateTime?
-completedAt DateTime?
-metadata    Json?
-createdAt   DateTime @default(now())
-updatedAt   DateTime @updatedAt
-
-user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-Create migration:
-
-npx prisma migrate dev –name add_user_onboarding_state
-
-If avoiding schema change is preferred, calculate checklist only and store no state.
+Add safe edit options for Super Admin.
 
 Preferred:
 
-Add UserOnboardingState so user can dismiss the checklist.
+Add button:
 
-Dismiss Behaviour
+Open Builder as Support
 
-User should be able to click:
+or:
 
-Hide setup checklist
+Edit Form as Super Admin
 
-If dismissed:
+This should open the existing builder route for that form in support mode, or a Super Admin edit route.
 
-* store dismissedAt
-* hide checklist from main dashboard
-* show smaller link/card:
-    Show setup checklist
+Important rules:
 
-If all checklist items are complete:
+* Only SUPER_ADMIN can use it.
+* Normal users/staff cannot access another owner’s builder.
+* Existing owner access must still work.
+* Super Admin edits should still pass existing validation.
+* Super Admin edits should not bypass plan restrictions unless deliberately allowed.
 
-* set completedAt if using UserOnboardingState
-* show small success card:
-    Your FormOS workspace is ready.
+Recommended behaviour:
 
-Dashboard Integration
+Super Admin can edit form fields as support, but action should be logged.
 
-Update /dashboard.
+If existing builder is tightly owner-scoped, create a Super Admin route/page that loads the builder component with admin permission.
 
-Add onboarding card near the top.
+Activity Logging
 
-It should not replace existing dashboard stats.
+If a form/admin event helper exists, log:
 
-It should look modern and clean:
+* super_admin_viewed_form
+* super_admin_opened_form_builder
+* super_admin_updated_form_fields
 
-* progress bar
-* completed count
-* checklist rows
-* action buttons
-* dismiss option
+If no such event helper exists, skip complex logging but leave TODO.
 
-Example:
+Do not log sensitive field values unnecessarily.
 
-Setup Progress: 5 / 9 completed
+Archive/Delete Actions
 
-Staff Behaviour
+If archive/delete form actions were added earlier, keep them available here.
 
-Staff users should not see owner onboarding checklist.
+Rules:
 
-If current user is workspace STAFF or ADMIN but not owner:
+* archive is allowed
+* delete only if safe
+* if form has submissions, block delete and suggest archive
 
-* hide onboarding checklist
-* show normal staff dashboard
+Security Requirements
 
-Only workspace owner should see setup checklist.
-
-Super Admin Behaviour
-
-Super Admin should not be forced through onboarding.
-
-If Super Admin is also using FormOS as a normal user, showing checklist is acceptable but not required.
-
-Do not show onboarding inside /admin.
-
-Plan Awareness
-
-Checklist should respect plan limits.
-
-Examples:
-
-If user’s plan does not allow Google Drive/Dropbox:
-
-* storage checklist item should show upgrade message, not broken action
-
-If user’s plan does not allow PDF generation:
-
-* final PDF checklist item should show upgrade message if relevant
-
-Do not break anything if user is on Free plan.
-
-UI Requirements
-
-Use Tailwind only.
-
-Checklist should include:
-
-* progress bar
-* icons or simple status dots
-* completed badge/checkmark
-* action buttons
-* dismiss button
-* mobile-friendly layout
-
-Do not add a heavy UI library.
-
-Security
-
-* user sees only their own onboarding data
-* staff does not see owner-only setup actions
-* no secrets exposed
-* no private data exposed
-* all linked pages already keep their own authorization checks
+* Only SUPER_ADMIN can access /admin/forms/[formId].
+* Super Admin should not see storage tokens.
+* Super Admin should not see OAuth tokens.
+* Super Admin should not see uploaded file contents.
+* Super Admin should not see full submission answers in this milestone.
+* Super Admin edit/support mode must not break owner permissions.
+* All actions must be server-side protected.
 
 Out of Scope
 
-Do not build product tours.
-Do not build tooltips everywhere.
-Do not build onboarding emails.
-Do not build video tutorials.
-Do not build AI assistant.
-Do not change billing logic.
-Do not change form submission logic.
+Do not build full submission viewer for Super Admin.
+Do not expose uploaded files.
+Do not expose completed PDFs.
+Do not build impersonation.
+Do not build per-field edit history.
+Do not build CMS/blog/knowledge base in this milestone.
 Do not integrate CommerceOS.
 
 Acceptance Criteria
 
-Milestone 26 is complete when:
+Milestone 27.1 is complete when:
 
-* Dashboard shows onboarding checklist for workspace owner.
-* Checklist tracks email verification.
-* Checklist tracks business profile completion.
-* Checklist shows current plan.
-* Checklist tracks storage setup where applicable.
-* Checklist tracks first form creation.
-* Checklist tracks published form.
-* Checklist tracks first submission.
-* Checklist tracks finalized submission/PDF completion.
-* Checklist has progress display.
-* Checklist action links work.
-* User can dismiss checklist if UserOnboardingState is implemented.
-* Staff users do not see owner onboarding checklist.
-* Super Admin/admin pages are unaffected.
-* Existing dashboard still works.
-* Existing forms/submissions/storage/billing/team/security flows still work.
+* /admin/forms/[formId] shows full form summary.
+* Super Admin can see owner context.
+* Super Admin can see field structure in order.
+* Super Admin can see required/visibility/type for each field.
+* Super Admin can preview the form structure safely.
+* Office-only fields are clearly marked or hidden in preview.
+* Super Admin can open/edit form as support if implemented.
+* Normal users cannot access admin form detail.
+* Staff cannot access admin form detail.
+* No storage tokens/secrets/uploaded file contents are exposed.
+* Existing owner form builder still works.
+* Existing public forms still work.
+* Existing billing/plans/workspace/security still works.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

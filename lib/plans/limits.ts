@@ -23,6 +23,7 @@ export type PlanLimits = {
   allowQrCode: boolean;
   allowCustomBranding: boolean;
   allowTeamMembers: boolean;
+  allowAdFreeForms: boolean;
   maxTeamMembers: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
 };
@@ -64,6 +65,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowQrCode",
   "allowCustomBranding",
   "allowTeamMembers",
+  "allowAdFreeForms",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -77,6 +79,7 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowQrCode: true,
   allowCustomBranding: true,
   allowTeamMembers: true,
+  allowAdFreeForms: true,
   maxTeamMembers: null,
   allowedFieldTypes: null,
 };
@@ -123,6 +126,7 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowQrCode: true,
     allowCustomBranding: false,
     allowTeamMembers: false,
+    allowAdFreeForms: false,
     maxTeamMembers: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
@@ -162,6 +166,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowQrCode: true,
       allowCustomBranding: false,
       allowTeamMembers: false,
+      allowAdFreeForms: true,
       maxTeamMembers: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
@@ -187,6 +192,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowQrCode: true,
       allowCustomBranding: false,
       allowTeamMembers: false,
+      allowAdFreeForms: true,
       maxTeamMembers: 0,
       allowedFieldTypes: null,
     },
@@ -212,6 +218,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowQrCode: true,
       allowCustomBranding: true,
       allowTeamMembers: true,
+      allowAdFreeForms: true,
       maxTeamMembers: 5,
       allowedFieldTypes: null,
     },
@@ -362,8 +369,9 @@ export async function seedDefaultPlansIfMissing() {
         if (
           isRecord(plan.limits) &&
           "allowedFieldTypes" in plan.limits &&
-          "allowTeamMembers" in plan.limits &&
-          "maxTeamMembers" in plan.limits
+            "allowTeamMembers" in plan.limits &&
+          "maxTeamMembers" in plan.limits &&
+          "allowAdFreeForms" in plan.limits
         ) {
           return Promise.resolve();
         }
@@ -384,6 +392,7 @@ export async function seedDefaultPlansIfMissing() {
               allowedFieldTypes: defaults.limits.allowedFieldTypes,
               allowTeamMembers: defaults.limits.allowTeamMembers,
               maxTeamMembers: defaults.limits.maxTeamMembers,
+              allowAdFreeForms: defaults.limits.allowAdFreeForms,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -633,6 +642,7 @@ export function featureLabels(limits: PlanLimits) {
     { label: "QR codes", allowed: limits.allowQrCode },
     { label: "Custom branding", allowed: limits.allowCustomBranding },
     { label: "Team members", allowed: limits.allowTeamMembers },
+    { label: "Ad-free public forms", allowed: limits.allowAdFreeForms },
   ];
 }
 

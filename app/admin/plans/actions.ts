@@ -91,6 +91,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowQrCode: readBoolean(formData, "allowQrCode"),
     allowCustomBranding: readBoolean(formData, "allowCustomBranding"),
     allowTeamMembers: readBoolean(formData, "allowTeamMembers"),
+    allowAdFreeForms: readBoolean(formData, "allowAdFreeForms"),
     allowedFieldTypes,
   });
 }

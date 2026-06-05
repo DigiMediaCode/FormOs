@@ -11,6 +11,25 @@ export type PlatformSettings = {
   metaDescription: string;
   logoUrl: string;
   faviconUrl: string;
+  companyName: string;
+  footerProjectText: string;
+  supportEmail: string;
+  contactEmail: string;
+  privacyPolicyUrl: string;
+  termsUrl: string;
+  dataSecurityUrl: string;
+  contactUrl: string;
+  showLandingPageAds: boolean;
+  showPublicFormAds: boolean;
+  enablePoweredByBranding: boolean;
+  adsEnabled: boolean;
+  adsenseClientId: string;
+  landingTopAdSlot: string;
+  landingMiddleAdSlot: string;
+  landingBottomAdSlot: string;
+  publicFormAdSlot: string;
+  publicFormAdFrequency: number;
+  publicFormAdLabel: string;
 };
 
 const PLATFORM_SETTING_KEYS = [
@@ -19,6 +38,25 @@ const PLATFORM_SETTING_KEYS = [
   "metaDescription",
   "logoUrl",
   "faviconUrl",
+  "companyName",
+  "footerProjectText",
+  "supportEmail",
+  "contactEmail",
+  "privacyPolicyUrl",
+  "termsUrl",
+  "dataSecurityUrl",
+  "contactUrl",
+  "showLandingPageAds",
+  "showPublicFormAds",
+  "enablePoweredByBranding",
+  "adsEnabled",
+  "adsenseClientId",
+  "landingTopAdSlot",
+  "landingMiddleAdSlot",
+  "landingBottomAdSlot",
+  "publicFormAdSlot",
+  "publicFormAdFrequency",
+  "publicFormAdLabel",
 ] as const;
 
 type PlatformSettingKey = (typeof PLATFORM_SETTING_KEYS)[number];
@@ -54,6 +92,25 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
     "Create online forms, agreements, signatures, file uploads, and completed PDFs with FormOS.",
   logoUrl: defaultLogoUrl(),
   faviconUrl: defaultFaviconUrl(),
+  companyName: "DigiMedia Code LLC",
+  footerProjectText: "FormOS is a project of DigiMedia Code LLC.",
+  supportEmail: "",
+  contactEmail: "",
+  privacyPolicyUrl: "/privacy-policy",
+  termsUrl: "/terms-of-service",
+  dataSecurityUrl: "/data-security",
+  contactUrl: "/contact",
+  showLandingPageAds: false,
+  showPublicFormAds: false,
+  enablePoweredByBranding: true,
+  adsEnabled: false,
+  adsenseClientId: "",
+  landingTopAdSlot: "",
+  landingMiddleAdSlot: "",
+  landingBottomAdSlot: "",
+  publicFormAdSlot: "",
+  publicFormAdFrequency: 4,
+  publicFormAdLabel: "Sponsored",
 };
 
 function isPlatformSettingKey(key: string): key is PlatformSettingKey {
@@ -62,6 +119,45 @@ function isPlatformSettingKey(key: string): key is PlatformSettingKey {
 
 function readSettingString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+function readSettingBoolean(value: unknown) {
+  return value === true;
+}
+
+function readSettingNumber(value: unknown, fallback: number) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function hasHtmlOrScript(value: string) {
+  return /<[^>]*>|javascript:/i.test(value);
+}
+
+function isSafeSettingText(value: string) {
+  return !hasHtmlOrScript(value);
+}
+
+function validatePlainTextSettings(settings: PlatformSettings) {
+  const textFields: Array<[keyof PlatformSettings, string]> = [
+    ["companyName", "Company name"],
+    ["footerProjectText", "Footer project text"],
+    ["supportEmail", "Support email"],
+    ["contactEmail", "Contact email"],
+    ["adsenseClientId", "AdSense client ID"],
+    ["landingTopAdSlot", "Landing top ad slot"],
+    ["landingMiddleAdSlot", "Landing middle ad slot"],
+    ["landingBottomAdSlot", "Landing bottom ad slot"],
+    ["publicFormAdSlot", "Public form ad slot"],
+    ["publicFormAdLabel", "Public form ad label"],
+  ];
+
+  for (const [key, label] of textFields) {
+    const value = settings[key];
+    if (typeof value === "string" && !isSafeSettingText(value)) {
+      throw new Error(`${label} must be plain text. Do not paste scripts or HTML.`);
+    }
+  }
 }
 
 export function isSafePublicUrlOrPath(value: string) {
@@ -104,7 +200,16 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
 
   for (const row of rows) {
     if (isPlatformSettingKey(row.key)) {
-      settings[row.key] = readSettingString(row.value);
+      if (typeof DEFAULT_PLATFORM_SETTINGS[row.key] === "boolean") {
+        settings[row.key] = readSettingBoolean(row.value) as never;
+      } else if (typeof DEFAULT_PLATFORM_SETTINGS[row.key] === "number") {
+        settings[row.key] = readSettingNumber(
+          row.value,
+          DEFAULT_PLATFORM_SETTINGS[row.key] as number,
+        ) as never;
+      } else {
+        settings[row.key] = readSettingString(row.value) as never;
+      }
     }
   }
 
@@ -124,6 +229,30 @@ export async function updatePlatformSettings(input: PlatformSettings) {
       input.metaDescription.trim() || DEFAULT_PLATFORM_SETTINGS.metaDescription,
     logoUrl: input.logoUrl.trim(),
     faviconUrl: input.faviconUrl.trim(),
+    companyName: input.companyName.trim(),
+    footerProjectText:
+      input.footerProjectText.trim() || DEFAULT_PLATFORM_SETTINGS.footerProjectText,
+    supportEmail: input.supportEmail.trim(),
+    contactEmail: input.contactEmail.trim(),
+    privacyPolicyUrl: input.privacyPolicyUrl.trim() || "/privacy-policy",
+    termsUrl: input.termsUrl.trim() || "/terms-of-service",
+    dataSecurityUrl: input.dataSecurityUrl.trim() || "/data-security",
+    contactUrl: input.contactUrl.trim() || "/contact",
+    showLandingPageAds: Boolean(input.showLandingPageAds),
+    showPublicFormAds: Boolean(input.showPublicFormAds),
+    enablePoweredByBranding: Boolean(input.enablePoweredByBranding),
+    adsEnabled: Boolean(input.adsEnabled),
+    adsenseClientId: input.adsenseClientId.trim(),
+    landingTopAdSlot: input.landingTopAdSlot.trim(),
+    landingMiddleAdSlot: input.landingMiddleAdSlot.trim(),
+    landingBottomAdSlot: input.landingBottomAdSlot.trim(),
+    publicFormAdSlot: input.publicFormAdSlot.trim(),
+    publicFormAdFrequency: Math.min(
+      10,
+      Math.max(3, Number(input.publicFormAdFrequency) || 4),
+    ),
+    publicFormAdLabel:
+      input.publicFormAdLabel.trim() || DEFAULT_PLATFORM_SETTINGS.publicFormAdLabel,
   };
 
   if (!isSafePublicUrlOrPath(nextSettings.logoUrl)) {
@@ -133,6 +262,19 @@ export async function updatePlatformSettings(input: PlatformSettings) {
   if (!isSafePublicUrlOrPath(nextSettings.faviconUrl)) {
     throw new Error("Favicon URL must be a path starting with / or a valid HTTPS URL.");
   }
+
+  for (const key of [
+    "privacyPolicyUrl",
+    "termsUrl",
+    "dataSecurityUrl",
+    "contactUrl",
+  ] as const) {
+    if (!isSafePublicUrlOrPath(nextSettings[key])) {
+      throw new Error(`${key} must be a path starting with / or a valid HTTPS URL.`);
+    }
+  }
+
+  validatePlainTextSettings(nextSettings);
 
   await prisma.$transaction(
     PLATFORM_SETTING_KEYS.map((key) =>

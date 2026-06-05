@@ -1,0 +1,300 @@
+"use client";
+
+import type { FormEvent, ReactNode } from "react";
+import { useEffect, useState } from "react";
+
+export const RESTORE_SIGNATURE_EVENT = "formos:restore-signature";
+
+export function PublicFormDraftScript({
+  clearDraft = false,
+  formId,
+}: {
+  clearDraft?: boolean;
+  formId: string;
+}) {
+  const script = `
+    (() => {
+      const formId = ${JSON.stringify(formId)};
+      const draftKey = "formos:public-form-draft:" + formId;
+
+      function collect(form) {
+        const values = {};
+        const data = new FormData(form);
+        for (const element of Array.from(form.elements)) {
+          if (!element || !element.name || element.type === "file") continue;
+          if (element instanceof HTMLInputElement && element.type === "checkbox") {
+            values[element.name] = data.get(element.name) === "on";
+          } else if (
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement
+          ) {
+            values[element.name] = String(data.get(element.name) || "");
+          }
+        }
+        return values;
+      }
+
+      function save(form) {
+        try {
+          sessionStorage.setItem(draftKey, JSON.stringify(collect(form)));
+        } catch {}
+      }
+
+      function restore() {
+        if (${clearDraft ? "true" : "false"}) {
+          try { sessionStorage.removeItem(draftKey); } catch {}
+          return;
+        }
+
+        let draft = null;
+        try {
+          draft = JSON.parse(sessionStorage.getItem(draftKey) || "null");
+        } catch {
+          try { sessionStorage.removeItem(draftKey); } catch {}
+        }
+
+        if (!draft) return;
+
+        const form = document.querySelector('form[data-public-form-id="' + formId + '"]');
+        if (!form) return;
+
+        for (const [name, value] of Object.entries(draft)) {
+          const element = form.elements.namedItem(name);
+          if (!element) continue;
+
+          if (element instanceof HTMLInputElement && element.type === "checkbox") {
+            element.checked = Boolean(value);
+          } else if (
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement
+          ) {
+            element.value = typeof value === "string" ? value : "";
+            element.dispatchEvent(new Event("input", { bubbles: true }));
+            element.dispatchEvent(new Event("change", { bubbles: true }));
+
+            if (
+              element instanceof HTMLInputElement &&
+              element.type === "hidden" &&
+              element.value.startsWith("data:image/png;base64,")
+            ) {
+              window.dispatchEvent(new CustomEvent("${RESTORE_SIGNATURE_EVENT}", {
+                detail: { fieldId: name, value: element.value }
+              }));
+            }
+          }
+        }
+      }
+
+      document.addEventListener("input", (event) => {
+        const form = event.target && event.target.closest
+          ? event.target.closest('form[data-public-form-id="' + formId + '"]')
+          : null;
+        if (form) save(form);
+      }, true);
+
+      document.addEventListener("change", (event) => {
+        const form = event.target && event.target.closest
+          ? event.target.closest('form[data-public-form-id="' + formId + '"]')
+          : null;
+        if (form) save(form);
+      }, true);
+
+      document.addEventListener("submit", (event) => {
+        const form = event.target;
+        if (form && form.matches && form.matches('form[data-public-form-id="' + formId + '"]')) {
+          save(form);
+        }
+      }, true);
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", restore, { once: true });
+      } else {
+        restore();
+      }
+    })();
+  `;
+
+  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+}
+
+type RequiredPublicField = {
+  id: string;
+  label: string;
+  type: string;
+};
+
+type PublicFormClientProps = {
+  action: (formData: FormData) => void;
+  children: ReactNode;
+  clearDraft?: boolean;
+  formId: string;
+  requiredFields: RequiredPublicField[];
+};
+
+function valueIsMissing(field: RequiredPublicField, formData: FormData) {
+  const value = formData.get(field.id);
+
+  if (field.type === "checkbox") {
+    return value !== "on";
+  }
+
+  if (field.type === "image_upload") {
+    return !(value instanceof File) || value.size === 0;
+  }
+
+  if (field.type === "signature" || field.type === "initials") {
+    return typeof value !== "string" || !value.startsWith("data:image/png;base64,");
+  }
+
+  return String(value ?? "").trim().length === 0;
+}
+
+export function PublicFormClient({
+  action,
+  children,
+  clearDraft = false,
+  formId,
+  requiredFields,
+}: PublicFormClientProps) {
+  const [error, setError] = useState("");
+  const draftKey = `formos:public-form-draft:${formId}`;
+
+  function collectDraft(form: HTMLFormElement) {
+    const formData = new FormData(form);
+    const values: Record<string, string | boolean> = {};
+
+    for (const element of Array.from(form.elements)) {
+      if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
+        continue;
+      }
+
+      if (!element.name || element.type === "file") {
+        continue;
+      }
+
+      if (element instanceof HTMLInputElement && element.type === "checkbox") {
+        values[element.name] = formData.get(element.name) === "on";
+        continue;
+      }
+
+      values[element.name] = String(formData.get(element.name) ?? "");
+    }
+
+    return values;
+  }
+
+  function persistDraft(form: HTMLFormElement) {
+    try {
+      window.sessionStorage.setItem(draftKey, JSON.stringify(collectDraft(form)));
+    } catch {
+      // Draft restore is best-effort only.
+    }
+  }
+
+  useEffect(() => {
+    if (clearDraft) {
+      window.sessionStorage.removeItem(draftKey);
+      return;
+    }
+
+    const rawDraft = window.sessionStorage.getItem(draftKey);
+
+    if (!rawDraft) {
+      return;
+    }
+
+    let draft: Record<string, unknown>;
+
+    try {
+      draft = JSON.parse(rawDraft) as Record<string, unknown>;
+    } catch {
+      window.sessionStorage.removeItem(draftKey);
+      return;
+    }
+
+    const form = document.querySelector<HTMLFormElement>(
+      `form[data-public-form-id="${formId}"]`,
+    );
+
+    if (!form) {
+      return;
+    }
+
+    for (const [name, value] of Object.entries(draft)) {
+      const element = form.elements.namedItem(name);
+
+      if (element instanceof HTMLInputElement && element.type === "checkbox") {
+        element.checked = Boolean(value);
+        continue;
+      }
+
+      if (
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLTextAreaElement ||
+        element instanceof HTMLSelectElement
+      ) {
+        element.value = typeof value === "string" ? value : "";
+
+        if (
+          element instanceof HTMLInputElement &&
+          element.type === "hidden" &&
+          element.value.startsWith("data:image/png;base64,")
+        ) {
+          window.dispatchEvent(
+            new CustomEvent(RESTORE_SIGNATURE_EVENT, {
+              detail: {
+                fieldId: name,
+                value: element.value,
+              },
+            }),
+          );
+        }
+      }
+    }
+  }, [clearDraft, draftKey, formId]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    persistDraft(event.currentTarget);
+
+    const formData = new FormData(event.currentTarget);
+    const missingField = requiredFields.find((field) => valueIsMissing(field, formData));
+
+    if (!missingField) {
+      setError("");
+      return;
+    }
+
+    event.preventDefault();
+    setError(`${missingField.label || "A required field"} is required.`);
+
+    const fieldElement = event.currentTarget.elements.namedItem(missingField.id);
+
+    if (fieldElement instanceof HTMLElement) {
+      fieldElement.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      if ("focus" in fieldElement) {
+        fieldElement.focus();
+      }
+    }
+  }
+
+  return (
+    <form
+      action={action}
+      className="mt-6 flex flex-col gap-5"
+      data-public-form-id={formId}
+      onChange={(event) => persistDraft(event.currentTarget)}
+      onInput={(event) => persistDraft(event.currentTarget)}
+      onSubmit={handleSubmit}
+    >
+      {error ? (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm leading-6 text-red-900 shadow-sm">
+          {error}
+        </p>
+      ) : null}
+      {children}
+    </form>
+  );
+}

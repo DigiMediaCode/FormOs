@@ -12,6 +12,8 @@ export type CurrentUser = {
   phone: string | null;
   email: string;
   emailVerifiedAt: Date | null;
+  suspendedAt: Date | null;
+  suspendedReason: string | null;
   role: "USER" | "SUPER_ADMIN";
   createdAt: Date;
 };
@@ -34,6 +36,8 @@ export const getCurrentUser = cache(async () => {
         phone: true,
         email: true,
         emailVerifiedAt: true,
+        suspendedAt: true,
+        suspendedReason: true,
         role: true,
         createdAt: true,
       },
@@ -67,6 +71,8 @@ export const getCurrentUser = cache(async () => {
       lastName: null,
       phone: null,
       emailVerifiedAt: null,
+      suspendedAt: null,
+      suspendedReason: null,
       role: "USER",
     } satisfies CurrentUser;
   }

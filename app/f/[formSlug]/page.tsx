@@ -1,6 +1,13 @@
 import { StorageProvider } from "@prisma/client";
 import type { ReactNode } from "react";
+import { GoogleAdSenseScript } from "@/components/ads/google-adsense-script";
+import { PublicFormAdUnit } from "@/components/ads/public-form-ad-unit";
+import {
+  PublicFormClient,
+  PublicFormDraftScript,
+} from "@/components/forms/public-form-client";
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
+import { SignatureCanvasBootstrapScript } from "@/components/forms/signature-canvas-bootstrap";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
 import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
@@ -66,13 +73,14 @@ function renderInput(field: FormBuilderField) {
         id={field.id}
         name={field.id}
         placeholder={field.placeholder}
+        required={field.required}
       />
     );
   }
 
   if (field.type === "select") {
     return (
-      <select className={inputClass} id={field.id} name={field.id}>
+      <select className={inputClass} id={field.id} name={field.id} required={field.required}>
         <option value="">{field.placeholder || "Choose an option"}</option>
         {field.options.map((option) => (
           <option key={option} value={option}>
@@ -93,6 +101,7 @@ function renderInput(field: FormBuilderField) {
           className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-700 focus:ring-blue-600"
           id={field.id}
           name={field.id}
+          required={field.required}
           type="checkbox"
         />
         <span className="leading-6">
@@ -118,6 +127,7 @@ function renderInput(field: FormBuilderField) {
       id={field.id}
       name={field.id}
       placeholder={field.placeholder}
+      required={field.required}
       step={field.type === "currency" ? "0.01" : undefined}
       type={inputTypeByFieldType[field.type as keyof typeof inputTypeByFieldType] ?? "text"}
     />
@@ -218,6 +228,7 @@ function renderField(
             accept="image/jpeg,image/png,image/webp,application/pdf"
             className="w-full text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700"
             name={field.id}
+            required={field.required}
             type="file"
           />
         </div>
@@ -244,6 +255,75 @@ function renderField(
       {renderInput(field)}
     </FieldShell>
   );
+}
+
+function isAdSafeField(field: FormBuilderField) {
+  return [
+    "text",
+    "textarea",
+    "date",
+    "phone",
+    "email",
+    "address",
+    "number",
+    "currency",
+    "select",
+    "checkbox",
+  ].includes(field.type);
+}
+
+function renderFieldsWithAds(
+  fields: FormBuilderField[],
+  uploadsAvailable: boolean,
+  options: {
+    firstSignatureFieldId: string | null;
+    uploadProvider: StorageProvider | null;
+    publicAds: {
+      enabled: boolean;
+      adsenseClientId: string;
+      publicFormAdSlot: string;
+      publicFormAdFrequency: number;
+      publicFormAdLabel: string;
+    };
+  },
+) {
+  let safeFieldCount = 0;
+  let adsRendered = 0;
+  const maxAds = 2;
+  const frequency = Math.min(10, Math.max(3, options.publicAds.publicFormAdFrequency || 4));
+  const output: ReactNode[] = [];
+
+  fields.forEach((field, index) => {
+    output.push(
+      renderField(field, uploadsAvailable, {
+        firstSignatureFieldId: options.firstSignatureFieldId,
+        uploadProvider: options.uploadProvider,
+      }),
+    );
+
+    if (!options.publicAds.enabled || !isAdSafeField(field)) {
+      return;
+    }
+
+    safeFieldCount += 1;
+
+    if (
+      safeFieldCount >= frequency &&
+      adsRendered < maxAds &&
+      index < fields.length - 2
+    ) {
+      output.push(
+        <PublicFormAdUnit
+          key={`ad-${field.id}-${adsRendered}`}
+          settings={options.publicAds}
+        />,
+      );
+      adsRendered += 1;
+      safeFieldCount = 0;
+    }
+  });
+
+  return output;
 }
 
 function Message({
@@ -324,12 +404,23 @@ export default async function PublicFormPage({
   const submitAction = submitPublicForm.bind(null, form.id);
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";
   const publicFields = form.fields.filter(isPublicField);
+  const requiredFields = publicFields
+    .filter((field) => field.required)
+    .map((field) => ({
+      id: field.id,
+      label: field.label,
+      type: field.type,
+    }));
   const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
   const firstSignatureFieldId =
     publicFields.find((field) => field.type === "signature")?.id ?? null;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
+      <GoogleAdSenseScript
+        adsEnabled={form.publicAds.enabled}
+        clientId={form.publicAds.adsenseClientId}
+      />
       <section className="mx-auto max-w-3xl">
         <div className="mb-6 flex justify-center">
           {logoUrl ? (
@@ -345,6 +436,9 @@ export default async function PublicFormPage({
             </p>
           )}
         </div>
+
+        <PublicFormDraftScript clearDraft={Boolean(success)} formId={form.id} />
+        <SignatureCanvasBootstrapScript />
 
         <header
           className="overflow-hidden rounded-2xl border border-t-4 border-slate-200 bg-white shadow-sm"
@@ -371,14 +465,18 @@ export default async function PublicFormPage({
           {error ? <Message tone="error">{error}</Message> : null}
         </div>
 
-        <form action={submitAction} className="mt-6 flex flex-col gap-5">
+        <PublicFormClient
+          action={submitAction}
+          clearDraft={Boolean(success)}
+          formId={form.id}
+          requiredFields={requiredFields}
+        >
           {publicFields.length > 0 ? (
-            publicFields.map((field) =>
-              renderField(field, form.uploadsAvailable, {
+            renderFieldsWithAds(publicFields, form.uploadsAvailable, {
                 firstSignatureFieldId,
                 uploadProvider: form.uploadProvider,
-              }),
-            )
+                publicAds: form.publicAds,
+              })
           ) : (
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <p className="text-sm leading-6 text-slate-700">
@@ -393,7 +491,7 @@ export default async function PublicFormPage({
               submitButtonText={submitButtonText}
             />
           </section>
-        </form>
+        </PublicFormClient>
       </section>
       <PoweredByFooter branding={form.branding} />
     </main>

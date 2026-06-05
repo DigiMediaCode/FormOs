@@ -34,6 +34,7 @@ const booleanLimitFields = [
   ["allowQrCode", "QR codes"],
   ["allowCustomBranding", "Custom branding"],
   ["allowTeamMembers", "Team members"],
+  ["allowAdFreeForms", "Ad-free public forms"],
 ] as const;
 
 function moneyValue(value: unknown) {
@@ -310,7 +311,7 @@ export default async function AdminPlansPage({ searchParams }: AdminPlansPagePro
 
   return (
     <main className="px-6 py-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 overflow-hidden">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-3xl font-semibold text-slate-950">Plans</h2>

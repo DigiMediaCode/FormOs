@@ -18,9 +18,11 @@ export async function PublicFooter() {
             The modern way to build forms, agreements, and signed workflows that
             deliver finished PDFs automatically.
           </p>
-          <p className="mt-3 text-sm text-slate-600">
-            Project by DigiMedia Code LLC
-          </p>
+          {settings.footerProjectText ? (
+            <p className="mt-3 text-sm text-slate-600">
+              {settings.footerProjectText}
+            </p>
+          ) : null}
         </div>
         <div>
           <h3 className="text-sm font-semibold text-[#071124]">Product</h3>
@@ -35,16 +37,18 @@ export async function PublicFooter() {
         <div>
           <h3 className="text-sm font-semibold text-[#071124]">Legal</h3>
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
-            <Link className="hover:text-blue-600" href="/privacy-policy">Privacy Policy</Link>
-            <Link className="hover:text-blue-600" href="/terms-of-service">Terms</Link>
-            <Link className="hover:text-blue-600" href="/data-security">Data Security</Link>
-            <Link className="hover:text-blue-600" href="/contact">Contact</Link>
+            <Link className="hover:text-blue-600" href={settings.privacyPolicyUrl}>Privacy Policy</Link>
+            <Link className="hover:text-blue-600" href={settings.termsUrl}>Terms</Link>
+            <Link className="hover:text-blue-600" href={settings.dataSecurityUrl}>Data Security</Link>
+            <Link className="hover:text-blue-600" href={settings.contactUrl}>Contact</Link>
           </div>
         </div>
       </div>
       <div className="mx-auto mt-10 flex max-w-[1088px] flex-col gap-3 border-t border-blue-100 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <p>&copy; 2025 {settings.siteName}. All rights reserved.</p>
-        <p className="text-blue-700">Secure document handling</p>
+        {settings.enablePoweredByBranding ? (
+          <p className="text-blue-700">Secure document handling</p>
+        ) : null}
       </div>
     </footer>
   );

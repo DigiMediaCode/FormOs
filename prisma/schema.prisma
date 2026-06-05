@@ -58,10 +58,12 @@ model User {
   firstName      String?
   lastName       String?
   phone          String?
-  email          String             @unique
-  passwordHash   String?
-  emailVerifiedAt DateTime?
-  role           UserRole           @default(USER)
+    email          String             @unique
+    passwordHash   String?
+    emailVerifiedAt DateTime?
+    suspendedAt    DateTime?
+    suspendedReason String?
+    role           UserRole           @default(USER)
   forms          Form[]
   integrations   UserIntegration[]
   uploadSettings UserUploadSettings?
