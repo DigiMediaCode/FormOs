@@ -53,6 +53,18 @@ class FormOS_Embed_Block {
                         'type' => 'string',
                         'default' => '',
                     ),
+                    'surface' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'text' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'border' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
                     'radius' => array(
                         'type' => 'string',
                         'default' => '',
@@ -88,6 +100,9 @@ class FormOS_Embed_Block {
                 'theme' => 'theme',
                 'accent' => 'accent',
                 'background' => 'bg',
+                'surface' => 'surface',
+                'text' => 'text',
+                'border' => 'border',
                 'radius' => 'radius',
                 'font' => 'font',
             ) as $attribute_key => $shortcode_key

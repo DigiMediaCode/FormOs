@@ -25,11 +25,14 @@ type EmbedFormPageProps = {
   searchParams: Promise<{
     accent?: string;
     bg?: string;
+    border?: string;
     compact?: string;
     error?: string;
     font?: string;
     radius?: string;
+    surface?: string;
     success?: string;
+    text?: string;
     theme?: string;
   }>;
 };

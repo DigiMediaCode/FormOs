@@ -45,6 +45,18 @@
                 type: 'string',
                 default: ''
             },
+            surface: {
+                type: 'string',
+                default: ''
+            },
+            text: {
+                type: 'string',
+                default: ''
+            },
+            border: {
+                type: 'string',
+                default: ''
+            },
             radius: {
                 type: 'string',
                 default: ''
@@ -73,6 +85,9 @@
                 (attributes.theme ? ' theme="' + attributes.theme + '"' : '') +
                 (attributes.accent ? ' accent="' + attributes.accent + '"' : '') +
                 (attributes.background ? ' bg="' + attributes.background + '"' : '') +
+                (attributes.surface ? ' surface="' + attributes.surface + '"' : '') +
+                (attributes.text ? ' text="' + attributes.text + '"' : '') +
+                (attributes.border ? ' border="' + attributes.border + '"' : '') +
                 (attributes.radius ? ' radius="' + attributes.radius + '"' : '') +
                 (attributes.compact ? ' compact="true"' : '') +
                 (attributes.font ? ' font="' + attributes.font + '"' : '') +
@@ -149,6 +164,30 @@
                             ],
                             onChange: function (value) {
                                 setAttributes({ background: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Card surface color', 'formos-embed'),
+                            help: __('Optional hex color, for example #ffffff.', 'formos-embed'),
+                            value: attributes.surface,
+                            onChange: function (value) {
+                                setAttributes({ surface: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Text color', 'formos-embed'),
+                            help: __('Optional hex color, for example #111827.', 'formos-embed'),
+                            value: attributes.text,
+                            onChange: function (value) {
+                                setAttributes({ text: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Border color', 'formos-embed'),
+                            help: __('Optional hex color, for example #e5e7eb.', 'formos-embed'),
+                            value: attributes.border,
+                            onChange: function (value) {
+                                setAttributes({ border: value });
                             }
                         }),
                         el(SelectControl, {

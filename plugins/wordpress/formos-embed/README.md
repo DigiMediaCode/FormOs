@@ -38,6 +38,7 @@ Theme overrides:
 ```text
 [formos_form id="abc123" theme="auto" accent="#7c3aed"]
 [formos_form id="abc123" bg="transparent" radius="16" compact="true"]
+[formos_form id="abc123" surface="#ffffff" text="#111827" border="#e5e7eb"]
 ```
 
 Supported appearance attributes:
@@ -45,9 +46,14 @@ Supported appearance attributes:
 - `theme`: `light`, `dark`, or `auto`
 - `accent`: hex color such as `#2563eb`
 - `bg`: `white`, `transparent`, `subtle`, or `none`
+- `surface`: card and input background hex color such as `#ffffff`
+- `text`: main text hex color such as `#111827`
+- `border`: border hex color such as `#e5e7eb`
 - `radius`: `0`, `6`, `8`, `12`, `16`, or `20`
 - `compact`: `true` or `false`
 - `font`: `system`, `sans`, or `inherit`
+
+To match a WordPress theme more closely, set `bg="transparent"` and copy the theme's button/accent, card background, text, and border colors into `accent`, `surface`, `text`, and `border`.
 
 You can find the Form ID in FormOS on the form detail page.
 

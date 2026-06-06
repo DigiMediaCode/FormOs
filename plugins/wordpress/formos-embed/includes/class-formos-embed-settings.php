@@ -105,6 +105,30 @@ class FormOS_Embed_Settings {
         );
 
         add_settings_field(
+            'surface',
+            __('Card Surface Color', 'formos-embed'),
+            array(__CLASS__, 'render_surface_field'),
+            'formos-embed',
+            'formos_embed_appearance'
+        );
+
+        add_settings_field(
+            'text',
+            __('Text Color', 'formos-embed'),
+            array(__CLASS__, 'render_text_field'),
+            'formos-embed',
+            'formos_embed_appearance'
+        );
+
+        add_settings_field(
+            'border',
+            __('Border Color', 'formos-embed'),
+            array(__CLASS__, 'render_border_field'),
+            'formos-embed',
+            'formos_embed_appearance'
+        );
+
+        add_settings_field(
             'radius',
             __('Border Radius', 'formos-embed'),
             array(__CLASS__, 'render_radius_field'),
@@ -137,6 +161,9 @@ class FormOS_Embed_Settings {
             'theme' => 'light',
             'accent' => '#2563eb',
             'background' => 'transparent',
+            'surface' => '',
+            'text' => '',
+            'border' => '',
             'radius' => 12,
             'compact' => 0,
             'font' => 'system',
@@ -159,6 +186,9 @@ class FormOS_Embed_Settings {
         $theme = isset($input['theme']) ? sanitize_text_field(wp_unslash($input['theme'])) : 'light';
         $accent = isset($input['accent']) ? sanitize_text_field(wp_unslash($input['accent'])) : '#2563eb';
         $background = isset($input['background']) ? sanitize_text_field(wp_unslash($input['background'])) : 'transparent';
+        $surface = isset($input['surface']) ? sanitize_text_field(wp_unslash($input['surface'])) : '';
+        $text = isset($input['text']) ? sanitize_text_field(wp_unslash($input['text'])) : '';
+        $border = isset($input['border']) ? sanitize_text_field(wp_unslash($input['border'])) : '';
         $radius = isset($input['radius']) ? absint($input['radius']) : 12;
         $font = isset($input['font']) ? sanitize_text_field(wp_unslash($input['font'])) : 'system';
 
@@ -166,6 +196,9 @@ class FormOS_Embed_Settings {
         $theme = self::allowed_text($theme, self::THEMES, 'light');
         $accent = self::sanitize_hex_color($accent);
         $background = self::allowed_text($background, self::BACKGROUNDS, 'transparent');
+        $surface = self::sanitize_optional_hex_color($surface);
+        $text = self::sanitize_optional_hex_color($text);
+        $border = self::sanitize_optional_hex_color($border);
         $radius = self::allowed_int($radius, self::RADII, 12);
         $font = self::allowed_text($font, self::FONTS, 'system');
 
@@ -184,6 +217,9 @@ class FormOS_Embed_Settings {
             'theme' => $theme,
             'accent' => $accent,
             'background' => $background,
+            'surface' => $surface,
+            'text' => $text,
+            'border' => $border,
             'radius' => $radius,
             'compact' => empty($input['compact']) ? 0 : 1,
             'font' => $font,
@@ -203,6 +239,16 @@ class FormOS_Embed_Settings {
     public static function sanitize_hex_color($value) {
         $value = trim(sanitize_text_field((string) $value));
         return preg_match('/^#[0-9a-fA-F]{6}$/', $value) ? $value : '#2563eb';
+    }
+
+    public static function sanitize_optional_hex_color($value) {
+        $value = trim(sanitize_text_field((string) $value));
+
+        if ($value === '') {
+            return '';
+        }
+
+        return preg_match('/^#[0-9a-fA-F]{6}$/', $value) ? $value : '';
     }
 
     private static function sanitize_base_url($value) {
@@ -243,7 +289,7 @@ class FormOS_Embed_Settings {
     }
 
     public static function render_appearance_intro() {
-        echo '<p>' . esc_html__('Choose safe default styling for embedded forms. Shortcode and block settings can override these values per form.', 'formos-embed') . '</p>';
+        echo '<p>' . esc_html__('Choose safe default styling for embedded forms. Shortcode and block settings can override these values per form. To match your website closely, set accent, card surface, text, and border colors from your WordPress theme.', 'formos-embed') . '</p>';
     }
 
     public static function render_base_url_field() {
@@ -348,6 +394,51 @@ class FormOS_Embed_Settings {
         );
     }
 
+    private static function render_optional_hex_field($name, $value, $placeholder, $description) {
+        ?>
+        <input
+            name="<?php echo esc_attr(self::OPTION_NAME); ?>[<?php echo esc_attr($name); ?>]"
+            pattern="^#[0-9a-fA-F]{6}$"
+            placeholder="<?php echo esc_attr($placeholder); ?>"
+            type="text"
+            value="<?php echo esc_attr($value); ?>"
+        />
+        <p class="description">
+            <?php echo esc_html($description); ?>
+        </p>
+        <?php
+    }
+
+    public static function render_surface_field() {
+        $options = self::get_options();
+        self::render_optional_hex_field(
+            'surface',
+            $options['surface'],
+            '#ffffff',
+            __('Optional. Card/input background color from your website theme.', 'formos-embed')
+        );
+    }
+
+    public static function render_text_field() {
+        $options = self::get_options();
+        self::render_optional_hex_field(
+            'text',
+            $options['text'],
+            '#111827',
+            __('Optional. Main form text color from your website theme.', 'formos-embed')
+        );
+    }
+
+    public static function render_border_field() {
+        $options = self::get_options();
+        self::render_optional_hex_field(
+            'border',
+            $options['border'],
+            '#e5e7eb',
+            __('Optional. Border color for cards, inputs, and dividers.', 'formos-embed')
+        );
+    }
+
     public static function render_radius_field() {
         $options = self::get_options();
         self::render_select(
@@ -416,6 +507,7 @@ class FormOS_Embed_Settings {
             <pre><code>[formos_form id="abc123" js="true"]</code></pre>
             <pre><code>[formos_form id="abc123" theme="auto" accent="#7c3aed"]</code></pre>
             <pre><code>[formos_form id="abc123" bg="transparent" radius="16" compact="true"]</code></pre>
+            <pre><code>[formos_form id="abc123" surface="#ffffff" text="#111827" border="#e5e7eb"]</code></pre>
             <p>
                 <?php esc_html_e('You can find the Form ID in FormOS on the form detail page. WordPress and Shopify apps can reuse the same embed URL foundation later.', 'formos-embed'); ?>
             </p>

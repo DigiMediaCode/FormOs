@@ -24,6 +24,9 @@ class FormOS_Embed_Shortcode {
                 'theme' => $options['theme'],
                 'accent' => $options['accent'],
                 'bg' => $options['background'],
+                'surface' => $options['surface'],
+                'text' => $options['text'],
+                'border' => $options['border'],
                 'radius' => $options['radius'],
                 'compact' => empty($options['compact']) ? 'false' : 'true',
                 'font' => $options['font'],
@@ -39,6 +42,9 @@ class FormOS_Embed_Shortcode {
         $theme = FormOS_Embed_Settings::allowed_text($attributes['theme'], FormOS_Embed_Settings::THEMES, $options['theme']);
         $accent = FormOS_Embed_Settings::sanitize_hex_color($attributes['accent']);
         $background = FormOS_Embed_Settings::allowed_text($attributes['bg'], FormOS_Embed_Settings::BACKGROUNDS, $options['background']);
+        $surface = FormOS_Embed_Settings::sanitize_optional_hex_color($attributes['surface']);
+        $text = FormOS_Embed_Settings::sanitize_optional_hex_color($attributes['text']);
+        $border = FormOS_Embed_Settings::sanitize_optional_hex_color($attributes['border']);
         $radius = FormOS_Embed_Settings::allowed_int($attributes['radius'], FormOS_Embed_Settings::RADII, $options['radius']);
         $compact = self::truthy($attributes['compact']) ? 'true' : 'false';
         $font = FormOS_Embed_Settings::allowed_text($attributes['font'], FormOS_Embed_Settings::FONTS, $options['font']);
@@ -46,6 +52,9 @@ class FormOS_Embed_Shortcode {
             'theme' => $theme,
             'accent' => $accent,
             'bg' => $background,
+            'surface' => $surface,
+            'text' => $text,
+            'border' => $border,
             'radius' => (string) $radius,
             'compact' => $compact,
             'font' => $font,
@@ -89,6 +98,9 @@ class FormOS_Embed_Shortcode {
                 'theme' => $appearance['theme'],
                 'accent' => $appearance['accent'],
                 'bg' => $appearance['bg'],
+                'surface' => $appearance['surface'],
+                'text' => $appearance['text'],
+                'border' => $appearance['border'],
                 'radius' => $appearance['radius'],
                 'compact' => $appearance['compact'],
                 'font' => $appearance['font'],

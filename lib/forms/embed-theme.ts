@@ -4,9 +4,12 @@ type EmbedThemeSearchParams = {
   theme?: string;
   accent?: string;
   bg?: string;
+  border?: string;
   radius?: string;
   compact?: string;
   font?: string;
+  surface?: string;
+  text?: string;
 };
 
 const THEMES = ["light", "dark", "auto"] as const;
@@ -27,13 +30,13 @@ function allowed<T extends readonly string[]>(
   return values.includes(value ?? "") ? (value as T[number]) : fallback;
 }
 
-function hexColor(value: string | undefined) {
+function hexColor(value: string | undefined, fallback: string) {
   if (!value) {
-    return "#2563eb";
+    return fallback;
   }
 
   const normalized = value.trim();
-  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : "#2563eb";
+  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
 }
 
 function booleanString(value: string | undefined) {
@@ -76,13 +79,24 @@ export function getEmbedTheme(searchParams: EmbedThemeSearchParams) {
   const radius = allowed(searchParams.radius, RADII, "12") as EmbedRadius;
   const compact = booleanString(searchParams.compact);
   const font = allowed(searchParams.font, FONTS, "system") as EmbedFont;
-  const accent = hexColor(searchParams.accent);
+  const accent = hexColor(searchParams.accent, "#2563eb");
   const accentText = textColorFor(accent);
-  const surface = theme === "dark" ? "#0f172a" : "#ffffff";
-  const mutedSurface = theme === "dark" ? "#111827" : "#f8fafc";
-  const border = theme === "dark" ? "#334155" : "#e2e8f0";
-  const text = theme === "dark" ? "#f8fafc" : "#0f172a";
-  const mutedText = theme === "dark" ? "#cbd5e1" : "#475569";
+  const defaultSurface = theme === "dark" ? "#0f172a" : "#ffffff";
+  const defaultMutedSurface = theme === "dark" ? "#111827" : "#f8fafc";
+  const defaultBorder = theme === "dark" ? "#334155" : "#e2e8f0";
+  const defaultText = theme === "dark" ? "#f8fafc" : "#0f172a";
+  const defaultMutedText = theme === "dark" ? "#cbd5e1" : "#475569";
+  const surface = hexColor(searchParams.surface, defaultSurface);
+  const mutedSurface =
+    searchParams.surface && /^#[0-9a-fA-F]{6}$/.test(searchParams.surface.trim())
+      ? surface
+      : defaultMutedSurface;
+  const border = hexColor(searchParams.border, defaultBorder);
+  const text = hexColor(searchParams.text, defaultText);
+  const mutedText =
+    searchParams.text && /^#[0-9a-fA-F]{6}$/.test(searchParams.text.trim())
+      ? text
+      : defaultMutedText;
 
   const style = {
     "--formos-embed-accent": accent,
@@ -106,6 +120,9 @@ export function getEmbedTheme(searchParams: EmbedThemeSearchParams) {
     compact,
     font,
     accent,
+    border,
+    surface,
+    text,
     style,
   };
 }
@@ -131,6 +148,9 @@ export const embedThemeCss = `
 .formos-embed-scope header,
 .formos-embed-scope .bg-white {
   background: var(--formos-embed-surface);
+}
+.formos-embed-scope .shadow-sm {
+  box-shadow: none;
 }
 .formos-embed-scope .bg-slate-50,
 .formos-embed-scope .from-white,
