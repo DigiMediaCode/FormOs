@@ -13,7 +13,7 @@ function safeAppUrl() {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const appUrl = safeAppUrl();
   const now = new Date();
-  const [cmsPages, blogPosts] = await Promise.all([
+  const [cmsPages, blogPosts, kbCategories, kbArticles] = await Promise.all([
     prisma.cmsPage.findMany({
       where: { status: "PUBLISHED" },
       select: {
@@ -28,6 +28,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         updatedAt: true,
       },
     }),
+    prisma.kbCategory.findMany({
+      where: { status: "PUBLISHED" },
+      select: {
+        slug: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.kbArticle.findMany({
+      where: {
+        status: "PUBLISHED",
+        category: {
+          status: "PUBLISHED",
+        },
+      },
+      select: {
+        slug: true,
+        updatedAt: true,
+        category: {
+          select: {
+            slug: true,
+          },
+        },
+      },
+    }),
   ]);
   const publicRoutes = [
     "",
@@ -37,6 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/data-security",
     "/contact",
     "/blog",
+    "/help",
     "/signup",
     "/login",
   ];
@@ -57,6 +82,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogPosts.map((post) => ({
       url: `${appUrl}/blog/${post.slug}`,
       lastModified: post.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...kbCategories.map((category) => ({
+      url: `${appUrl}/help/${category.slug}`,
+      lastModified: category.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...kbArticles.map((article) => ({
+      url: `${appUrl}/help/${article.category?.slug}/${article.slug}`,
+      lastModified: article.updatedAt,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

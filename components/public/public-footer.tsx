@@ -34,6 +34,7 @@ export async function PublicFooter() {
             <Link className="hover:text-blue-600" href="/#features">Features</Link>
             <Link className="hover:text-blue-600" href="/#use-cases">Use Cases</Link>
             <Link className="hover:text-blue-600" href="/blog">Blog</Link>
+            <Link className="hover:text-blue-600" href="/help">Help Center</Link>
             <Link className="hover:text-blue-600" href="/pricing">Pricing</Link>
             <Link className="hover:text-blue-600" href="/login">Login</Link>
             <Link className="hover:text-blue-600" href="/signup">Signup</Link>

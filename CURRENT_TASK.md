@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 29: Blog System
+# CURRENT TASK — FormOS Milestone 30: Knowledge Base / FAQ System
 
 ## Project Context
 
@@ -8,97 +8,114 @@ Current state:
 
 * FormOS MVP foundation is live and working.
 * Super Admin exists.
-* CMS Pages + Menu Manager exists or is being completed.
+* CMS Pages + Menu Manager exists.
+* Blog System exists or is being completed.
 * Public website/landing page exists.
 * Forms, builder, public forms, submissions, QR, storage integrations, office fields, PDF generation, email, audit timeline, billing, plans, workspace, and staff access all work.
+* Google Drive and Dropbox uploads work.
+* Stripe billing works.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add a simple but professional blog system.
+Add a Knowledge Base / FAQ system for FormOS.
 
-Super Admin should be able to create, edit, publish, archive, and manage blog posts.
+The Knowledge Base should help users find answers to common questions about using FormOS.
 
-Public visitors should be able to browse blog posts and read individual posts.
+Super Admin should be able to create, edit, categorize, publish, and archive knowledge base articles.
 
-This will help FormOS with SEO, product education, tutorials, announcements, and content marketing.
+Public users should be able to browse categories, read articles, and contact support if they cannot find an answer.
 
-## Important Direction
+## Difference Between Blog and Knowledge Base
 
-Do not build Knowledge Base in this milestone.
+Blog:
 
-Do not build comments.
+* marketing articles
+* product updates
+* SEO content
+* tutorials and thought leadership
 
-Do not build likes/reactions.
+Knowledge Base:
 
-Do not build newsletter system.
+* support documentation
+* FAQ answers
+* how-to guides
+* troubleshooting
+* account/billing/help content
 
-Do not build multi-author workflow beyond basic author tracking.
+Do not mix blog posts and knowledge base articles.
 
-Do not build media library yet.
-
-Do not allow arbitrary JavaScript.
-
-Keep it simple, clean, secure, and SEO-friendly.
-
-## Public Blog Routes
+## Public Routes
 
 Create:
 
-* /blog
-* /blog/[slug]
+* /help
+* /help/[categorySlug]
+* /help/[categorySlug]/[articleSlug]
 
-### /blog
+### /help
 
-Public blog listing page.
-
-Show:
-
-* page title: Blog
-* short description
-* list/grid of published blog posts
-* featured image if available
-* title
-* excerpt
-* category if available
-* published date
-* read more link
-
-Only show posts where status = PUBLISHED.
-
-Sort newest first by publishedAt or createdAt.
-
-### /blog/[slug]
-
-Public blog post detail page.
+Knowledge Base home page.
 
 Show:
 
-* title
-* excerpt if useful
-* featured image if available
+* page title: Help Center
+* search input
+* category cards
+* popular/recent articles
+* contact support CTA at bottom
+
+### /help/[categorySlug]
+
+Category page.
+
+Show:
+
+* category title
+* category description
+* articles in that category
+* search/filter if simple
+* back to Help Center
+
+### /help/[categorySlug]/[articleSlug]
+
+Article page.
+
+Show:
+
+* article title
 * category
-* published date
-* author name if available
 * content
-* back to blog link
-* optional related/recent posts if simple
+* updated date
+* helpful contact/support CTA at bottom
+* back to category/help links
 
-Only published posts should render publicly.
+Only published articles/categories should appear publicly.
 
-Draft/archived/missing posts should show clean not found/unavailable page.
+Draft/archived articles should not be public.
 
-## Super Admin Blog Routes
+## Admin Routes
 
-Create:
+Create Super Admin routes:
 
-* /admin/blog
-* /admin/blog/new
-* /admin/blog/[postId]
+* /admin/knowledge-base
+* /admin/knowledge-base/categories
+* /admin/knowledge-base/categories/new
+* /admin/knowledge-base/categories/[categoryId]
+* /admin/knowledge-base/articles/new
+* /admin/knowledge-base/articles/[articleId]
+
+If too many routes are too much, implement simpler:
+
+* /admin/knowledge-base
+* /admin/knowledge-base/categories
+* /admin/knowledge-base/articles/[articleId]
+
+But the system must support category and article management.
 
 Add Super Admin navigation link:
 
-Blog → /admin/blog
+Knowledge Base → /admin/knowledge-base
 
 Only SUPER_ADMIN can access.
 
@@ -107,53 +124,56 @@ Only SUPER_ADMIN can access.
 Add model:
 
 ```prisma
-model BlogCategory {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model KbCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  status      String   @default("PUBLISHED")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  posts     BlogPost[]
+  articles    KbArticle[]
 }
 ```
 
 Add model:
 
 ```prisma
-model BlogPost {
+model KbArticle {
   id              String   @id @default(cuid())
   title           String
-  slug            String   @unique
+  slug            String
   excerpt         String?
   content         String?
   status          String   @default("DRAFT")
-  featuredImage   String?
+  categoryId      String?
+  sortOrder       Int      @default(0)
+  isFeatured      Boolean  @default(false)
   metaTitle       String?
   metaDescription String?
+  createdById     String?
+  updatedById     String?
   publishedAt     DateTime?
-  categoryId      String?
-  authorId        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  category        BlogCategory? @relation(fields: [categoryId], references: [id])
+  category        KbCategory? @relation(fields: [categoryId], references: [id])
 }
 ```
-
-If adding author relation to User is simple, add it. If not, authorId string is acceptable for MVP.
 
 Create migration:
 
 ```bash
-npx prisma migrate dev --name add_blog_system
+npx prisma migrate dev –name add_knowledge_base
 ```
 
 Do not use prisma db push.
 
-## Post Status
+## Status Values
 
-Supported statuses:
+For both categories and articles, support:
 
 * DRAFT
 * PUBLISHED
@@ -161,198 +181,315 @@ Supported statuses:
 
 Rules:
 
-* only PUBLISHED posts render publicly
-* DRAFT and ARCHIVED are hidden from public
-* Super Admin can view/edit all
+* public pages only show PUBLISHED categories/articles
+* Super Admin can see all statuses
+* archived articles are hidden publicly
 
-## Blog Post Fields
+## Category Fields
 
-Super Admin post editor should support:
+Admin category editor should support:
+
+* Name
+* Slug
+* Description
+* Status
+* Sort Order
+
+Slug rules:
+
+* generated from name if missing
+* lowercase
+* letters/numbers/hyphens
+* unique
+* no slash or spaces
+
+## Article Fields
+
+Admin article editor should support:
 
 * Title
 * Slug
 * Excerpt
 * Content
 * Status
-* Featured Image URL / Path
 * Category
+* Sort Order
+* Featured / Popular
 * Meta Title
 * Meta Description
 * Published At
 
-## Blog Category Management
+Slug rules:
 
-Keep category management simple.
-
-Options:
-
-Preferred MVP:
-
-* allow category creation inline on blog post editor
-* or add basic category create field on /admin/blog
-
-Minimum acceptable:
-
-* category is optional
-* allow selecting existing categories
-* allow creating a new category through simple action
-
-Do not overbuild category management.
+* generated from title if missing
+* lowercase
+* letters/numbers/hyphens
+* unique within category if possible
+* unique globally is acceptable for MVP
+* no slash or spaces
 
 ## Content Editor
 
-Use a large textarea or existing safe editor style.
+Use simple textarea or existing safe editor.
 
-Content can be simple HTML/Markdown-like content.
+Content can be simple HTML/Markdown-like text.
 
 If rendering HTML:
 
-* sanitize before public rendering
-* block script/iframe/object/embed/form/input/button tags
+* sanitize before public display
+* block script tags
+* block iframe/object/embed
 * block event handler attributes
 * block javascript: URLs
 
-Do not allow arbitrary JavaScript.
-
 Use existing sanitize helper where possible.
 
-## Slug Rules
+Do not allow arbitrary JavaScript.
 
-Generate slug from title if missing.
+## Search
 
-Validate:
+Add simple search on /help.
 
-* lowercase
-* letters, numbers, hyphens only
-* no spaces
-* no slash
-* unique
+MVP search can be query parameter based:
 
-Reserved slugs should be blocked:
+```text
+/help?q=google
+```
 
-* admin
-* dashboard
-* login
-* signup
-* api
-* f
-* p
-* blog
-* pricing
-* privacy-policy
-* terms-of-service
-* data-security
-* contact
+Search should look through:
+
+* article title
+* excerpt
+* content
+
+Only search published articles.
+
+If full search is too much, implement simple server-side contains search.
+
+## Suggested Default Categories
+
+If safe, add seed helper for default categories:
+
+* Getting Started
+* Forms & Builder
+* File Uploads
+* Signatures & PDFs
+* Billing & Plans
+* Account & Security
+* Team & Staff
+
+Do not overwrite existing categories.
+
+Default status:
+
+PUBLISHED
+
+## Suggested Default Articles
+
+Optional draft or published starter articles:
+
+Getting Started:
+
+* How to create your first form
+* How to publish and share a form
+* How to use QR codes
+
+File Uploads:
+
+* How file uploads work with Google Drive
+* How file uploads work with Dropbox
+
+Signatures & PDFs:
+
+* How signatures work
+* How to finalize a submission and send PDF
+
+Billing & Plans:
+
+* How plans and limits work
+* How to manage your subscription
+
+Account & Security:
+
+* How to reset your password
+* How to verify your email
+
+Team & Staff:
+
+* How to invite staff members
+
+If creating article content is too much, seed categories only.
+
+## Public Help Center Design
+
+/help should be clean and support-focused.
+
+Sections:
+
+* hero/search area
+* category cards
+* featured/popular articles
+* contact support CTA
+
+Contact CTA:
+
+Still need help?
+
+Button:
+
+Contact Us
+
+Link:
+
+/contact
+
+If /contact is CMS page, use that. Otherwise use fallback contact page.
+
+## Contact CTA on Article Pages
+
+At the bottom of each article, show:
+
+Still need help?
+
+If you cannot find the answer, contact us and we’ll help.
+
+Button:
+
+Contact Us
+
+Link:
+
+/contact
 
 ## SEO Metadata
 
-For /blog:
+/help:
 
-* title: FormOS Blog
-* description: Tips, guides, and updates about online forms, signed agreements, document workflows, and FormOS.
+Title:
 
-For /blog/[slug]:
+FormOS Help Center
 
-Use:
+Description:
 
-* metaTitle if available, otherwise post title
-* metaDescription if available, otherwise excerpt
+Find answers and guides for using FormOS forms, agreements, signatures, uploads, billing, and team features.
 
-Do not break build over dynamic metadata.
+Category pages:
 
-## Public Header/Footer Integration
+Use category name/description.
 
-Public header should include Blog link if practical.
+Article pages:
 
-Footer should include Blog link if practical.
+Use metaTitle/metaDescription if available, otherwise title/excerpt.
 
-Do not break CMS menu functionality.
+## Admin Knowledge Base List
 
-## Admin Blog List
+/admin/knowledge-base should show:
 
-/admin/blog should show:
-
+* articles list
 * title
-* slug
-* status
 * category
-* published date
+* status
+* featured
+* sort order
 * updated date
 * edit button
-* public view link if published
-* archive/delete action
+* public link if published
+
+Also include links/buttons:
+
+* New Article
+* Manage Categories
+
+## Category Admin Page
+
+/admin/knowledge-base/categories should show:
+
+* categories list
+* name
+* slug
+* status
+* article count
+* sort order
+* edit button
 
 ## Archive/Delete Rules
 
 Preferred:
 
 * archive by setting status = ARCHIVED
-* hard delete allowed only with confirmation if no important relation issues
+* hard delete optional with confirmation
+
+If category has articles:
+
+* block hard delete
+* suggest archive instead
 
 For MVP:
 
 * archive is enough
-* hard delete optional
 
-## Default Blog Content
+## Menu / Header / Footer Integration
 
-Optional:
+Add Help Center link to public header/footer if practical.
 
-Seed one draft post:
+Footer should include:
 
-Welcome to FormOS
+* Help Center
+* Blog
+* Privacy Policy
+* Terms
+* Contact
 
-Do not publish automatically unless safe.
-
-Do not overwrite existing posts.
+Do not break CMS menu manager.
 
 ## Security
 
-* only SUPER_ADMIN can create/edit/archive/delete blog posts
-* public only sees published posts
-* sanitize content
-* no arbitrary scripts
-* no secrets exposed
-* no private user/form/submission data exposed
+* only SUPER_ADMIN can create/edit/archive categories/articles
+* public only sees published content
+* sanitize article content
+* do not expose admin data
+* do not expose secrets
+* do not allow arbitrary JS
 
 ## Out of Scope
 
-Do not build Knowledge Base.
+Do not build live chat.
+Do not build support tickets.
+Do not build article feedback voting.
 Do not build comments.
-Do not build newsletter.
-Do not build media library.
-Do not build tags unless simple.
-Do not build author profile pages.
-Do not build public search yet.
-Do not build RSS unless very simple.
+Do not build AI search.
+Do not build file attachments.
+Do not build rich media manager.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 29 is complete when:
+Milestone 30 is complete when:
 
-* BlogPost model exists.
-* BlogCategory model exists.
+* KbCategory model exists.
+* KbArticle model exists.
 * Prisma migration exists.
-* /admin/blog exists.
-* /admin/blog/new exists.
-* /admin/blog/[postId] exists.
-* Super Admin can create a blog post.
-* Super Admin can edit a blog post.
-* Super Admin can publish/draft/archive a blog post.
-* Blog slug generation works.
-* Blog slug uniqueness is enforced.
-* Public /blog shows published posts.
-* Public /blog/[slug] shows published post content.
-* Draft/archived posts are hidden publicly.
-* Blog content is sanitized before rendering.
-* SEO metadata works where practical.
-* Public header/footer can link to Blog.
+* /help exists.
+* /help shows search, categories, and articles.
+* /help/[categorySlug] exists.
+* /help/[categorySlug]/[articleSlug] exists.
+* Public only sees published content.
+* Draft/archived content is hidden publicly.
+* /admin/knowledge-base exists.
+* Super Admin can create/edit/publish/archive KB articles.
+* Super Admin can manage KB categories.
+* Slug generation works.
+* Slug uniqueness is enforced.
+* Content is sanitized before rendering.
+* Search works at least basically.
+* Contact Us CTA appears at bottom of Help Center/article pages.
+* Help Center link appears in public nav/footer where practical.
+* Existing blog still works.
 * Existing CMS pages still work.
 * Existing public website still works.
-* Existing dashboard/admin still work.
-* Existing forms/submissions/billing/storage/PDF/email/audit flows still work.
+* Existing dashboard/admin still works.
+* Existing forms/billing/storage/PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev --name add_blog_system creates migration.
+* npx prisma migrate dev –name add_knowledge_base creates migration.
 * npm run build passes.

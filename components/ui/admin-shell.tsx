@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   BookOpen,
+  CircleHelp,
   CreditCard,
   FileText,
   Files,
@@ -21,6 +22,7 @@ const ADMIN_NAV_ITEMS = [
   { href: "/admin/forms", label: "Forms", icon: FileText },
   { href: "/admin/pages", label: "Pages", icon: Files },
   { href: "/admin/blog", label: "Blog", icon: BookOpen },
+  { href: "/admin/knowledge-base", label: "Knowledge Base", icon: CircleHelp },
   { href: "/admin/media", label: "Media", icon: Image },
   { href: "/admin/email-notifications", label: "Emails", icon: Mail },
   { href: "/admin/plans", label: "Plans", icon: CreditCard },
