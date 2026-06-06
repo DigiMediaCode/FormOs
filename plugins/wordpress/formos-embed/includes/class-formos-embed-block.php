@@ -41,6 +41,30 @@ class FormOS_Embed_Block {
                         'type' => 'boolean',
                         'default' => false,
                     ),
+                    'theme' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'accent' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'background' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'radius' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
+                    'compact' => array(
+                        'type' => 'boolean',
+                        'default' => false,
+                    ),
+                    'font' => array(
+                        'type' => 'string',
+                        'default' => '',
+                    ),
                 ),
                 'render_callback' => array(__CLASS__, 'render'),
             )
@@ -53,13 +77,30 @@ class FormOS_Embed_Block {
             : '';
         $height = isset($attributes['height']) ? absint($attributes['height']) : 800;
         $use_js = !empty($attributes['useJs']) ? 'true' : 'false';
-
-        return FormOS_Embed_Shortcode::render(
-            array(
-                'id' => $form_id,
-                'height' => $height,
-                'js' => $use_js,
-            )
+        $shortcode_attributes = array(
+            'id' => $form_id,
+            'height' => $height,
+            'js' => $use_js,
         );
+
+        foreach (
+            array(
+                'theme' => 'theme',
+                'accent' => 'accent',
+                'background' => 'bg',
+                'radius' => 'radius',
+                'font' => 'font',
+            ) as $attribute_key => $shortcode_key
+        ) {
+            if (!empty($attributes[$attribute_key])) {
+                $shortcode_attributes[$shortcode_key] = sanitize_text_field((string) $attributes[$attribute_key]);
+            }
+        }
+
+        if (!empty($attributes['compact'])) {
+            $shortcode_attributes['compact'] = 'true';
+        }
+
+        return FormOS_Embed_Shortcode::render($shortcode_attributes);
     }
 }

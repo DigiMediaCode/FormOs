@@ -33,6 +33,22 @@ Use the FormOS JavaScript embed if enabled in plugin settings:
 [formos_form id="abc123" js="true"]
 ```
 
+Theme overrides:
+
+```text
+[formos_form id="abc123" theme="auto" accent="#7c3aed"]
+[formos_form id="abc123" bg="transparent" radius="16" compact="true"]
+```
+
+Supported appearance attributes:
+
+- `theme`: `light`, `dark`, or `auto`
+- `accent`: hex color such as `#2563eb`
+- `bg`: `white`, `transparent`, `subtle`, or `none`
+- `radius`: `0`, `6`, `8`, `12`, `16`, or `20`
+- `compact`: `true` or `false`
+- `font`: `system`, `sans`, or `inherit`
+
 You can find the Form ID in FormOS on the form detail page.
 
 ## WordPress Block Editor
@@ -43,7 +59,7 @@ The plugin also adds a Gutenberg block:
 2. Click the block inserter.
 3. Search for **FormOS Form**.
 4. Enter the Form ID in the block settings sidebar.
-5. Adjust height or enable auto-height if needed.
+5. Adjust height, auto-height, theme, accent color, background, radius, compact mode, or font if needed.
 
 The block renders the same reliable FormOS embed as the shortcode.
 

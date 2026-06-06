@@ -7,3 +7,4 @@ build
 .env*.local
 *.tsbuildinfo
 .codex-*.log
+*.zip

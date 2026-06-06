@@ -12,6 +12,7 @@ import {
   renderFieldsWithAds,
 } from "@/app/f/[formSlug]/page";
 import { isPublicField } from "@/lib/forms/fields";
+import { embedThemeCss, getEmbedTheme } from "@/lib/forms/embed-theme";
 import {
   getEmbeddedFormForPublicView,
   submitEmbeddedForm,
@@ -22,8 +23,14 @@ type EmbedFormPageProps = {
     formId: string;
   }>;
   searchParams: Promise<{
+    accent?: string;
+    bg?: string;
+    compact?: string;
     error?: string;
+    font?: string;
+    radius?: string;
     success?: string;
+    theme?: string;
   }>;
 };
 
@@ -32,12 +39,19 @@ export default async function EmbedFormPage({
   searchParams,
 }: EmbedFormPageProps) {
   const { formId } = await params;
-  const { error, success } = await searchParams;
+  const search = await searchParams;
+  const { error, success } = search;
+  const embedTheme = getEmbedTheme(search);
   const { form, unavailableMessage } = await getEmbeddedFormForPublicView(formId);
 
   if (!form) {
     return (
-      <main className="min-h-screen bg-transparent px-3 py-4 sm:px-4">
+      <main
+        className="formos-embed-scope min-h-screen px-3 py-4 sm:px-4"
+        data-theme={embedTheme.theme}
+        style={embedTheme.style}
+      >
+        <style>{embedThemeCss}</style>
         <EmbedHeightScript formId={formId} />
         <section className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
@@ -69,7 +83,12 @@ export default async function EmbedFormPage({
     publicFields.find((field) => field.type === "signature")?.id ?? null;
 
   return (
-    <main className="min-h-screen bg-transparent px-3 py-4 sm:px-4">
+    <main
+      className="formos-embed-scope min-h-screen px-3 py-4 sm:px-4"
+      data-theme={embedTheme.theme}
+      style={embedTheme.style}
+    >
+      <style>{embedThemeCss}</style>
       <GoogleAdSenseScript
         adsEnabled={form.publicAds.enabled}
         clientId={form.publicAds.adsenseClientId}
@@ -110,26 +129,28 @@ export default async function EmbedFormPage({
           formId={form.id}
           requiredFields={requiredFields}
         >
-          {publicFields.length > 0 ? (
-            renderFieldsWithAds(publicFields, form.uploadsAvailable, {
-              firstSignatureFieldId,
-              uploadProvider: form.uploadProvider,
-              publicAds: form.publicAds,
-            })
-          ) : (
-            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-sm leading-6 text-slate-700">
-                This form does not have fields yet.
-              </p>
-            </section>
-          )}
+          <div className="flex flex-col gap-3" data-formos-embed-inner>
+            {publicFields.length > 0 ? (
+              renderFieldsWithAds(publicFields, form.uploadsAvailable, {
+                firstSignatureFieldId,
+                uploadProvider: form.uploadProvider,
+                publicAds: form.publicAds,
+              })
+            ) : (
+              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm leading-6 text-slate-700">
+                  This form does not have fields yet.
+                </p>
+              </section>
+            )}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <PublicFormSubmitControls
-              hasUploadFields={hasUploadFields}
-              submitButtonText={submitButtonText}
-            />
-          </section>
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <PublicFormSubmitControls
+                hasUploadFields={hasUploadFields}
+                submitButtonText={submitButtonText}
+              />
+            </section>
+          </div>
         </PublicFormClient>
       </section>
 

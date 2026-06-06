@@ -7,6 +7,7 @@
     var TextControl = components.TextControl;
     var ToggleControl = components.ToggleControl;
     var RangeControl = components.RangeControl;
+    var SelectControl = components.SelectControl;
     var Notice = components.Notice;
 
     blocks.registerBlockType('formos/embed-form', {
@@ -31,6 +32,30 @@
             useJs: {
                 type: 'boolean',
                 default: false
+            },
+            theme: {
+                type: 'string',
+                default: ''
+            },
+            accent: {
+                type: 'string',
+                default: ''
+            },
+            background: {
+                type: 'string',
+                default: ''
+            },
+            radius: {
+                type: 'string',
+                default: ''
+            },
+            compact: {
+                type: 'boolean',
+                default: false
+            },
+            font: {
+                type: 'string',
+                default: ''
             }
         },
         edit: function (props) {
@@ -45,6 +70,12 @@
                 (attributes.height || 800) +
                 '"' +
                 (attributes.useJs ? ' js="true"' : '') +
+                (attributes.theme ? ' theme="' + attributes.theme + '"' : '') +
+                (attributes.accent ? ' accent="' + attributes.accent + '"' : '') +
+                (attributes.background ? ' bg="' + attributes.background + '"' : '') +
+                (attributes.radius ? ' radius="' + attributes.radius + '"' : '') +
+                (attributes.compact ? ' compact="true"' : '') +
+                (attributes.font ? ' font="' + attributes.font + '"' : '') +
                 ']';
 
             return el(
@@ -83,6 +114,77 @@
                             checked: !!attributes.useJs,
                             onChange: function (value) {
                                 setAttributes({ useJs: !!value });
+                            }
+                        }),
+                        el(SelectControl, {
+                            label: __('Theme', 'formos-embed'),
+                            value: attributes.theme,
+                            options: [
+                                { label: __('Plugin default', 'formos-embed'), value: '' },
+                                { label: __('Light', 'formos-embed'), value: 'light' },
+                                { label: __('Dark', 'formos-embed'), value: 'dark' },
+                                { label: __('Auto', 'formos-embed'), value: 'auto' }
+                            ],
+                            onChange: function (value) {
+                                setAttributes({ theme: value });
+                            }
+                        }),
+                        el(TextControl, {
+                            label: __('Accent color', 'formos-embed'),
+                            help: __('Hex only, for example #7c3aed.', 'formos-embed'),
+                            value: attributes.accent,
+                            onChange: function (value) {
+                                setAttributes({ accent: value });
+                            }
+                        }),
+                        el(SelectControl, {
+                            label: __('Background', 'formos-embed'),
+                            value: attributes.background,
+                            options: [
+                                { label: __('Plugin default', 'formos-embed'), value: '' },
+                                { label: __('White', 'formos-embed'), value: 'white' },
+                                { label: __('Transparent', 'formos-embed'), value: 'transparent' },
+                                { label: __('Subtle', 'formos-embed'), value: 'subtle' },
+                                { label: __('None', 'formos-embed'), value: 'none' }
+                            ],
+                            onChange: function (value) {
+                                setAttributes({ background: value });
+                            }
+                        }),
+                        el(SelectControl, {
+                            label: __('Border radius', 'formos-embed'),
+                            value: attributes.radius || '',
+                            options: [
+                                { label: __('Plugin default', 'formos-embed'), value: '' },
+                                { label: '0px', value: '0' },
+                                { label: '6px', value: '6' },
+                                { label: '8px', value: '8' },
+                                { label: '12px', value: '12' },
+                                { label: '16px', value: '16' },
+                                { label: '20px', value: '20' }
+                            ],
+                            onChange: function (value) {
+                                setAttributes({ radius: value });
+                            }
+                        }),
+                        el(ToggleControl, {
+                            label: __('Compact mode', 'formos-embed'),
+                            checked: !!attributes.compact,
+                            onChange: function (value) {
+                                setAttributes({ compact: !!value });
+                            }
+                        }),
+                        el(SelectControl, {
+                            label: __('Font style', 'formos-embed'),
+                            value: attributes.font,
+                            options: [
+                                { label: __('Plugin default', 'formos-embed'), value: '' },
+                                { label: __('System', 'formos-embed'), value: 'system' },
+                                { label: __('Sans', 'formos-embed'), value: 'sans' },
+                                { label: __('Inherit from site', 'formos-embed'), value: 'inherit' }
+                            ],
+                            onChange: function (value) {
+                                setAttributes({ font: value });
                             }
                         })
                     )

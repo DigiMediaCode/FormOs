@@ -23,6 +23,21 @@ export function GET() {
     return typeof value === "string" && /^[a-zA-Z0-9_-]+$/.test(value);
   }
 
+  function safeEmbedSrc(value, formId) {
+    if (typeof value !== "string" || value.length > 1200) {
+      return null;
+    }
+
+    try {
+      var url = new URL(value, FORMOS_ORIGIN);
+      if (url.origin !== FORMOS_ORIGIN) return null;
+      if (url.pathname !== "/embed/forms/" + encodeURIComponent(formId)) return null;
+      return url.href;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function createIframe(target) {
     var formId = target.getAttribute("data-formos-form");
     if (!safeFormId(formId) || target.getAttribute("data-formos-mounted") === "true") {
@@ -34,7 +49,8 @@ export function GET() {
     height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.floor(height)));
 
     var iframe = document.createElement("iframe");
-    iframe.src = FORMOS_ORIGIN.replace(/\\/+$/, "") + "/embed/forms/" + encodeURIComponent(formId);
+    iframe.src = safeEmbedSrc(target.getAttribute("data-formos-src"), formId) ||
+      FORMOS_ORIGIN.replace(/\\/+$/, "") + "/embed/forms/" + encodeURIComponent(formId);
     iframe.width = "100%";
     iframe.height = String(height);
     iframe.loading = "lazy";

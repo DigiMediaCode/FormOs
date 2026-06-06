@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 33: WordPress Plugin for Form Embeds
+# CURRENT TASK — FormOS Milestone 33.1: Embed Theme Customization for WordPress + Generic Embeds
 
 ## Project Context
 
@@ -6,204 +6,282 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS embed foundation exists.
-* Public embed route exists:
-  /embed/forms/{formId}
-* iframe embed code works.
-* Optional JS embed /embed.js may exist.
-* Public form submissions through embed work.
-* Forms, submissions, storage, PDF, email, audit, billing, plans, workspace, and Super Admin all work.
+* FormOS embed system works.
+* WordPress plugin works.
+* WordPress plugin can embed a FormOS form using form ID.
+* Embedded forms submit successfully.
+* FormOS public embed route exists.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Create a WordPress plugin that allows WordPress users to embed FormOS forms into WordPress pages/posts.
+Improve embedded form styling so forms can better match the website where they are embedded.
 
-This should be the simplest reliable integration first.
+This is especially needed for WordPress sites where each website has its own color scheme and visual style.
 
 ## Important Direction
 
-Create a separate WordPress plugin folder/project.
+Do not build full form editing inside WordPress yet.
 
-Do not mix WordPress plugin code into FormOS Next.js app source unless a separate plugin package/folder is clearly created.
+Do not build FormOS login inside WordPress yet.
 
-Do not build Shopify app in this milestone.
+Do not build API token/OAuth connection for WordPress yet.
 
-Do not build WordPress.org marketplace packaging yet.
+This milestone is only about embed styling and theme customization.
 
-Do not require WordPress users to authenticate with FormOS yet.
+## Why Not Build Form Creation Inside WordPress Yet
 
-This plugin should consume the existing FormOS embed URL.
+Creating/editing forms inside WordPress would require:
 
-## Plugin Name
+* WordPress plugin authentication to FormOS
+* API tokens or OAuth
+* FormOS API for listing/creating/editing forms
+* permissions
+* sync/error handling
+* more complex plugin UI
 
-FormOS Embed
+That should be a future milestone.
 
-Suggested plugin folder:
+For now, embed customization gives immediate value with low risk.
 
-wordpress-plugin/formos-embed/
+## Embed Styling Concept
 
-or:
-
-plugins/wordpress/formos-embed/
-
-## Core Features
-
-The plugin should support:
-
-1. Admin settings page
-2. FormOS base URL setting
-3. Shortcode embed
-4. Optional Gutenberg block if simple
-5. Safe iframe output
-6. Responsive embed
-
-## WordPress Admin Settings
-
-Create settings page:
-
-Settings → FormOS Embed
-
-Fields:
-
-* FormOS Base URL
+The embedded form should support safe theme query parameters.
 
 Example:
 
-https://your-formos-domain.com
+/embed/forms/{formId}?theme=auto&accent=%232563eb&radius=12&bg=transparent
 
-Default can be empty.
+Supported query parameters:
 
-Validation:
+* theme
+* accent
+* bg
+* radius
+* compact
+* font
 
-* must be https:// URL in production
-* remove trailing slash
-* no javascript: URLs
-* no HTML
-* no unsafe input
+## Supported Theme Parameters
 
-Optional settings:
+### theme
 
-* Default height
-* Use auto-height script if available
-* Show plugin instructions
+Allowed values:
 
-## Shortcode
+* light
+* dark
+* auto
 
-Add shortcode:
+Default:
+
+light
+
+### accent
+
+Hex color.
+
+Example:
+
+#2563eb
+
+Rules:
+
+* must be valid hex color
+* reject unsafe values
+* fallback to default if invalid
+
+### bg
+
+Allowed values:
+
+* white
+* transparent
+* subtle
+* none
+
+Default:
+
+white
+
+### radius
+
+Allowed values:
+
+* 0
+* 6
+* 8
+* 12
+* 16
+* 20
+
+Default:
+
+12
+
+### compact
+
+Allowed values:
+
+* true
+* false
+
+Default:
+
+false
+
+### font
+
+Allowed values:
+
+* system
+* sans
+* inherit
+
+Default:
+
+system
+
+Note:
+
+Because iframe content is isolated from parent CSS, inherit cannot truly inherit parent page CSS unless CSS variables are passed. For MVP, treat inherit similar to system but keep option for future.
+
+## Embed Route Styling
+
+Update:
+
+/embed/forms/[formId]
+
+It should read safe query parameters and apply them to the embedded form UI.
+
+Requirements:
+
+* transparent background option should remove outer heavy background/card styling
+* accent color should affect submit button/focus styles where safe
+* radius should affect card/input/button border radius
+* compact should reduce spacing
+* dark theme should use dark background and readable text
+* auto can use prefers-color-scheme or default light if simpler
+
+Do not allow arbitrary CSS injection.
+
+Do not allow arbitrary style tags.
+
+Only safe predefined values and validated hex color.
+
+## WordPress Plugin Settings
+
+Update WordPress plugin settings page:
+
+Settings → FormOS Embed
+
+Add default embed appearance settings:
+
+* Default Theme: Light / Dark / Auto
+* Accent Color
+* Background: White / Transparent / Subtle / None
+* Border Radius
+* Compact Mode
+* Font Style
+
+These settings are used by shortcode unless overridden.
+
+## WordPress Shortcode Attributes
+
+Update shortcode:
 
 [formos_form id="FORM_ID"]
 
-Optional attributes:
+Support optional attributes:
 
-[formos_form id="FORM_ID" height="800"]
+* theme
+* accent
+* bg
+* radius
+* compact
+* font
+* height
+* js
 
-[formos_form id="FORM_ID" js="true"]
+Examples:
 
-Shortcode should render iframe:
+[formos_form id="abc123" theme="auto" accent="#7c3aed"]
 
-<iframe
-  src="{FORMOS_BASE_URL}/embed/forms/{FORM_ID}"
-  width="100%"
-  height="{height}"
-  frameborder="0"
-  style="border:0;width:100%;min-height:{height}px;"
-  loading="lazy"
-></iframe>
+[formos_form id="abc123" bg="transparent" radius="16" compact="true"]
 
-If js="true" and /embed.js is supported, optionally render:
+Shortcode attributes should override plugin defaults.
 
-<div data-formos-form="{FORM_ID}"></div>
-<script src="{FORMOS_BASE_URL}/embed.js" async></script>
+## WordPress Plugin Output
 
-Default should be iframe because it is reliable.
+The iframe src should include safe query params.
 
-## Gutenberg Block
+Example:
 
-If simple, add a basic block:
+https://formos.com/embed/forms/abc123?theme=auto&accent=%237c3aed&bg=transparent&radius=16&compact=true
 
-FormOS Form
+Sanitize all attributes using WordPress sanitization functions.
 
-Block fields:
+Do not allow arbitrary CSS or JavaScript.
 
-* Form ID
-* Height
-* Use auto-height script toggle
+## Copy Embed Code in FormOS
 
-If Gutenberg block is too much, document as TODO and implement shortcode only.
+Update FormOS embed section if practical.
 
-Shortcode is required.
+Add simple theme options to generated embed code:
+
+* Theme
+* Accent color
+* Background
+* Radius
+* Compact mode
+
+If this is too much, at minimum ensure embed route supports query params and WordPress plugin can use them.
+
+## Plan Consideration
+
+Do not restrict theme customization by plan in this milestone.
+
+Later, advanced custom branding can become a paid feature.
+
+For now, all embed users can use these simple style options.
 
 ## Security
 
-Use WordPress escaping/sanitization:
-
-* esc_url
-* esc_attr
-* sanitize_text_field
-* absint for height
-* current_user_can for admin settings
-
-Do not allow arbitrary HTML or script injection.
-
-Do not expose secrets.
-
-Plugin should not store FormOS API keys in this milestone.
-
-## User Instructions
-
-Settings page should show examples:
-
-Shortcode:
-
-[formos_form id="abc123"]
-
-With height:
-
-[formos_form id="abc123" height="900"]
-
-Tell users:
-
-You can find your Form ID in FormOS on the form detail page.
-
-## Plugin Files
-
-Recommended structure:
-
-formos-embed.php
-includes/
-class-formos-embed-settings.php
-class-formos-embed-shortcode.php
-assets/
-admin.css optional
-
-Keep it simple.
+* no arbitrary CSS input
+* no arbitrary JS input
+* validate hex color
+* whitelist theme/bg/font/radius values
+* WordPress plugin must sanitize shortcode attributes
+* FormOS embed route must validate query params server-side
+* do not expose secrets
 
 ## Out of Scope
 
-Do not build FormOS login inside WordPress.
-Do not fetch forms list from API.
-Do not add API tokens.
-Do not build form selection dropdown from FormOS.
+Do not build WordPress form creation.
+Do not build WordPress FormOS login.
+Do not build API keys.
 Do not build Shopify app.
-Do not build WordPress.org release automation.
-Do not store submission data in WordPress.
-Do not proxy submissions through WordPress.
+Do not build custom CSS editor.
+Do not build full theme designer.
+Do not build per-form theme presets.
+Do not change core submission logic.
+Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 33 is complete when:
+Milestone 33.1 is complete when:
 
-* WordPress plugin folder exists.
-* Plugin can be installed/activated in WordPress.
-* Settings page exists.
-* Admin can set FormOS Base URL.
-* Shortcode [formos_form id="..."] works.
-* Shortcode renders responsive iframe.
-* Height attribute works.
-* Unsafe settings/input are sanitized.
-* Plugin does not expose secrets.
-* Embed submits to FormOS successfully.
-* WordPress plugin code is separate from FormOS app.
-* FormOS app still builds.
-* npm run build for FormOS still passes if touched.
+* Embed route accepts safe theme query parameters.
+* Accent color affects embedded form styling.
+* Background option works.
+* Border radius option works.
+* Compact mode works.
+* Dark/light/auto theme works or gracefully falls back.
+* Invalid theme parameters are ignored or safely defaulted.
+* WordPress plugin settings include default appearance options.
+* WordPress shortcode accepts appearance attributes.
+* Shortcode attributes override plugin defaults.
+* WordPress plugin sanitizes all appearance inputs.
+* Embedded form visually adapts better to WordPress sites.
+* Existing embed submissions still work.
+* Existing iframe embed still works.
+* Existing public form route still works.
+* FormOS build passes.
