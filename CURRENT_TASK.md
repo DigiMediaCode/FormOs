@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 32: Form Embed System Foundation
+# CURRENT TASK — FormOS Milestone 33: WordPress Plugin for Form Embeds
 
 ## Project Context
 
@@ -6,405 +6,204 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS MVP foundation is live and working.
-* Auth/signup/login works.
-* Google + Lark OAuth login works.
-* CMS Pages, Blog, Knowledge Base, and Support system exist.
-* Dynamic plans, quota overrides, field type controls, and billing exist.
-* Stripe billing works.
-* Super Admin exists.
-* Forms, builder, public forms, QR, submissions, storage integrations, office fields, PDF generation, email, and audit timeline work.
-* Google Drive and Dropbox uploads work.
-* Public forms are accessible at /f/{formId}.
+* FormOS embed foundation exists.
+* Public embed route exists:
+  /embed/forms/{formId}
+* iframe embed code works.
+* Optional JS embed /embed.js may exist.
+* Public form submissions through embed work.
+* Forms, submissions, storage, PDF, email, audit, billing, plans, workspace, and Super Admin all work.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add form embed functionality so FormOS users can embed their forms into external websites.
+Create a WordPress plugin that allows WordPress users to embed FormOS forms into WordPress pages/posts.
 
-This should support:
-
-* generic website iframe embed
-* JavaScript embed snippet with better auto-height behaviour
-* future WordPress plugin
-* future Shopify app/block
-
-This milestone should create the embed foundation cleanly.
+This should be the simplest reliable integration first.
 
 ## Important Direction
 
-Start with a secure iframe-based embed.
+Create a separate WordPress plugin folder/project.
 
-Add JavaScript auto-height support if practical.
-
-Do not build WordPress plugin in this milestone.
+Do not mix WordPress plugin code into FormOS Next.js app source unless a separate plugin package/folder is clearly created.
 
 Do not build Shopify app in this milestone.
 
-But design the embed system so WordPress and Shopify can reuse it later.
+Do not build WordPress.org marketplace packaging yet.
 
-## Product Behaviour
+Do not require WordPress users to authenticate with FormOS yet.
 
-A form owner should be able to:
+This plugin should consume the existing FormOS embed URL.
 
-1. Open a form detail page.
-2. See an Embed section.
-3. Copy iframe embed code.
-4. Copy JavaScript embed code if implemented.
-5. Configure basic embed settings.
-6. Paste the embed code into an external website.
-7. Visitors can submit the embedded form.
-8. Embedded submissions behave the same as normal public submissions.
+## Plugin Name
 
-## Where To Add UI
+FormOS Embed
 
-Add embed UI to:
+Suggested plugin folder:
 
-* /dashboard/forms/[formId]
+wordpress-plugin/formos-embed/
 
-Optional if useful:
+or:
 
-* /dashboard/forms/[formId]/builder
+plugins/wordpress/formos-embed/
 
-Main required location:
+## Core Features
 
-* /dashboard/forms/[formId]
+The plugin should support:
 
-## Embed Section UI
+1. Admin settings page
+2. FormOS base URL setting
+3. Shortcode embed
+4. Optional Gutenberg block if simple
+5. Safe iframe output
+6. Responsive embed
 
-Create a card/section:
+## WordPress Admin Settings
 
-Embed Form
+Create settings page:
 
-Show:
+Settings → FormOS Embed
 
-* Embed status
-* iframe embed code
-* Copy iframe code button
-* JavaScript embed code if implemented
-* Copy JS embed code button
-* Preview button
-* Embed settings
+Fields:
 
-## Embed URL
+* FormOS Base URL
 
-Create a dedicated embed route:
+Example:
 
-* /embed/forms/[formId]
+https://your-formos-domain.com
 
-This route should render the form in embedded mode.
+Default can be empty.
 
-Do not use the normal /f/{formId} route directly inside iframe if it has public page branding/header/footer that is not suitable for embed.
+Validation:
 
-Embedded form page should:
+* must be https:// URL in production
+* remove trailing slash
+* no javascript: URLs
+* no HTML
+* no unsafe input
 
-* show the form only
-* no landing page header
-* no public site footer
-* minimal FormOS branding depending on plan
-* responsive width
-* clean inside iframe
+Optional settings:
 
-## Embed Code
+* Default height
+* Use auto-height script if available
+* Show plugin instructions
 
-iframe Embed Code
+## Shortcode
 
-Generate code like:
+Add shortcode:
 
-```html
+[formos_form id="FORM_ID"]
+
+Optional attributes:
+
+[formos_form id="FORM_ID" height="800"]
+
+[formos_form id="FORM_ID" js="true"]
+
+Shortcode should render iframe:
+
 <iframe
-  src="{APP_URL}/embed/forms/{formId}"
+  src="{FORMOS_BASE_URL}/embed/forms/{FORM_ID}"
   width="100%"
-  height="800"
+  height="{height}"
   frameborder="0"
-  style="border:0; width:100%; min-height:800px;"
+  style="border:0;width:100%;min-height:{height}px;"
   loading="lazy"
 ></iframe>
-```
 
-Use APP_URL.
+If js="true" and /embed.js is supported, optionally render:
 
-Do not use:
+<div data-formos-form="{FORM_ID}"></div>
+<script src="{FORMOS_BASE_URL}/embed.js" async></script>
 
-* localhost
-* 127.0.0.1
-* 0.0.0.0
-* internal Hostinger host
+Default should be iframe because it is reliable.
 
-JavaScript Embed Code
+## Gutenberg Block
 
-If practical, also generate:
+If simple, add a basic block:
 
-```html
-<div data-formos-form="{formId}"></div>
-<script src="{APP_URL}/embed.js" async></script>
-```
+FormOS Form
 
-The script should:
+Block fields:
 
-* find [data-formos-form]
-* create iframe
-* set iframe src to /embed/forms/{formId}
-* set width 100%
-* set safe default height
-* optionally listen for postMessage resize events from iframe
-* update iframe height when embedded form posts height
+* Form ID
+* Height
+* Use auto-height script toggle
 
-If JS embed is too much, iframe embed is required and JS embed can be done as a follow-up.
+If Gutenberg block is too much, document as TODO and implement shortcode only.
 
-Preferred: implement both if safe.
+Shortcode is required.
 
-## Auto Height / postMessage
+## Security
 
-If JavaScript embed is implemented:
+Use WordPress escaping/sanitization:
 
-* embedded form can send height to parent using postMessage
-* parent embed.js listens for message from FormOS origin only
-* parent updates iframe height
+* esc_url
+* esc_attr
+* sanitize_text_field
+* absint for height
+* current_user_can for admin settings
 
-Security:
+Do not allow arbitrary HTML or script injection.
 
-* validate message origin
-* validate message type
-* validate formId
-* validate height is a reasonable number
-* do not allow arbitrary message actions
+Do not expose secrets.
 
-Message shape:
-
-```json
-{
-  "type": "FORMOS_EMBED_HEIGHT",
-  "formId": "…",
-  "height": 1234
-}
-```
-
-## Embed Settings
-
-Add settings stored in Form.settings or a clean embedSettings object.
-
-Suggested settings:
-
-```json
-{
-  "embedSettings": {
-    "enabled": true,
-    "showBranding": true,
-    "background": "transparent",
-    "maxWidth": "720px",
-    "height": 800
-  }
-}
-```
-
-For MVP, keep settings simple:
-
-* Enable embed
-* Show FormOS branding
-* Default height
-
-If settings UI is too much, default embed enabled for published forms and add basic values.
-
-## Public Access Rules
-
-Embedded forms should follow the same access rules as public forms:
-
-* only PUBLISHED forms can be embedded
-* DRAFT forms show unavailable message
-* ARCHIVED forms show unavailable message
-* plan submission limits apply
-* field type restrictions and form validation remain server-side
-* storage provider rules remain unchanged
-* office-only fields remain hidden
-* display-only fields render safely
-
-## Plan / Package Controls
-
-Add plan permission:
-
-allowEmbeds: boolean
-
-Default suggested:
-
-Free:
-
-* allowEmbeds: true
-
-Starter:
-
-* allowEmbeds: true
-
-Pro:
-
-* allowEmbeds: true
-
-Business:
-
-* allowEmbeds: true
-
-Why allow Free? Because embeds can be a growth feature, and ads can still show for free users if ad-free is not allowed.
-
-However, the plan system should support disabling embeds later.
-
-Update plan editor and user quota override UI to support:
-
-* Allow form embeds
-
-If allowEmbeds is false:
-
-* hide/disable embed section
-* show upgrade message
-* embedded route should block with friendly message
-
-Server-side enforcement required.
-
-## Ads / Branding In Embedded Forms
-
-Embedded forms should follow current ad/ad-free rules.
-
-If owner plan is not ad-free and platform public form ads are enabled:
-
-* ads may show inside embedded form
-* same safe placement rules as public form
-* do not place ads near submit/signature/upload controls
-
-Branding:
-
-If showBranding true or plan requires branding:
-
-* show subtle “Powered by FormOS”
-
-If plan allows custom/ad-free branding later:
-
-* hide branding if allowed and setting disabled
-
-For now, keep existing FormOS branding behaviour consistent.
-
-## Security Headers / iframe Support
-
-Since forms must be embeddable, make sure security headers do not block embed route.
-
-If the app currently uses X-Frame-Options: DENY globally, embeds will fail.
-
-Adjust carefully:
-
-* Do not remove protection blindly for entire app.
-* Allow iframe embedding only for /embed/forms/[formId] if possible.
-* Dashboard/admin routes should remain protected from iframe embedding.
-* Avoid allowing admin/dashboard in iframes.
-
-If using CSP frame-ancestors, configure carefully.
-
-For MVP:
-
-* ensure /embed/forms/[formId] can be iframe embedded
-* admin/dashboard should not be embeddable
-
-## CORS / Cross-Origin
-
-Iframe embeds usually do not need CORS.
-
-If using embed.js:
-
-* script must be publicly accessible
-* no secrets exposed
-* it should only create iframe and handle resize
-
-Do not expose private API endpoints.
-
-## WordPress / Shopify Future Compatibility
-
-Design with future apps in mind.
-
-Future WordPress plugin should be able to use:
-
-* form ID
-* iframe embed URL
-* JS embed URL
-
-Future Shopify app/block should be able to use:
-
-* form ID
-* embed URL
-* script URL
-
-Do not hardcode website-specific assumptions.
-
-Keep embed code generic.
+Plugin should not store FormOS API keys in this milestone.
 
 ## User Instructions
 
-In embed card, show short instructions:
+Settings page should show examples:
 
-1. Copy the embed code.
-2. Paste it into your website HTML.
-3. Publish your website.
-4. Form submissions will appear in your FormOS dashboard.
+Shortcode:
 
-For WordPress/Shopify:
+[formos_form id="abc123"]
 
-Show small note:
+With height:
 
-WordPress and Shopify apps are coming soon. For now, use the iframe embed code.
+[formos_form id="abc123" height="900"]
 
-## Submission Source Tracking
+Tell users:
 
-Update public submission metadata if practical.
+You can find your Form ID in FormOS on the form detail page.
 
-When submitted from embed route, store:
+## Plugin Files
 
-metadata.source = “embed”
+Recommended structure:
 
-When submitted from normal public route, store:
+formos-embed.php
+includes/
+class-formos-embed-settings.php
+class-formos-embed-shortcode.php
+assets/
+admin.css optional
 
-metadata.source = “public_form”
-
-If iframe passes referrer, store safe referrer/origin if available.
-
-Do not store sensitive data.
+Keep it simple.
 
 ## Out of Scope
 
-Do not build WordPress plugin.
+Do not build FormOS login inside WordPress.
+Do not fetch forms list from API.
+Do not add API tokens.
+Do not build form selection dropdown from FormOS.
 Do not build Shopify app.
-Do not build embed analytics.
-Do not build domain allowlist yet unless simple.
-Do not build custom embed themes.
-Do not build per-form custom CSS.
-Do not build conditional logic.
-Do not change core submission logic beyond embed source handling.
-Do not integrate CommerceOS.
+Do not build WordPress.org release automation.
+Do not store submission data in WordPress.
+Do not proxy submissions through WordPress.
 
 ## Acceptance Criteria
 
-Milestone 32 is complete when:
+Milestone 33 is complete when:
 
-* /embed/forms/[formId] exists.
-* Embedded form route renders published forms.
-* Embedded form route blocks draft/archived forms.
-* Embedded form route hides public site header/footer.
-* Embedded form submits successfully.
-* Embed submissions appear in dashboard.
-* Embed submissions use existing validation.
-* Embed submissions respect storage provider/upload rules.
-* Embed submissions hide office-only fields.
-* Embed section appears on form detail page.
-* iframe embed code is generated using APP_URL.
-* Copy iframe code button works.
-* JS embed code exists if implemented.
-* embed.js exists if implemented.
-* Auto-height works if implemented.
-* Plan limit allowEmbeds exists.
-* Plan editor can control allowEmbeds.
-* User quota override can control allowEmbeds.
-* Embed route/server-side logic respects allowEmbeds.
-* Dashboard/admin routes are not accidentally iframe-embeddable.
-* Embed route can be used inside iframe.
-* Existing public form route still works.
-* Existing QR code still works.
-* Existing Google Drive/Dropbox uploads still work.
-* Existing PDF/email/audit/billing flows still work.
-* npx prisma validate passes.
-* npx prisma generate passes.
-* npm run build passes.
+* WordPress plugin folder exists.
+* Plugin can be installed/activated in WordPress.
+* Settings page exists.
+* Admin can set FormOS Base URL.
+* Shortcode [formos_form id="..."] works.
+* Shortcode renders responsive iframe.
+* Height attribute works.
+* Unsafe settings/input are sanitized.
+* Plugin does not expose secrets.
+* Embed submits to FormOS successfully.
+* WordPress plugin code is separate from FormOS app.
+* FormOS app still builds.
+* npm run build for FormOS still passes if touched.
