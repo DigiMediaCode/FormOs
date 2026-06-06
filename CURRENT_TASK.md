@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 30: Knowledge Base / FAQ System
+# CURRENT TASK — FormOS Milestone 31.1: Social Share Image / Open Graph Settings
 
 ## Project Context
 
@@ -7,489 +7,196 @@ FormOS is a standalone SaaS-style form builder project.
 Current state:
 
 * FormOS MVP foundation is live and working.
-* Super Admin exists.
-* CMS Pages + Menu Manager exists.
-* Blog System exists or is being completed.
-* Public website/landing page exists.
-* Forms, builder, public forms, submissions, QR, storage integrations, office fields, PDF generation, email, audit timeline, billing, plans, workspace, and staff access all work.
-* Google Drive and Dropbox uploads work.
-* Stripe billing works.
+* Super Admin Settings exist.
+* Super Admin can edit site name, logo, favicon, meta title, and meta description.
+* CMS Pages, Blog, Knowledge Base, Contact/Support, billing, forms, public forms, storage, PDF, email, and audit features exist.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add a Knowledge Base / FAQ system for FormOS.
+Add a Social Share Image / Open Graph Image setting in Super Admin SEO settings.
 
-The Knowledge Base should help users find answers to common questions about using FormOS.
+This image should be used when the FormOS website URL is shared on social platforms such as Facebook, LinkedIn, WhatsApp, X/Twitter, and other apps that read Open Graph metadata.
 
-Super Admin should be able to create, edit, categorize, publish, and archive knowledge base articles.
+## User Need
 
-Public users should be able to browse categories, read articles, and contact support if they cannot find an answer.
+In Super Admin Settings, where Meta Title and Meta Description are configured, add a new field:
 
-## Difference Between Blog and Knowledge Base
+* Social Share Image URL / Path
 
-Blog:
+This should control the image used in social previews.
 
-* marketing articles
-* product updates
-* SEO content
-* tutorials and thought leadership
+Example:
 
-Knowledge Base:
+* /social-share.png
+* /og-image.png
+* https://example.com/social-share.png
 
-* support documentation
-* FAQ answers
-* how-to guides
-* troubleshooting
-* account/billing/help content
+## Important Direction
 
-Do not mix blog posts and knowledge base articles.
+Do not build a full media manager in this milestone.
 
-## Public Routes
+Do not build image cropper.
 
-Create:
+Do not build image upload unless it is already simple and safe.
 
-* /help
-* /help/[categorySlug]
-* /help/[categorySlug]/[articleSlug]
+For MVP, use URL/path input.
 
-### /help
+If upload is already available and simple, it can be added, but URL/path is enough.
 
-Knowledge Base home page.
+## Settings To Add
 
-Show:
+Add platform setting:
 
-* page title: Help Center
-* search input
-* category cards
-* popular/recent articles
-* contact support CTA at bottom
+* socialImageUrl
 
-### /help/[categorySlug]
+Display label:
 
-Category page.
+Social Share Image URL / Path
 
-Show:
+Helper text:
 
-* category title
-* category description
-* articles in that category
-* search/filter if simple
-* back to Help Center
+Recommended size: 1200 × 630 px. Used for social sharing previews on platforms like Facebook, LinkedIn, WhatsApp, and X.
 
-### /help/[categorySlug]/[articleSlug]
+## Super Admin UI
 
-Article page.
+Update:
 
-Show:
+* /admin/settings
 
-* article title
-* category
-* content
-* updated date
-* helpful contact/support CTA at bottom
-* back to category/help links
+In the SEO section, show:
 
-Only published articles/categories should appear publicly.
-
-Draft/archived articles should not be public.
-
-## Admin Routes
-
-Create Super Admin routes:
-
-* /admin/knowledge-base
-* /admin/knowledge-base/categories
-* /admin/knowledge-base/categories/new
-* /admin/knowledge-base/categories/[categoryId]
-* /admin/knowledge-base/articles/new
-* /admin/knowledge-base/articles/[articleId]
-
-If too many routes are too much, implement simpler:
-
-* /admin/knowledge-base
-* /admin/knowledge-base/categories
-* /admin/knowledge-base/articles/[articleId]
-
-But the system must support category and article management.
-
-Add Super Admin navigation link:
-
-Knowledge Base → /admin/knowledge-base
-
-Only SUPER_ADMIN can access.
-
-## Prisma Schema
-
-Add model:
-
-```prisma
-model KbCategory {
-  id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  description String?
-  status      String   @default("PUBLISHED")
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  articles    KbArticle[]
-}
-```
-
-Add model:
-
-```prisma
-model KbArticle {
-  id              String   @id @default(cuid())
-  title           String
-  slug            String
-  excerpt         String?
-  content         String?
-  status          String   @default("DRAFT")
-  categoryId      String?
-  sortOrder       Int      @default(0)
-  isFeatured      Boolean  @default(false)
-  metaTitle       String?
-  metaDescription String?
-  createdById     String?
-  updatedById     String?
-  publishedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  category        KbCategory? @relation(fields: [categoryId], references: [id])
-}
-```
-
-Create migration:
-
-```bash
-npx prisma migrate dev –name add_knowledge_base
-```
-
-Do not use prisma db push.
-
-## Status Values
-
-For both categories and articles, support:
-
-* DRAFT
-* PUBLISHED
-* ARCHIVED
-
-Rules:
-
-* public pages only show PUBLISHED categories/articles
-* Super Admin can see all statuses
-* archived articles are hidden publicly
-
-## Category Fields
-
-Admin category editor should support:
-
-* Name
-* Slug
-* Description
-* Status
-* Sort Order
-
-Slug rules:
-
-* generated from name if missing
-* lowercase
-* letters/numbers/hyphens
-* unique
-* no slash or spaces
-
-## Article Fields
-
-Admin article editor should support:
-
-* Title
-* Slug
-* Excerpt
-* Content
-* Status
-* Category
-* Sort Order
-* Featured / Popular
 * Meta Title
 * Meta Description
-* Published At
+* Social Share Image URL / Path
 
-Slug rules:
+If socialImageUrl exists, show small preview image.
 
-* generated from title if missing
-* lowercase
-* letters/numbers/hyphens
-* unique within category if possible
-* unique globally is acceptable for MVP
-* no slash or spaces
+Preview should be safe and not break layout.
 
-## Content Editor
+## Validation
 
-Use simple textarea or existing safe editor.
+Validate socialImageUrl:
 
-Content can be simple HTML/Markdown-like text.
+Allow:
 
-If rendering HTML:
+* paths starting with /
+* https:// URLs
+* http:// URLs only in development if current validation already supports it
 
-* sanitize before public display
-* block script tags
-* block iframe/object/embed
-* block event handler attributes
-* block javascript: URLs
+Reject:
 
-Use existing sanitize helper where possible.
+* javascript: URLs
+* data: URLs
+* script tags
+* HTML
+* empty is allowed
 
-Do not allow arbitrary JavaScript.
+Return friendly error if invalid.
 
-## Search
+## Metadata Application
 
-Add simple search on /help.
+Use socialImageUrl in public metadata where practical.
 
-MVP search can be query parameter based:
+Apply to:
 
-```text
-/help?q=google
-```
+* landing page /
+* pricing page if exists
+* CMS pages if no page-specific image exists
+* blog pages if no post-specific image exists
+* knowledge base pages if no article-specific image exists
 
-Search should look through:
+At minimum, apply to the landing page/global metadata.
 
-* article title
-* excerpt
-* content
+Metadata should include:
 
-Only search published articles.
+Open Graph:
 
-If full search is too much, implement simple server-side contains search.
+* og:title
+* og:description
+* og:image
 
-## Suggested Default Categories
+Twitter/X:
 
-If safe, add seed helper for default categories:
+* twitter:card = summary_large_image
+* twitter:title
+* twitter:description
+* twitter:image
 
-* Getting Started
-* Forms & Builder
-* File Uploads
-* Signatures & PDFs
-* Billing & Plans
-* Account & Security
-* Team & Staff
+Use existing metaTitle and metaDescription settings.
 
-Do not overwrite existing categories.
+Fallback:
 
-Default status:
+If socialImageUrl is missing, do not break metadata.
 
-PUBLISHED
+If logoUrl exists but socialImageUrl is missing, do not automatically use small logo as og:image unless the implementation already does so safely. Social image should ideally be wide 1200x630.
 
-## Suggested Default Articles
+## Page-Level Future Compatibility
 
-Optional draft or published starter articles:
+Do not overbuild now, but keep helper structure flexible.
 
-Getting Started:
+Future pages may have their own social image:
 
-* How to create your first form
-* How to publish and share a form
-* How to use QR codes
+* CMS page social image
+* Blog post social image
+* Knowledge base article social image
 
-File Uploads:
+For now, global socialImageUrl is enough.
 
-* How file uploads work with Google Drive
-* How file uploads work with Dropbox
+## Public URL Handling
 
-Signatures & PDFs:
+If socialImageUrl is a relative path like:
 
-* How signatures work
-* How to finalize a submission and send PDF
+/social-share.png
 
-Billing & Plans:
+Convert it to absolute URL using APP_URL for metadata:
 
-* How plans and limits work
-* How to manage your subscription
+{APP_URL}/social-share.png
 
-Account & Security:
+Do not generate metadata with:
 
-* How to reset your password
-* How to verify your email
+* localhost in production
+* 127.0.0.1 in production
+* 0.0.0.0
+* internal Hostinger host
 
-Team & Staff:
-
-* How to invite staff members
-
-If creating article content is too much, seed categories only.
-
-## Public Help Center Design
-
-/help should be clean and support-focused.
-
-Sections:
-
-* hero/search area
-* category cards
-* featured/popular articles
-* contact support CTA
-
-Contact CTA:
-
-Still need help?
-
-Button:
-
-Contact Us
-
-Link:
-
-/contact
-
-If /contact is CMS page, use that. Otherwise use fallback contact page.
-
-## Contact CTA on Article Pages
-
-At the bottom of each article, show:
-
-Still need help?
-
-If you cannot find the answer, contact us and we’ll help.
-
-Button:
-
-Contact Us
-
-Link:
-
-/contact
-
-## SEO Metadata
-
-/help:
-
-Title:
-
-FormOS Help Center
-
-Description:
-
-Find answers and guides for using FormOS forms, agreements, signatures, uploads, billing, and team features.
-
-Category pages:
-
-Use category name/description.
-
-Article pages:
-
-Use metaTitle/metaDescription if available, otherwise title/excerpt.
-
-## Admin Knowledge Base List
-
-/admin/knowledge-base should show:
-
-* articles list
-* title
-* category
-* status
-* featured
-* sort order
-* updated date
-* edit button
-* public link if published
-
-Also include links/buttons:
-
-* New Article
-* Manage Categories
-
-## Category Admin Page
-
-/admin/knowledge-base/categories should show:
-
-* categories list
-* name
-* slug
-* status
-* article count
-* sort order
-* edit button
-
-## Archive/Delete Rules
-
-Preferred:
-
-* archive by setting status = ARCHIVED
-* hard delete optional with confirmation
-
-If category has articles:
-
-* block hard delete
-* suggest archive instead
-
-For MVP:
-
-* archive is enough
-
-## Menu / Header / Footer Integration
-
-Add Help Center link to public header/footer if practical.
-
-Footer should include:
-
-* Help Center
-* Blog
-* Privacy Policy
-* Terms
-* Contact
-
-Do not break CMS menu manager.
+Use existing APP_URL helper.
 
 ## Security
 
-* only SUPER_ADMIN can create/edit/archive categories/articles
-* public only sees published content
-* sanitize article content
-* do not expose admin data
-* do not expose secrets
-* do not allow arbitrary JS
+* Only SUPER_ADMIN can edit socialImageUrl.
+* Do not allow script injection.
+* Do not expose secrets.
+* Do not allow arbitrary HTML in settings.
+* Public pages should only read safe settings.
 
 ## Out of Scope
 
-Do not build live chat.
-Do not build support tickets.
-Do not build article feedback voting.
-Do not build comments.
-Do not build AI search.
-Do not build file attachments.
-Do not build rich media manager.
+Do not build media library.
+Do not build image upload/cropper.
+Do not build per-page social image.
+Do not build dynamic OG image generator.
+Do not change billing, forms, storage, PDF, email, or audit logic.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 30 is complete when:
+Milestone 31.1 is complete when:
 
-* KbCategory model exists.
-* KbArticle model exists.
-* Prisma migration exists.
-* /help exists.
-* /help shows search, categories, and articles.
-* /help/[categorySlug] exists.
-* /help/[categorySlug]/[articleSlug] exists.
-* Public only sees published content.
-* Draft/archived content is hidden publicly.
-* /admin/knowledge-base exists.
-* Super Admin can create/edit/publish/archive KB articles.
-* Super Admin can manage KB categories.
-* Slug generation works.
-* Slug uniqueness is enforced.
-* Content is sanitized before rendering.
-* Search works at least basically.
-* Contact Us CTA appears at bottom of Help Center/article pages.
-* Help Center link appears in public nav/footer where practical.
-* Existing blog still works.
-* Existing CMS pages still work.
-* Existing public website still works.
-* Existing dashboard/admin still works.
+* Super Admin Settings has Social Share Image URL / Path field.
+* Social image field appears in SEO section.
+* Social image setting persists.
+* Social image preview appears if configured.
+* Invalid unsafe URLs are rejected.
+* Landing page metadata uses socialImageUrl for Open Graph image.
+* Landing page metadata uses socialImageUrl for Twitter image.
+* Relative social image paths are converted to absolute URLs using APP_URL.
+* Metadata does not use localhost/0.0.0.0 in production.
+* Existing meta title/description still work.
+* Existing favicon/logo settings still work.
+* Existing public pages still build.
+* Existing dashboard/admin still work.
 * Existing forms/billing/storage/PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
-* npx prisma migrate dev –name add_knowledge_base creates migration.
 * npm run build passes.

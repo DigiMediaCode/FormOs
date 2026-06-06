@@ -73,6 +73,7 @@ model User {
   onboardingState UserOnboardingState?
   authTokens     AuthToken[]
   oauthAccounts  UserOAuthAccount[]
+  supportRequests SupportRequest[]
   ownedWorkspace Workspace?         @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   createdAt      DateTime           @default(now())
@@ -529,4 +530,28 @@ model BillingEvent {
   @@index([subscriptionId])
   @@index([customerId])
   @@index([status])
+}
+
+model SupportRequest {
+  id         String   @id @default(cuid())
+  userId     String?
+  name       String?
+  email      String
+  subject    String
+  message    String
+  category   String?
+  status     String   @default("OPEN")
+  priority   String   @default("NORMAL")
+  source     String   @default("CONTACT_FORM")
+  adminNotes String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  resolvedAt DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([category])
 }

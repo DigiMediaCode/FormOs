@@ -1,11 +1,26 @@
 import type { Metadata } from "next";
 import { getAppUrl } from "@/lib/app-url";
-import { getPlatformSettings } from "@/lib/platform/settings";
+import {
+  getAbsoluteSocialImageUrl,
+  getPlatformSettings,
+} from "@/lib/platform/settings";
 import "./globals.css";
 
 function safeAppUrl() {
   try {
-    return getAppUrl();
+    const appUrl = getAppUrl();
+    const hostname = new URL(appUrl).hostname;
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      (hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "0.0.0.0")
+    ) {
+      return "https://formos.com.au";
+    }
+
+    return appUrl;
   } catch {
     return "https://formos.com.au";
   }
@@ -15,6 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPlatformSettings();
   const appUrl = safeAppUrl();
   const adsenseClientId = settings.adsenseClientId.trim();
+  const socialImageUrl = getAbsoluteSocialImageUrl(settings, appUrl);
+  const openGraphImages = socialImageUrl ? [{ url: socialImageUrl }] : undefined;
+  const twitterImages = socialImageUrl ? [socialImageUrl] : undefined;
 
   return {
     metadataBase: new URL(appUrl),
@@ -41,13 +59,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: appUrl,
       siteName: settings.siteName,
       type: "website",
-      images: settings.logoUrl ? [{ url: settings.logoUrl }] : undefined,
+      images: openGraphImages,
     },
     twitter: {
       card: "summary_large_image",
       title: settings.metaTitle,
       description: settings.metaDescription,
-      images: settings.logoUrl ? [settings.logoUrl] : undefined,
+      images: twitterImages,
     },
     robots: {
       index: true,

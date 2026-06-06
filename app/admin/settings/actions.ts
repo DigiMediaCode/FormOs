@@ -21,11 +21,15 @@ export async function savePlatformSettingsAction(formData: FormData) {
   try {
     const logoFile = formData.get("logoFile");
     const faviconFile = formData.get("faviconFile");
+    const socialImageFile = formData.get("socialImageFile");
     if (logoFile instanceof File && logoFile.size > 0) {
       assertImageUpload(logoFile, "Logo");
     }
     if (faviconFile instanceof File && faviconFile.size > 0) {
       assertImageUpload(faviconFile, "Favicon");
+    }
+    if (socialImageFile instanceof File && socialImageFile.size > 0) {
+      assertImageUpload(socialImageFile, "Social share image");
     }
     const uploadedLogo =
       logoFile instanceof File && logoFile.size > 0
@@ -43,11 +47,21 @@ export async function savePlatformSettingsAction(formData: FormData) {
             createdById: user.id,
           })
         : null;
+    const uploadedSocialImage =
+      socialImageFile instanceof File && socialImageFile.size > 0
+        ? await saveMediaFile({
+            file: socialImageFile,
+            altText: "Platform social share image",
+            createdById: user.id,
+          })
+        : null;
 
     await updatePlatformSettings({
       siteName: String(formData.get("siteName") ?? ""),
       metaTitle: String(formData.get("metaTitle") ?? ""),
       metaDescription: String(formData.get("metaDescription") ?? ""),
+      socialImageUrl:
+        uploadedSocialImage?.publicPath ?? String(formData.get("socialImageUrl") ?? ""),
       logoUrl: uploadedLogo?.publicPath ?? String(formData.get("logoUrl") ?? ""),
       faviconUrl: uploadedFavicon?.publicPath ?? String(formData.get("faviconUrl") ?? ""),
       companyName: String(formData.get("companyName") ?? ""),

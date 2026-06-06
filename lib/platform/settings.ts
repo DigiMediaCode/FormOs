@@ -9,6 +9,7 @@ export type PlatformSettings = {
   siteName: string;
   metaTitle: string;
   metaDescription: string;
+  socialImageUrl: string;
   logoUrl: string;
   faviconUrl: string;
   companyName: string;
@@ -36,6 +37,7 @@ const PLATFORM_SETTING_KEYS = [
   "siteName",
   "metaTitle",
   "metaDescription",
+  "socialImageUrl",
   "logoUrl",
   "faviconUrl",
   "companyName",
@@ -90,6 +92,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   metaTitle: "FormOS — Online Form Builder",
   metaDescription:
     "Create online forms, agreements, signatures, file uploads, and completed PDFs with FormOS.",
+  socialImageUrl: "",
   logoUrl: defaultLogoUrl(),
   faviconUrl: defaultFaviconUrl(),
   companyName: "DigiMedia Code LLC",
@@ -131,7 +134,7 @@ function readSettingNumber(value: unknown, fallback: number) {
 }
 
 function hasHtmlOrScript(value: string) {
-  return /<[^>]*>|javascript:/i.test(value);
+  return /<[^>]*>|javascript:|data:/i.test(value);
 }
 
 function isSafeSettingText(value: string) {
@@ -167,8 +170,12 @@ export function isSafePublicUrlOrPath(value: string) {
     return true;
   }
 
+  if (hasHtmlOrScript(trimmed)) {
+    return false;
+  }
+
   if (trimmed.startsWith("/")) {
-    return !trimmed.startsWith("//") && !trimmed.includes("\\");
+    return !trimmed.startsWith("//") && !trimmed.includes("\\") && !/[\s<>]/.test(trimmed);
   }
 
   try {
@@ -227,6 +234,7 @@ export async function updatePlatformSettings(input: PlatformSettings) {
     metaTitle: input.metaTitle.trim() || DEFAULT_PLATFORM_SETTINGS.metaTitle,
     metaDescription:
       input.metaDescription.trim() || DEFAULT_PLATFORM_SETTINGS.metaDescription,
+    socialImageUrl: input.socialImageUrl.trim(),
     logoUrl: input.logoUrl.trim(),
     faviconUrl: input.faviconUrl.trim(),
     companyName: input.companyName.trim(),
@@ -261,6 +269,12 @@ export async function updatePlatformSettings(input: PlatformSettings) {
 
   if (!isSafePublicUrlOrPath(nextSettings.faviconUrl)) {
     throw new Error("Favicon URL must be a path starting with / or a valid HTTPS URL.");
+  }
+
+  if (!isSafePublicUrlOrPath(nextSettings.socialImageUrl)) {
+    throw new Error(
+      "Social share image URL must be empty, a path starting with /, or a valid HTTPS URL.",
+    );
   }
 
   for (const key of [
@@ -326,4 +340,33 @@ export function getRenderablePlatformLogoUrl(settings: Pick<PlatformSettings, "l
 
   const fallbackLogoUrl = defaultLogoUrl();
   return fallbackLogoUrl || "";
+}
+
+export function getAbsolutePublicUrl(pathOrUrl: string, appUrl: string) {
+  const trimmed = pathOrUrl.trim();
+
+  if (!trimmed || !isSafePublicUrlOrPath(trimmed)) {
+    return "";
+  }
+
+  if (trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  if (process.env.NODE_ENV !== "production" && trimmed.startsWith("http://")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("/")) {
+    return new URL(trimmed, `${appUrl.replace(/\/+$/, "")}/`).toString();
+  }
+
+  return "";
+}
+
+export function getAbsoluteSocialImageUrl(
+  settings: Pick<PlatformSettings, "socialImageUrl">,
+  appUrl: string,
+) {
+  return getAbsolutePublicUrl(settings.socialImageUrl, appUrl);
 }

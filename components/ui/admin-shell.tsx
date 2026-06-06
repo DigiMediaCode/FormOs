@@ -12,6 +12,7 @@ import {
   Image,
   LayoutDashboard,
   Mail,
+  MessageSquare,
   Settings,
   Users,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const ADMIN_NAV_ITEMS = [
   { href: "/admin/knowledge-base", label: "Knowledge Base", icon: CircleHelp },
   { href: "/admin/media", label: "Media", icon: Image },
   { href: "/admin/email-notifications", label: "Emails", icon: Mail },
+  { href: "/admin/support", label: "Support", icon: MessageSquare },
   { href: "/admin/plans", label: "Plans", icon: CreditCard },
   { href: "/admin/billing/events", label: "Billing Events", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },

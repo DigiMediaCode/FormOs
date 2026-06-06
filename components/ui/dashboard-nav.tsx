@@ -7,6 +7,7 @@ import {
   Brush,
   FileText,
   Gauge,
+  HelpCircle,
   Plug,
   Users,
 } from "lucide-react";
@@ -45,6 +46,11 @@ const NAV_ITEMS = [
     label: "Branding",
     ownerOnly: true,
     icon: Brush,
+  },
+  {
+    href: "/help",
+    label: "Support / Help",
+    icon: HelpCircle,
   },
 ];
 

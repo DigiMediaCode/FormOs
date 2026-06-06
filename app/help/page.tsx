@@ -6,6 +6,7 @@ import { PublicHeader } from "@/components/public/public-header";
 import {
   getPublishedKbArticles,
   getPublishedKbCategories,
+  seedDefaultKbContentIfMissing,
 } from "@/lib/knowledge-base/articles";
 
 type HelpPageProps = {
@@ -33,11 +34,21 @@ function formatDate(date: Date | null | undefined) {
 export default async function HelpPage({ searchParams }: HelpPageProps) {
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
-  const [categories, articles, featuredArticles] = await Promise.all([
+  let [categories, articles, featuredArticles] = await Promise.all([
     getPublishedKbCategories(),
     getPublishedKbArticles({ q: query || undefined }),
     getPublishedKbArticles({ featured: true, take: 6 }),
   ]);
+
+  if (!query && categories.length === 0 && articles.length === 0) {
+    await seedDefaultKbContentIfMissing();
+    [categories, articles, featuredArticles] = await Promise.all([
+      getPublishedKbCategories(),
+      getPublishedKbArticles(),
+      getPublishedKbArticles({ featured: true, take: 6 }),
+    ]);
+  }
+
   const visibleArticles = query ? articles : featuredArticles.length ? featuredArticles : articles.slice(0, 6);
 
   return (
@@ -140,7 +151,7 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
                         </p>
                       ) : null}
                       <p className="mt-2 text-xs text-slate-500">
-                        {article.category?.name} · {formatDate(article.publishedAt ?? article.updatedAt)}
+                        {article.category?.name} - {formatDate(article.publishedAt ?? article.updatedAt)}
                       </p>
                     </div>
                     <ArrowRight className="mt-1 size-4 shrink-0 text-slate-400" />

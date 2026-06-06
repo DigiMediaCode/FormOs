@@ -14,7 +14,7 @@ import {
 } from "@/app/admin/knowledge-base/actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
-import { seedDefaultKbCategoriesIfMissing } from "@/lib/knowledge-base/articles";
+import { seedDefaultKbContentIfMissing } from "@/lib/knowledge-base/articles";
 import { prisma } from "@/lib/prisma";
 
 type AdminKbPageProps = {
@@ -51,7 +51,7 @@ export default async function AdminKnowledgeBasePage({
   searchParams,
 }: AdminKbPageProps) {
   await requireSuperAdmin();
-  await seedDefaultKbCategoriesIfMissing();
+  await seedDefaultKbContentIfMissing();
   const { error, success } = await searchParams;
   const articles = await prisma.kbArticle.findMany({
     orderBy: [{ updatedAt: "desc" }],
@@ -79,11 +79,11 @@ export default async function AdminKnowledgeBasePage({
             <form action={seedKbCategoriesAction}>
               <SubmitButton
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
-                pendingText="Checking categories..."
+                pendingText="Checking content..."
                 showStatus={false}
               >
                 <Sparkles className="size-4 text-blue-600" />
-                Seed Categories
+                Seed Content
               </SubmitButton>
             </form>
             <Link

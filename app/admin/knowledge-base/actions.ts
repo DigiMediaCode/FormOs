@@ -8,7 +8,7 @@ import {
   assertKbCategorySlugAvailable,
   kbArticleDataFromForm,
   kbCategoryDataFromForm,
-  seedDefaultKbCategoriesIfMissing,
+  seedDefaultKbContentIfMissing,
 } from "@/lib/knowledge-base/articles";
 import { prisma } from "@/lib/prisma";
 
@@ -38,10 +38,10 @@ function revalidateKbPaths(slug?: string, categorySlug?: string) {
 
 export async function seedKbCategoriesAction() {
   await requireSuperAdmin();
-  await seedDefaultKbCategoriesIfMissing();
+  await seedDefaultKbContentIfMissing();
 
   revalidateKbPaths();
-  redirectTo(ADMIN_KB_PATH, "success", "Default knowledge base categories checked.");
+  redirectTo(ADMIN_KB_PATH, "success", "Default knowledge base content checked.");
 }
 
 export async function createKbCategoryAction(formData: FormData) {

@@ -193,6 +193,40 @@ export default async function AdminSettingsPage({
                 name="metaDescription"
               />
             </label>
+            <TextField
+              defaultValue={settings.socialImageUrl}
+              help="Recommended size: 1200 x 630 px. Used for social sharing previews on Facebook, LinkedIn, WhatsApp, and X."
+              label="Social Share Image URL / Path"
+              name="socialImageUrl"
+              placeholder="/media/... or https://example.com/social-share.png"
+            />
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Upload Social Share Image
+                <input
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
+                  name="socialImageFile"
+                  type="file"
+                />
+                <span className="text-[11px] font-normal leading-4 text-slate-500">
+                  Uploading saves the image to the Media Library and replaces the
+                  social image path.
+                </span>
+              </label>
+              {settings.socialImageUrl ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">
+                    Preview
+                  </p>
+                  <img
+                    alt="Social share preview"
+                    className="aspect-[1200/630] w-full rounded-lg border border-slate-200 bg-white object-cover"
+                    src={settings.socialImageUrl}
+                  />
+                </div>
+              ) : null}
+            </div>
           </Section>
 
           <Section icon={Building2} title="Company / Footer">
