@@ -50,6 +50,7 @@ const booleanOverrideFields = [
   ["allowCustomBranding", "Custom branding"],
   ["allowTeamMembers", "Team members"],
   ["allowAdFreeForms", "Ad-free public forms"],
+  ["allowEmbeds", "Form embeds"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

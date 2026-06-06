@@ -24,6 +24,7 @@ export type PlanLimits = {
   allowCustomBranding: boolean;
   allowTeamMembers: boolean;
   allowAdFreeForms: boolean;
+  allowEmbeds: boolean;
   maxTeamMembers: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
 };
@@ -66,6 +67,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowCustomBranding",
   "allowTeamMembers",
   "allowAdFreeForms",
+  "allowEmbeds",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -80,6 +82,7 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowCustomBranding: true,
   allowTeamMembers: true,
   allowAdFreeForms: true,
+  allowEmbeds: true,
   maxTeamMembers: null,
   allowedFieldTypes: null,
 };
@@ -127,6 +130,7 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowCustomBranding: false,
     allowTeamMembers: false,
     allowAdFreeForms: false,
+    allowEmbeds: true,
     maxTeamMembers: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
@@ -167,6 +171,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowCustomBranding: false,
       allowTeamMembers: false,
       allowAdFreeForms: true,
+      allowEmbeds: true,
       maxTeamMembers: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
@@ -193,6 +198,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowCustomBranding: false,
       allowTeamMembers: false,
       allowAdFreeForms: true,
+      allowEmbeds: true,
       maxTeamMembers: 0,
       allowedFieldTypes: null,
     },
@@ -219,6 +225,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowCustomBranding: true,
       allowTeamMembers: true,
       allowAdFreeForms: true,
+      allowEmbeds: true,
       maxTeamMembers: 5,
       allowedFieldTypes: null,
     },
@@ -371,7 +378,8 @@ export async function seedDefaultPlansIfMissing() {
           "allowedFieldTypes" in plan.limits &&
             "allowTeamMembers" in plan.limits &&
           "maxTeamMembers" in plan.limits &&
-          "allowAdFreeForms" in plan.limits
+          "allowAdFreeForms" in plan.limits &&
+          "allowEmbeds" in plan.limits
         ) {
           return Promise.resolve();
         }
@@ -393,6 +401,7 @@ export async function seedDefaultPlansIfMissing() {
               allowTeamMembers: defaults.limits.allowTeamMembers,
               maxTeamMembers: defaults.limits.maxTeamMembers,
               allowAdFreeForms: defaults.limits.allowAdFreeForms,
+              allowEmbeds: defaults.limits.allowEmbeds,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -643,6 +652,7 @@ export function featureLabels(limits: PlanLimits) {
     { label: "Custom branding", allowed: limits.allowCustomBranding },
     { label: "Team members", allowed: limits.allowTeamMembers },
     { label: "Ad-free public forms", allowed: limits.allowAdFreeForms },
+    { label: "Form embeds", allowed: limits.allowEmbeds },
   ];
 }
 

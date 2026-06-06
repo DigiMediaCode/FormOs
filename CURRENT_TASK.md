@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 31.1: Social Share Image / Open Graph Settings
+# CURRENT TASK — FormOS Milestone 32: Form Embed System Foundation
 
 ## Project Context
 
@@ -7,196 +7,404 @@ FormOS is a standalone SaaS-style form builder project.
 Current state:
 
 * FormOS MVP foundation is live and working.
-* Super Admin Settings exist.
-* Super Admin can edit site name, logo, favicon, meta title, and meta description.
-* CMS Pages, Blog, Knowledge Base, Contact/Support, billing, forms, public forms, storage, PDF, email, and audit features exist.
+* Auth/signup/login works.
+* Google + Lark OAuth login works.
+* CMS Pages, Blog, Knowledge Base, and Support system exist.
+* Dynamic plans, quota overrides, field type controls, and billing exist.
+* Stripe billing works.
+* Super Admin exists.
+* Forms, builder, public forms, QR, submissions, storage integrations, office fields, PDF generation, email, and audit timeline work.
+* Google Drive and Dropbox uploads work.
+* Public forms are accessible at /f/{formId}.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Add a Social Share Image / Open Graph Image setting in Super Admin SEO settings.
+Add form embed functionality so FormOS users can embed their forms into external websites.
 
-This image should be used when the FormOS website URL is shared on social platforms such as Facebook, LinkedIn, WhatsApp, X/Twitter, and other apps that read Open Graph metadata.
+This should support:
 
-## User Need
+* generic website iframe embed
+* JavaScript embed snippet with better auto-height behaviour
+* future WordPress plugin
+* future Shopify app/block
 
-In Super Admin Settings, where Meta Title and Meta Description are configured, add a new field:
-
-* Social Share Image URL / Path
-
-This should control the image used in social previews.
-
-Example:
-
-* /social-share.png
-* /og-image.png
-* https://example.com/social-share.png
+This milestone should create the embed foundation cleanly.
 
 ## Important Direction
 
-Do not build a full media manager in this milestone.
+Start with a secure iframe-based embed.
 
-Do not build image cropper.
+Add JavaScript auto-height support if practical.
 
-Do not build image upload unless it is already simple and safe.
+Do not build WordPress plugin in this milestone.
 
-For MVP, use URL/path input.
+Do not build Shopify app in this milestone.
 
-If upload is already available and simple, it can be added, but URL/path is enough.
+But design the embed system so WordPress and Shopify can reuse it later.
 
-## Settings To Add
+## Product Behaviour
 
-Add platform setting:
+A form owner should be able to:
 
-* socialImageUrl
+1. Open a form detail page.
+2. See an Embed section.
+3. Copy iframe embed code.
+4. Copy JavaScript embed code if implemented.
+5. Configure basic embed settings.
+6. Paste the embed code into an external website.
+7. Visitors can submit the embedded form.
+8. Embedded submissions behave the same as normal public submissions.
 
-Display label:
+## Where To Add UI
 
-Social Share Image URL / Path
+Add embed UI to:
 
-Helper text:
+* /dashboard/forms/[formId]
 
-Recommended size: 1200 × 630 px. Used for social sharing previews on platforms like Facebook, LinkedIn, WhatsApp, and X.
+Optional if useful:
 
-## Super Admin UI
+* /dashboard/forms/[formId]/builder
 
-Update:
+Main required location:
 
-* /admin/settings
+* /dashboard/forms/[formId]
 
-In the SEO section, show:
+## Embed Section UI
 
-* Meta Title
-* Meta Description
-* Social Share Image URL / Path
+Create a card/section:
 
-If socialImageUrl exists, show small preview image.
+Embed Form
 
-Preview should be safe and not break layout.
+Show:
 
-## Validation
+* Embed status
+* iframe embed code
+* Copy iframe code button
+* JavaScript embed code if implemented
+* Copy JS embed code button
+* Preview button
+* Embed settings
 
-Validate socialImageUrl:
+## Embed URL
 
-Allow:
+Create a dedicated embed route:
 
-* paths starting with /
-* https:// URLs
-* http:// URLs only in development if current validation already supports it
+* /embed/forms/[formId]
 
-Reject:
+This route should render the form in embedded mode.
 
-* javascript: URLs
-* data: URLs
-* script tags
-* HTML
-* empty is allowed
+Do not use the normal /f/{formId} route directly inside iframe if it has public page branding/header/footer that is not suitable for embed.
 
-Return friendly error if invalid.
+Embedded form page should:
 
-## Metadata Application
+* show the form only
+* no landing page header
+* no public site footer
+* minimal FormOS branding depending on plan
+* responsive width
+* clean inside iframe
 
-Use socialImageUrl in public metadata where practical.
+## Embed Code
 
-Apply to:
+iframe Embed Code
 
-* landing page /
-* pricing page if exists
-* CMS pages if no page-specific image exists
-* blog pages if no post-specific image exists
-* knowledge base pages if no article-specific image exists
+Generate code like:
 
-At minimum, apply to the landing page/global metadata.
+```html
+<iframe
+  src="{APP_URL}/embed/forms/{formId}"
+  width="100%"
+  height="800"
+  frameborder="0"
+  style="border:0; width:100%; min-height:800px;"
+  loading="lazy"
+></iframe>
+```
 
-Metadata should include:
+Use APP_URL.
 
-Open Graph:
+Do not use:
 
-* og:title
-* og:description
-* og:image
-
-Twitter/X:
-
-* twitter:card = summary_large_image
-* twitter:title
-* twitter:description
-* twitter:image
-
-Use existing metaTitle and metaDescription settings.
-
-Fallback:
-
-If socialImageUrl is missing, do not break metadata.
-
-If logoUrl exists but socialImageUrl is missing, do not automatically use small logo as og:image unless the implementation already does so safely. Social image should ideally be wide 1200x630.
-
-## Page-Level Future Compatibility
-
-Do not overbuild now, but keep helper structure flexible.
-
-Future pages may have their own social image:
-
-* CMS page social image
-* Blog post social image
-* Knowledge base article social image
-
-For now, global socialImageUrl is enough.
-
-## Public URL Handling
-
-If socialImageUrl is a relative path like:
-
-/social-share.png
-
-Convert it to absolute URL using APP_URL for metadata:
-
-{APP_URL}/social-share.png
-
-Do not generate metadata with:
-
-* localhost in production
-* 127.0.0.1 in production
+* localhost
+* 127.0.0.1
 * 0.0.0.0
 * internal Hostinger host
 
-Use existing APP_URL helper.
+JavaScript Embed Code
 
-## Security
+If practical, also generate:
 
-* Only SUPER_ADMIN can edit socialImageUrl.
-* Do not allow script injection.
-* Do not expose secrets.
-* Do not allow arbitrary HTML in settings.
-* Public pages should only read safe settings.
+```html
+<div data-formos-form="{formId}"></div>
+<script src="{APP_URL}/embed.js" async></script>
+```
+
+The script should:
+
+* find [data-formos-form]
+* create iframe
+* set iframe src to /embed/forms/{formId}
+* set width 100%
+* set safe default height
+* optionally listen for postMessage resize events from iframe
+* update iframe height when embedded form posts height
+
+If JS embed is too much, iframe embed is required and JS embed can be done as a follow-up.
+
+Preferred: implement both if safe.
+
+## Auto Height / postMessage
+
+If JavaScript embed is implemented:
+
+* embedded form can send height to parent using postMessage
+* parent embed.js listens for message from FormOS origin only
+* parent updates iframe height
+
+Security:
+
+* validate message origin
+* validate message type
+* validate formId
+* validate height is a reasonable number
+* do not allow arbitrary message actions
+
+Message shape:
+
+```json
+{
+  "type": "FORMOS_EMBED_HEIGHT",
+  "formId": "…",
+  "height": 1234
+}
+```
+
+## Embed Settings
+
+Add settings stored in Form.settings or a clean embedSettings object.
+
+Suggested settings:
+
+```json
+{
+  "embedSettings": {
+    "enabled": true,
+    "showBranding": true,
+    "background": "transparent",
+    "maxWidth": "720px",
+    "height": 800
+  }
+}
+```
+
+For MVP, keep settings simple:
+
+* Enable embed
+* Show FormOS branding
+* Default height
+
+If settings UI is too much, default embed enabled for published forms and add basic values.
+
+## Public Access Rules
+
+Embedded forms should follow the same access rules as public forms:
+
+* only PUBLISHED forms can be embedded
+* DRAFT forms show unavailable message
+* ARCHIVED forms show unavailable message
+* plan submission limits apply
+* field type restrictions and form validation remain server-side
+* storage provider rules remain unchanged
+* office-only fields remain hidden
+* display-only fields render safely
+
+## Plan / Package Controls
+
+Add plan permission:
+
+allowEmbeds: boolean
+
+Default suggested:
+
+Free:
+
+* allowEmbeds: true
+
+Starter:
+
+* allowEmbeds: true
+
+Pro:
+
+* allowEmbeds: true
+
+Business:
+
+* allowEmbeds: true
+
+Why allow Free? Because embeds can be a growth feature, and ads can still show for free users if ad-free is not allowed.
+
+However, the plan system should support disabling embeds later.
+
+Update plan editor and user quota override UI to support:
+
+* Allow form embeds
+
+If allowEmbeds is false:
+
+* hide/disable embed section
+* show upgrade message
+* embedded route should block with friendly message
+
+Server-side enforcement required.
+
+## Ads / Branding In Embedded Forms
+
+Embedded forms should follow current ad/ad-free rules.
+
+If owner plan is not ad-free and platform public form ads are enabled:
+
+* ads may show inside embedded form
+* same safe placement rules as public form
+* do not place ads near submit/signature/upload controls
+
+Branding:
+
+If showBranding true or plan requires branding:
+
+* show subtle “Powered by FormOS”
+
+If plan allows custom/ad-free branding later:
+
+* hide branding if allowed and setting disabled
+
+For now, keep existing FormOS branding behaviour consistent.
+
+## Security Headers / iframe Support
+
+Since forms must be embeddable, make sure security headers do not block embed route.
+
+If the app currently uses X-Frame-Options: DENY globally, embeds will fail.
+
+Adjust carefully:
+
+* Do not remove protection blindly for entire app.
+* Allow iframe embedding only for /embed/forms/[formId] if possible.
+* Dashboard/admin routes should remain protected from iframe embedding.
+* Avoid allowing admin/dashboard in iframes.
+
+If using CSP frame-ancestors, configure carefully.
+
+For MVP:
+
+* ensure /embed/forms/[formId] can be iframe embedded
+* admin/dashboard should not be embeddable
+
+## CORS / Cross-Origin
+
+Iframe embeds usually do not need CORS.
+
+If using embed.js:
+
+* script must be publicly accessible
+* no secrets exposed
+* it should only create iframe and handle resize
+
+Do not expose private API endpoints.
+
+## WordPress / Shopify Future Compatibility
+
+Design with future apps in mind.
+
+Future WordPress plugin should be able to use:
+
+* form ID
+* iframe embed URL
+* JS embed URL
+
+Future Shopify app/block should be able to use:
+
+* form ID
+* embed URL
+* script URL
+
+Do not hardcode website-specific assumptions.
+
+Keep embed code generic.
+
+## User Instructions
+
+In embed card, show short instructions:
+
+1. Copy the embed code.
+2. Paste it into your website HTML.
+3. Publish your website.
+4. Form submissions will appear in your FormOS dashboard.
+
+For WordPress/Shopify:
+
+Show small note:
+
+WordPress and Shopify apps are coming soon. For now, use the iframe embed code.
+
+## Submission Source Tracking
+
+Update public submission metadata if practical.
+
+When submitted from embed route, store:
+
+metadata.source = “embed”
+
+When submitted from normal public route, store:
+
+metadata.source = “public_form”
+
+If iframe passes referrer, store safe referrer/origin if available.
+
+Do not store sensitive data.
 
 ## Out of Scope
 
-Do not build media library.
-Do not build image upload/cropper.
-Do not build per-page social image.
-Do not build dynamic OG image generator.
-Do not change billing, forms, storage, PDF, email, or audit logic.
+Do not build WordPress plugin.
+Do not build Shopify app.
+Do not build embed analytics.
+Do not build domain allowlist yet unless simple.
+Do not build custom embed themes.
+Do not build per-form custom CSS.
+Do not build conditional logic.
+Do not change core submission logic beyond embed source handling.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 31.1 is complete when:
+Milestone 32 is complete when:
 
-* Super Admin Settings has Social Share Image URL / Path field.
-* Social image field appears in SEO section.
-* Social image setting persists.
-* Social image preview appears if configured.
-* Invalid unsafe URLs are rejected.
-* Landing page metadata uses socialImageUrl for Open Graph image.
-* Landing page metadata uses socialImageUrl for Twitter image.
-* Relative social image paths are converted to absolute URLs using APP_URL.
-* Metadata does not use localhost/0.0.0.0 in production.
-* Existing meta title/description still work.
-* Existing favicon/logo settings still work.
-* Existing public pages still build.
-* Existing dashboard/admin still work.
-* Existing forms/billing/storage/PDF/email/audit flows still work.
+* /embed/forms/[formId] exists.
+* Embedded form route renders published forms.
+* Embedded form route blocks draft/archived forms.
+* Embedded form route hides public site header/footer.
+* Embedded form submits successfully.
+* Embed submissions appear in dashboard.
+* Embed submissions use existing validation.
+* Embed submissions respect storage provider/upload rules.
+* Embed submissions hide office-only fields.
+* Embed section appears on form detail page.
+* iframe embed code is generated using APP_URL.
+* Copy iframe code button works.
+* JS embed code exists if implemented.
+* embed.js exists if implemented.
+* Auto-height works if implemented.
+* Plan limit allowEmbeds exists.
+* Plan editor can control allowEmbeds.
+* User quota override can control allowEmbeds.
+* Embed route/server-side logic respects allowEmbeds.
+* Dashboard/admin routes are not accidentally iframe-embeddable.
+* Embed route can be used inside iframe.
+* Existing public form route still works.
+* Existing QR code still works.
+* Existing Google Drive/Dropbox uploads still work.
+* Existing PDF/email/audit/billing flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
 * npm run build passes.

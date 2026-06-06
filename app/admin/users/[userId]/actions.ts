@@ -97,6 +97,7 @@ function readQuotaOverride(formData: FormData) {
     "allowCustomBranding",
     "allowTeamMembers",
     "allowAdFreeForms",
+    "allowEmbeds",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

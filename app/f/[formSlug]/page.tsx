@@ -272,7 +272,7 @@ function isAdSafeField(field: FormBuilderField) {
   ].includes(field.type);
 }
 
-function renderFieldsWithAds(
+export function renderFieldsWithAds(
   fields: FormBuilderField[],
   uploadsAvailable: boolean,
   options: {
@@ -326,7 +326,7 @@ function renderFieldsWithAds(
   return output;
 }
 
-function Message({
+export function Message({
   children,
   tone,
 }: {
@@ -345,7 +345,7 @@ function Message({
   );
 }
 
-function PoweredByFooter({
+export function PoweredByFooter({
   branding,
 }: {
   branding?: {

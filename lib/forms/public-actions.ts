@@ -70,6 +70,8 @@ type PublicFormSettings = {
   successMessage?: string;
 };
 
+type PublicSubmissionSource = "public_form" | "embed";
+
 type PublicFormSnapshot = {
   id: string;
   title: string;
@@ -140,8 +142,16 @@ function successMessageFor(settings: PublicFormSettings | null) {
   return settings?.successMessage?.trim() || DEFAULT_SUCCESS_MESSAGE;
 }
 
-function errorRedirect(formId: string, message: string): never {
-  redirect(`/f/${formId}?error=${encodeURIComponent(message)}`);
+function formReturnPath(formId: string, source: PublicSubmissionSource) {
+  return source === "embed" ? `/embed/forms/${formId}` : `/f/${formId}`;
+}
+
+function errorRedirect(
+  formId: string,
+  message: string,
+  source: PublicSubmissionSource,
+): never {
+  redirect(`${formReturnPath(formId, source)}?error=${encodeURIComponent(message)}`);
 }
 
 function isInputField(field: FormBuilderField) {
@@ -285,7 +295,48 @@ export async function getPublishedFormForPublicView(formId: string) {
   } satisfies PublicFormView;
 }
 
-export async function submitPublicForm(formId: string, formData: FormData) {
+export async function getEmbeddedFormForPublicView(formId: string) {
+  const form = await getPublishedFormForPublicView(formId);
+
+  if (!form) {
+    return {
+      form: null,
+      unavailableMessage: "This form is currently unavailable.",
+    };
+  }
+
+  const source = await prisma.form.findUnique({
+    where: { id: formId },
+    select: { ownerId: true },
+  });
+
+  if (!source) {
+    return {
+      form: null,
+      unavailableMessage: "This form is currently unavailable.",
+    };
+  }
+
+  const limits = await getUserEffectiveLimits(source.ownerId);
+
+  if (!limits.allowEmbeds) {
+    return {
+      form: null,
+      unavailableMessage: "This form cannot be embedded on the owner's current plan.",
+    };
+  }
+
+  return {
+    form,
+    unavailableMessage: null,
+  };
+}
+
+async function submitFormInternal(
+  formId: string,
+  formData: FormData,
+  source: PublicSubmissionSource,
+) {
   const form = await prisma.form.findUnique({
     where: {
       id: formId,
@@ -309,7 +360,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
   });
 
   if (!form || form.status !== FormStatus.PUBLISHED) {
-    errorRedirect(formId, "This form is not available.");
+    errorRedirect(formId, "This form is not available.", source);
   }
 
   const headerStore = await headers();
@@ -324,17 +375,26 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     errorRedirect(
       form.id,
       `Too many submissions from this connection. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
+      source,
     );
   }
 
   try {
     await assertCanReceiveSubmission(form.ownerId);
+    if (source === "embed") {
+      const limits = await getUserEffectiveLimits(form.ownerId);
+
+      if (!limits.allowEmbeds) {
+        throw new Error("This form cannot be embedded on the owner's current plan.");
+      }
+    }
   } catch (error) {
     errorRedirect(
       form.id,
       error instanceof Error
         ? error.message
         : "This form is temporarily unavailable.",
+      source,
     );
   }
 
@@ -369,12 +429,12 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       const value = String(formData.get(field.id) ?? "").trim();
 
       if (field.required && !value) {
-        errorRedirect(form.id, `${field.label || "Signature"} is required.`);
+        errorRedirect(form.id, `${field.label || "Signature"} is required.`, source);
       }
 
       if (value) {
         if (!isImageDataUrl(value)) {
-          errorRedirect(form.id, `${field.label || "Signature"} is invalid.`);
+          errorRedirect(form.id, `${field.label || "Signature"} is invalid.`, source);
         }
 
         submittedSignatures[field.id] = value;
@@ -391,12 +451,13 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           `${field.label || "File upload"} is required, but uploads are unavailable for this form.`,
+          source,
         );
       }
 
       if (!hasFile) {
         if (field.required) {
-          errorRedirect(form.id, `${field.label || "File upload"} is required.`);
+          errorRedirect(form.id, `${field.label || "File upload"} is required.`, source);
         }
 
         continue;
@@ -406,6 +467,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           `${field.label || "File upload"} cannot be uploaded because no upload storage provider is active.`,
+          source,
         );
       }
 
@@ -420,7 +482,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
           size: value.size,
           reason: validationError,
         });
-        errorRedirect(form.id, validationError);
+        errorRedirect(form.id, validationError, source);
       }
 
       logUploadDiagnostic("Accepted upload for storage provider transfer.", {
@@ -453,11 +515,11 @@ export async function submitPublicForm(formId: string, formData: FormData) {
 
     if (field.required) {
       if (field.type === "checkbox" && value !== true) {
-        errorRedirect(form.id, `${field.label || "A required field"} is required.`);
+        errorRedirect(form.id, `${field.label || "A required field"} is required.`, source);
       }
 
       if (field.type !== "checkbox" && value === "") {
-        errorRedirect(form.id, `${field.label || "A required field"} is required.`);
+        errorRedirect(form.id, `${field.label || "A required field"} is required.`, source);
       }
     }
 
@@ -475,8 +537,10 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       data: submittedData,
       signatures: submittedSignatures,
       metadata: {
+        source,
         userAgent: headerStore.get("user-agent"),
         ipAddress,
+        referrer: headerStore.get("referer")?.slice(0, 500) || null,
         submittedAt: new Date().toISOString(),
       },
     },
@@ -518,6 +582,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           "Uploads are unavailable because Google Drive is not connected.",
+          source,
         );
       }
 
@@ -613,6 +678,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           "File upload failed. Please contact the form owner.",
+          source,
         );
       }
     } else if (uploadProvider.activeProvider === StorageProvider.DROPBOX) {
@@ -627,6 +693,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           "Uploads are unavailable because Dropbox is not connected.",
+          source,
         );
       }
 
@@ -697,6 +764,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
         errorRedirect(
           form.id,
           "File upload failed. Please contact the form owner.",
+          source,
         );
       }
     } else {
@@ -708,6 +776,7 @@ export async function submitPublicForm(formId: string, formData: FormData) {
       errorRedirect(
         form.id,
         "Uploads are unavailable because no upload storage provider is active.",
+        source,
       );
     }
   }
@@ -720,5 +789,13 @@ export async function submitPublicForm(formId: string, formData: FormData) {
     submittedAt: submission.createdAt,
   });
 
-  redirect(`/f/${form.id}?success=${encodeURIComponent(successMessage)}`);
+  redirect(`${formReturnPath(form.id, source)}?success=${encodeURIComponent(successMessage)}`);
+}
+
+export async function submitPublicForm(formId: string, formData: FormData) {
+  await submitFormInternal(formId, formData, "public_form");
+}
+
+export async function submitEmbeddedForm(formId: string, formData: FormData) {
+  await submitFormInternal(formId, formData, "embed");
 }

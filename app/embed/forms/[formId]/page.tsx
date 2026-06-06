@@ -1,0 +1,139 @@
+import { GoogleAdSenseScript } from "@/components/ads/google-adsense-script";
+import { EmbedHeightScript } from "@/components/forms/embed-height-script";
+import {
+  PublicFormClient,
+  PublicFormDraftScript,
+} from "@/components/forms/public-form-client";
+import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
+import { SignatureCanvasBootstrapScript } from "@/components/forms/signature-canvas-bootstrap";
+import {
+  Message,
+  PoweredByFooter,
+  renderFieldsWithAds,
+} from "@/app/f/[formSlug]/page";
+import { isPublicField } from "@/lib/forms/fields";
+import {
+  getEmbeddedFormForPublicView,
+  submitEmbeddedForm,
+} from "@/lib/forms/public-actions";
+
+type EmbedFormPageProps = {
+  params: Promise<{
+    formId: string;
+  }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+  }>;
+};
+
+export default async function EmbedFormPage({
+  params,
+  searchParams,
+}: EmbedFormPageProps) {
+  const { formId } = await params;
+  const { error, success } = await searchParams;
+  const { form, unavailableMessage } = await getEmbeddedFormForPublicView(formId);
+
+  if (!form) {
+    return (
+      <main className="min-h-screen bg-transparent px-3 py-4 sm:px-4">
+        <EmbedHeightScript formId={formId} />
+        <section className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
+            FormOS
+          </p>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+            This form is currently unavailable.
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            {unavailableMessage || "Please contact the form owner if this is unexpected."}
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  const submitAction = submitEmbeddedForm.bind(null, form.id);
+  const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";
+  const publicFields = form.fields.filter(isPublicField);
+  const requiredFields = publicFields
+    .filter((field) => field.required)
+    .map((field) => ({
+      id: field.id,
+      label: field.label,
+      type: field.type,
+    }));
+  const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
+  const firstSignatureFieldId =
+    publicFields.find((field) => field.type === "signature")?.id ?? null;
+
+  return (
+    <main className="min-h-screen bg-transparent px-3 py-4 sm:px-4">
+      <GoogleAdSenseScript
+        adsEnabled={form.publicAds.enabled}
+        clientId={form.publicAds.adsenseClientId}
+      />
+      <PublicFormDraftScript clearDraft={Boolean(success)} formId={form.id} />
+      <SignatureCanvasBootstrapScript />
+      <EmbedHeightScript formId={form.id} />
+
+      <section className="mx-auto max-w-3xl">
+        <header
+          className="overflow-hidden rounded-2xl border border-t-4 border-slate-200 bg-white shadow-sm"
+          style={
+            form.branding?.primaryColor
+              ? { borderTopColor: form.branding.primaryColor }
+              : undefined
+          }
+        >
+          <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-5 py-6 text-center sm:px-7">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+              {form.title}
+            </h1>
+            {form.description ? (
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-700">
+                {form.description}
+              </p>
+            ) : null}
+          </div>
+        </header>
+
+        <div className="mt-4 flex flex-col gap-3">
+          {success ? <Message tone="success">{success}</Message> : null}
+          {error ? <Message tone="error">{error}</Message> : null}
+        </div>
+
+        <PublicFormClient
+          action={submitAction}
+          clearDraft={Boolean(success)}
+          formId={form.id}
+          requiredFields={requiredFields}
+        >
+          {publicFields.length > 0 ? (
+            renderFieldsWithAds(publicFields, form.uploadsAvailable, {
+              firstSignatureFieldId,
+              uploadProvider: form.uploadProvider,
+              publicAds: form.publicAds,
+            })
+          ) : (
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm leading-6 text-slate-700">
+                This form does not have fields yet.
+              </p>
+            </section>
+          )}
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <PublicFormSubmitControls
+              hasUploadFields={hasUploadFields}
+              submitButtonText={submitButtonText}
+            />
+          </section>
+        </PublicFormClient>
+      </section>
+
+      <PoweredByFooter branding={form.branding} />
+    </main>
+  );
+}

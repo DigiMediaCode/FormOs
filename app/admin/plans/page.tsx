@@ -48,6 +48,7 @@ const booleanLimitFields = [
   ["allowCustomBranding", "Custom branding"],
   ["allowTeamMembers", "Team members"],
   ["allowAdFreeForms", "Ad-free public forms"],
+  ["allowEmbeds", "Form embeds"],
 ] as const;
 
 function moneyValue(value: unknown) {

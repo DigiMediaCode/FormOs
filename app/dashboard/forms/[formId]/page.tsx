@@ -1,5 +1,6 @@
 import { FormMode, FormStatus } from "@prisma/client";
 import Link from "next/link";
+import { FormEmbedCard } from "@/components/forms/form-embed-card";
 import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
 import { PublicFormQrCard } from "@/components/forms/public-form-qr-card";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -48,6 +49,18 @@ export default async function FormDetailPage({
   const form = await getUserFormById(formId);
   const publicPath = `/f/${form.id}`;
   const publicFormUrl = `${getAppUrl()}${publicPath}`;
+  const embedPath = `/embed/forms/${form.id}`;
+  const embedUrl = `${getAppUrl()}${embedPath}`;
+  const iframeEmbedCode = `<iframe
+  src="${embedUrl}"
+  width="100%"
+  height="800"
+  frameborder="0"
+  style="border:0; width:100%; min-height:800px;"
+  loading="lazy"
+></iframe>`;
+  const jsEmbedCode = `<div data-formos-form="${form.id}"></div>
+<script src="${getAppUrl()}/embed.js" async></script>`;
   const isPublished = form.status === FormStatus.PUBLISHED;
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
@@ -107,6 +120,14 @@ export default async function FormDetailPage({
             QR codes are not included in your current plan.
           </section>
         )}
+
+        <FormEmbedCard
+          allowEmbeds={limits.allowEmbeds}
+          embedUrl={embedUrl}
+          iframeCode={iframeEmbedCode}
+          isPublished={isPublished}
+          jsCode={jsEmbedCode}
+        />
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>

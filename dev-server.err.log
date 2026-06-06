@@ -1,0 +1,49 @@
+⚠ Blocked cross-origin request to Next.js dev resource /_next/webpack-hmr from "raise-amenities-announces-definitions.trycloudflare.com".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['raise-amenities-announces-definitions.trycloudflare.com'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+[formos:lark-mail] Lark Mail sender token refresh failed. {}
+[formos:lark-email] Lark Mail sender is not connected. Connect Lark Mail in Settings / Integrations. { senderEmail: 'info@formso.com.au' }
+⨯ TypeError: Cannot read properties of undefined (reading 'upsert')
+    at seedDefaultKbCategoriesIfMissing (lib\knowledge-base\articles.ts:148:29)
+    at AdminKnowledgeBasePage (app\admin\knowledge-base\page.tsx:54:41)
+  146 |     const slug = slugifyKbTitle(name);
+  147 |
+> 148 |     await prisma.kbCategory.upsert({
+      |                             ^
+  149 |       where: { slug },
+  150 |       update: {},
+  151 |       create: { {
+  digest: '2894314529'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'upsert')
+    at seedDefaultKbCategoriesIfMissing (lib\knowledge-base\articles.ts:148:29)
+    at AdminKnowledgeBasePage (app\admin\knowledge-base\page.tsx:54:41)
+  146 |     const slug = slugifyKbTitle(name);
+  147 |
+> 148 |     await prisma.kbCategory.upsert({
+      |                             ^
+  149 |       where: { slug },
+  150 |       update: {},
+  151 |       create: { {
+  digest: '2894314529'
+}
+⨯ TypeError: Cannot read properties of undefined (reading 'upsert')
+    at seedDefaultKbCategoriesIfMissing (lib\knowledge-base\articles.ts:148:29)
+    at AdminKnowledgeBasePage (app\admin\knowledge-base\page.tsx:54:41)
+  146 |     const slug = slugifyKbTitle(name);
+  147 |
+> 148 |     await prisma.kbCategory.upsert({
+      |                             ^
+  149 |       where: { slug },
+  150 |       update: {},
+  151 |       create: { {
+  digest: '2894314529'
+}
