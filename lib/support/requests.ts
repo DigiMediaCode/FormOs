@@ -3,6 +3,7 @@ import "server-only";
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send-email";
 import { getPlatformSettings } from "@/lib/platform/settings";
+import { createSupportReplyToken } from "@/lib/support/reply-token";
 
 export const SUPPORT_CATEGORIES = [
   "General Question",
@@ -140,6 +141,11 @@ export async function sendSupportReplyEmail(input: {
   status: string;
 }) {
   const appUrl = getAppUrl();
+  const replyToken = createSupportReplyToken({
+    requestId: input.requestId,
+    email: input.recipientEmail,
+  });
+  const replyUrl = `${appUrl}/support/reply?token=${encodeURIComponent(replyToken)}`;
   const safeName = input.recipientName || "there";
   const text = [
     `Hi ${safeName},`,
@@ -149,6 +155,9 @@ export async function sendSupportReplyEmail(input: {
     `Support request: ${input.subject}`,
     `Request ID: ${input.requestId}`,
     `Status: ${input.status}`,
+    "",
+    "Reply to this support request:",
+    replyUrl,
     "",
     "Regards,",
     "FormOS Support",
@@ -162,12 +171,67 @@ export async function sendSupportReplyEmail(input: {
     <p><strong>Support request:</strong> ${escapeHtml(input.subject)}</p>
     <p><strong>Request ID:</strong> ${escapeHtml(input.requestId)}</p>
     <p><strong>Status:</strong> ${escapeHtml(input.status)}</p>
+    <p><a href="${escapeHtml(replyUrl)}">Reply to this support request</a></p>
     <p>Regards,<br />FormOS Support</p>
   `;
 
   const result = await sendEmail({
     to: input.recipientEmail,
     subject: `Re: ${input.subject}`,
+    text,
+    html,
+  });
+
+  return {
+    ok: result.ok,
+    reason: result.error,
+  };
+}
+
+export async function sendSupportCustomerReplyNotification(input: {
+  requestId: string;
+  customerName: string | null;
+  customerEmail: string;
+  subject: string;
+  message: string;
+}) {
+  const recipient = await getSupportRecipientEmail();
+
+  if (!recipient) {
+    return {
+      ok: false,
+      reason: "No support recipient configured.",
+    };
+  }
+
+  const appUrl = getAppUrl();
+  const adminUrl = `${appUrl}/admin/support/${input.requestId}`;
+  const safeName = input.customerName || "Customer";
+  const text = [
+    `New customer reply: ${input.subject}`,
+    "",
+    `Request ID: ${input.requestId}`,
+    `Name: ${safeName}`,
+    `Email: ${input.customerEmail}`,
+    "",
+    "Reply:",
+    input.message,
+    "",
+    `Admin link: ${adminUrl}`,
+  ].join("\n");
+  const html = `
+    <h2>New customer support reply</h2>
+    <p><strong>Request ID:</strong> ${escapeHtml(input.requestId)}</p>
+    <p><strong>Name:</strong> ${escapeHtml(safeName)}</p>
+    <p><strong>Email:</strong> ${escapeHtml(input.customerEmail)}</p>
+    <h3>Reply</h3>
+    <p>${escapeHtml(input.message).replace(/\n/g, "<br />")}</p>
+    <p><a href="${escapeHtml(adminUrl)}">Open support request in FormOS Admin</a></p>
+  `;
+
+  const result = await sendEmail({
+    to: recipient,
+    subject: `Customer replied: ${input.subject}`,
     text,
     html,
   });
