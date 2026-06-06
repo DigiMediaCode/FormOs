@@ -4,9 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  BookOpen,
   CreditCard,
   FileText,
+  Files,
+  Image,
   LayoutDashboard,
+  Mail,
   Settings,
   Users,
 } from "lucide-react";
@@ -15,6 +19,10 @@ const ADMIN_NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/forms", label: "Forms", icon: FileText },
+  { href: "/admin/pages", label: "Pages", icon: Files },
+  { href: "/admin/blog", label: "Blog", icon: BookOpen },
+  { href: "/admin/media", label: "Media", icon: Image },
+  { href: "/admin/email-notifications", label: "Emails", icon: Mail },
   { href: "/admin/plans", label: "Plans", icon: CreditCard },
   { href: "/admin/billing/events", label: "Billing Events", icon: BarChart3 },
   { href: "/admin/settings", label: "Settings", icon: Settings },

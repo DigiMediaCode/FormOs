@@ -1,11 +1,31 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
+import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
 
 export const metadata: Metadata = {
   title: "Terms of Service | FormOS",
 };
 
-export default function TermsOfServicePage() {
+export default async function TermsOfServicePage() {
+  const cmsPage = await getPublishedCmsPage("terms-of-service");
+
+  if (cmsPage) {
+    const html = renderCmsContent(cmsPage.content);
+
+    return (
+      <LegalPageLayout
+        description={cmsPage.excerpt ?? "The terms that apply when using FormOS."}
+        title={cmsPage.title}
+      >
+        {html ? (
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <p>This page is being updated.</p>
+        )}
+      </LegalPageLayout>
+    );
+  }
+
   return (
     <LegalPageLayout
       description="The terms that apply when using FormOS to create forms and signed workflows."

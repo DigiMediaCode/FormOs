@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { PlatformBrand } from "@/components/ui/platform-brand";
+import { getCmsFooterPages } from "@/lib/cms/pages";
 import { getPlatformSettings } from "@/lib/platform/settings";
 
 export async function PublicFooter() {
-  const settings = await getPlatformSettings();
+  const [settings, cmsPages] = await Promise.all([
+    getPlatformSettings(),
+    getCmsFooterPages(),
+  ]);
 
   return (
     <footer className="border-t border-blue-100 bg-white px-5 py-10 sm:px-8">
@@ -29,6 +33,7 @@ export async function PublicFooter() {
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
             <Link className="hover:text-blue-600" href="/#features">Features</Link>
             <Link className="hover:text-blue-600" href="/#use-cases">Use Cases</Link>
+            <Link className="hover:text-blue-600" href="/blog">Blog</Link>
             <Link className="hover:text-blue-600" href="/pricing">Pricing</Link>
             <Link className="hover:text-blue-600" href="/login">Login</Link>
             <Link className="hover:text-blue-600" href="/signup">Signup</Link>
@@ -41,6 +46,25 @@ export async function PublicFooter() {
             <Link className="hover:text-blue-600" href={settings.termsUrl}>Terms</Link>
             <Link className="hover:text-blue-600" href={settings.dataSecurityUrl}>Data Security</Link>
             <Link className="hover:text-blue-600" href={settings.contactUrl}>Contact</Link>
+            {cmsPages
+              .filter(
+                (page) =>
+                  ![
+                    "privacy-policy",
+                    "terms-of-service",
+                    "data-security",
+                    "contact",
+                  ].includes(page.slug),
+              )
+              .map((page) => (
+                <Link
+                  className="hover:text-blue-600"
+                  href={`/p/${page.slug}`}
+                  key={page.id}
+                >
+                  {page.menuLabel || page.title}
+                </Link>
+              ))}
           </div>
         </div>
       </div>

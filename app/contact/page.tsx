@@ -1,11 +1,31 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
+import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
 
 export const metadata: Metadata = {
   title: "Contact | FormOS",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const cmsPage = await getPublishedCmsPage("contact");
+
+  if (cmsPage) {
+    const html = renderCmsContent(cmsPage.content);
+
+    return (
+      <LegalPageLayout
+        description={cmsPage.excerpt ?? "Need help with FormOS? Contact the support team."}
+        title={cmsPage.title}
+      >
+        {html ? (
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <p>This page is being updated.</p>
+        )}
+      </LegalPageLayout>
+    );
+  }
+
   return (
     <LegalPageLayout
       description="Need help with FormOS? Contact the support team."

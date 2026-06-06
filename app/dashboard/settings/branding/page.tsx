@@ -87,13 +87,37 @@ export default async function BrandingPage({ searchParams }: BrandingPageProps) 
                   className={inputClass()}
                   defaultValue={branding.logoUrl}
                   name="logoUrl"
-                  placeholder="/formos-logo-v2.png or https://example.com/logo.png"
+                  placeholder="/media/... or https://example.com/logo.png"
                 />
                 <span className="text-xs leading-5 text-slate-500">
-                  Use a public path starting with / or an HTTPS URL. Local public
-                  files must exist under the FormOS public folder.
+                  Use a Media Library path starting with /media/... or an HTTPS URL.
                 </span>
               </label>
+
+              <div className="grid gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <label className="flex flex-col gap-2 text-sm font-medium text-blue-950">
+                  Upload Logo
+                  <input
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="rounded-md border border-blue-100 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
+                    name="logoFile"
+                    type="file"
+                  />
+                  <span className="text-xs font-normal leading-5 text-blue-800">
+                    Uploading saves the image to the FormOS Media Library and replaces
+                    the Logo URL automatically.
+                  </span>
+                </label>
+                {branding.logoUrl ? (
+                  <div className="flex h-20 w-36 items-center justify-center rounded-lg border border-blue-100 bg-white p-2">
+                    <img
+                      alt="Current workspace logo"
+                      className="max-h-full max-w-full object-contain"
+                      src={branding.logoUrl}
+                    />
+                  </div>
+                ) : null}
+              </div>
 
               <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
                 Brand color

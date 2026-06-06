@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getCmsHeaderPages } from "@/lib/cms/pages";
 import { PlatformBrand } from "@/components/ui/platform-brand";
 
 const navLinks = [
@@ -7,11 +8,15 @@ const navLinks = [
   { href: "/#use-cases", label: "Use Cases" },
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/#templates", label: "Templates" },
+  { href: "/blog", label: "Blog" },
   { href: "/pricing", label: "Pricing" },
 ];
 
 export async function PublicHeader() {
-  const user = await getCurrentUser();
+  const [user, cmsPages] = await Promise.all([
+    getCurrentUser(),
+    getCmsHeaderPages(),
+  ]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-blue-100 bg-white/95 backdrop-blur">
@@ -25,6 +30,15 @@ export async function PublicHeader() {
           {navLinks.map((link) => (
             <Link className="transition hover:text-blue-600" href={link.href} key={link.href}>
               {link.label}
+            </Link>
+          ))}
+          {cmsPages.map((page) => (
+            <Link
+              className="transition hover:text-blue-600"
+              href={`/p/${page.slug}`}
+              key={page.id}
+            >
+              {page.menuLabel || page.title}
             </Link>
           ))}
         </nav>

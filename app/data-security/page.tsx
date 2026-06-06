@@ -1,11 +1,31 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
+import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
 
 export const metadata: Metadata = {
   title: "Data Security | FormOS",
 };
 
-export default function DataSecurityPage() {
+export default async function DataSecurityPage() {
+  const cmsPage = await getPublishedCmsPage("data-security");
+
+  if (cmsPage) {
+    const html = renderCmsContent(cmsPage.content);
+
+    return (
+      <LegalPageLayout
+        description={cmsPage.excerpt ?? "How FormOS approaches data security."}
+        title={cmsPage.title}
+      >
+        {html ? (
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <p>This page is being updated.</p>
+        )}
+      </LegalPageLayout>
+    );
+  }
+
   return (
     <LegalPageLayout
       description="How FormOS approaches submissions, connected storage, and access control."

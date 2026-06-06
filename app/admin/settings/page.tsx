@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import {
@@ -142,10 +143,43 @@ export default async function AdminSettingsPage({
         <form action={savePlatformSettingsAction} className="grid gap-4">
           <div className="grid gap-4 xl:grid-cols-2">
           <Section icon={Palette} title="Branding">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+              Upload here or manage files in{" "}
+              <Link className="font-semibold underline" href="/admin/media">
+                Media Library
+              </Link>
+              , then paste the generated <code>/media/...</code> path here.
+            </div>
             <div className="grid gap-3 md:grid-cols-2">
               <TextField defaultValue={settings.siteName} label="Site Name" name="siteName" />
-              <TextField defaultValue={settings.logoUrl} help="Use a public path like /pdf-logo.png or an HTTPS URL." label="Logo URL / Path" name="logoUrl" placeholder="/pdf-logo.png" />
-              <TextField defaultValue={settings.faviconUrl} label="Favicon URL / Path" name="faviconUrl" placeholder="/favicon.ico" />
+              <TextField defaultValue={settings.logoUrl} help="Use a public path like /media/... or an HTTPS URL." label="Logo URL / Path" name="logoUrl" placeholder="/media/..." />
+              <TextField defaultValue={settings.faviconUrl} help="Use a public path like /media/... or /favicon.ico." label="Favicon URL / Path" name="faviconUrl" placeholder="/media/..." />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Upload Logo
+                <input
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
+                  name="logoFile"
+                  type="file"
+                />
+                <span className="text-[11px] font-normal leading-4 text-slate-500">
+                  Uploading replaces the Logo URL with the new Media Library path.
+                </span>
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Upload Favicon
+                <input
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/x-icon,image/vnd.microsoft.icon"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
+                  name="faviconFile"
+                  type="file"
+                />
+                <span className="text-[11px] font-normal leading-4 text-slate-500">
+                  Uploading replaces the Favicon URL with the new Media Library path.
+                </span>
+              </label>
             </div>
           </Section>
 

@@ -1,11 +1,31 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
+import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | FormOS",
 };
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const cmsPage = await getPublishedCmsPage("privacy-policy");
+
+  if (cmsPage) {
+    const html = renderCmsContent(cmsPage.content);
+
+    return (
+      <LegalPageLayout
+        description={cmsPage.excerpt ?? "How FormOS handles data and privacy."}
+        title={cmsPage.title}
+      >
+        {html ? (
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <p>This page is being updated.</p>
+        )}
+      </LegalPageLayout>
+    );
+  }
+
   return (
     <LegalPageLayout
       description="How FormOS handles account data, submissions, uploads, and integrations."

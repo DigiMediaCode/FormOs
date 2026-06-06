@@ -1,208 +1,358 @@
-CURRENT TASK — FormOS Milestone 27.1: Super Admin Form View + Assisted Edit
+# CURRENT TASK — FormOS Milestone 29: Blog System
 
-Project Context
+## Project Context
 
 FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
+* FormOS MVP foundation is live and working.
 * Super Admin exists.
-* Super Admin settings have been expanded successfully.
-* Super Admin can view users/forms at a high level.
-* Forms, builder, public forms, submissions, storage, PDF, audit, billing, plans, workspace, and staff access all work.
+* CMS Pages + Menu Manager exists or is being completed.
+* Public website/landing page exists.
+* Forms, builder, public forms, submissions, QR, storage integrations, office fields, PDF generation, email, audit timeline, billing, plans, workspace, and staff access all work.
 * Do not touch CommerceOS.
 
-Problem
+## Goal
 
-On the Super Admin Forms page, clicking View currently shows only form name and description.
+Add a simple but professional blog system.
 
-This is not useful enough.
+Super Admin should be able to create, edit, publish, archive, and manage blog posts.
 
-Super Admin should be able to inspect the actual form structure and help customers if they need support.
+Public visitors should be able to browse blog posts and read individual posts.
 
-Goal
+This will help FormOS with SEO, product education, tutorials, announcements, and content marketing.
 
-Improve Super Admin form view so Super Admin can:
+## Important Direction
 
-* view complete form details
-* inspect actual fields
-* preview how the form looks publicly
-* access owner/customer context
-* optionally edit the form if needed for customer support
+Do not build Knowledge Base in this milestone.
 
-Important Direction
+Do not build comments.
 
-Super Admin support access must be controlled and safe.
+Do not build likes/reactions.
 
-Do not expose uploaded files or private submission answers in this milestone.
+Do not build newsletter system.
 
-Do not give Super Admin direct PDF/download access unless intentionally built later.
+Do not build multi-author workflow beyond basic author tracking.
 
-Do not break owner/staff permissions.
+Do not build media library yet.
 
-Do not integrate CommerceOS.
+Do not allow arbitrary JavaScript.
 
-Required Route
+Keep it simple, clean, secure, and SEO-friendly.
 
-Create or improve:
+## Public Blog Routes
 
-/admin/forms/[formId]
+Create:
 
-This page should show a complete Super Admin form detail view.
+* /blog
+* /blog/[slug]
 
-Form Detail Page Should Show
+### /blog
 
-Form Summary
+Public blog listing page.
 
-* form title
-* description
-* owner name/email
-* owner plan
-* status: Draft / Published / Archived
-* mode
-* created date
-* updated date
-* version
-* submissions count
-* fields count
-* public form link if published
-* QR/public link card if already available and safe
+Show:
 
-Field Structure
+* page title: Blog
+* short description
+* list/grid of published blog posts
+* featured image if available
+* title
+* excerpt
+* category if available
+* published date
+* read more link
 
-Show the actual form fields in order.
+Only show posts where status = PUBLISHED.
 
-For each field show:
+Sort newest first by publishedAt or createdAt.
 
-* order
-* label
-* type
-* required status
-* visibility: Public / Office Use Only
-* display-only status if applicable
-* options count for dropdown/select
-* short content preview for static/html/section fields
+### /blog/[slug]
 
-Do not show uploaded user files here.
+Public blog post detail page.
 
-Do not show private submission answers here.
+Show:
 
-Public Preview
+* title
+* excerpt if useful
+* featured image if available
+* category
+* published date
+* author name if available
+* content
+* back to blog link
+* optional related/recent posts if simple
 
-Add a preview section that shows approximately how the form appears publicly.
+Only published posts should render publicly.
 
-This can reuse existing field rendering style if safe.
+Draft/archived/missing posts should show clean not found/unavailable page.
 
-Preview should:
+## Super Admin Blog Routes
 
-* show public fields
-* hide office-only fields or show them with Office Use Only badge in admin preview
-* show signatures/file upload placeholders only
-* not submit anything
-* not upload files
-* not create submissions
+Create:
 
-Owner Context
+* /admin/blog
+* /admin/blog/new
+* /admin/blog/[postId]
 
-Show owner summary:
+Add Super Admin navigation link:
 
-* owner name
-* owner email
-* current plan
-* business profile/company if available
-* storage provider status if available
+Blog → /admin/blog
 
-No secrets/tokens.
+Only SUPER_ADMIN can access.
 
-Assisted Edit
+## Prisma Schema
 
-Add safe edit options for Super Admin.
+Add model:
 
-Preferred:
+```prisma
+model BlogCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-Add button:
+  posts     BlogPost[]
+}
+```
 
-Open Builder as Support
+Add model:
 
-or:
+```prisma
+model BlogPost {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  excerpt         String?
+  content         String?
+  status          String   @default("DRAFT")
+  featuredImage   String?
+  metaTitle       String?
+  metaDescription String?
+  publishedAt     DateTime?
+  categoryId      String?
+  authorId        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-Edit Form as Super Admin
+  category        BlogCategory? @relation(fields: [categoryId], references: [id])
+}
+```
 
-This should open the existing builder route for that form in support mode, or a Super Admin edit route.
+If adding author relation to User is simple, add it. If not, authorId string is acceptable for MVP.
 
-Important rules:
+Create migration:
 
-* Only SUPER_ADMIN can use it.
-* Normal users/staff cannot access another owner’s builder.
-* Existing owner access must still work.
-* Super Admin edits should still pass existing validation.
-* Super Admin edits should not bypass plan restrictions unless deliberately allowed.
+```bash
+npx prisma migrate dev --name add_blog_system
+```
 
-Recommended behaviour:
+Do not use prisma db push.
 
-Super Admin can edit form fields as support, but action should be logged.
+## Post Status
 
-If existing builder is tightly owner-scoped, create a Super Admin route/page that loads the builder component with admin permission.
+Supported statuses:
 
-Activity Logging
-
-If a form/admin event helper exists, log:
-
-* super_admin_viewed_form
-* super_admin_opened_form_builder
-* super_admin_updated_form_fields
-
-If no such event helper exists, skip complex logging but leave TODO.
-
-Do not log sensitive field values unnecessarily.
-
-Archive/Delete Actions
-
-If archive/delete form actions were added earlier, keep them available here.
+* DRAFT
+* PUBLISHED
+* ARCHIVED
 
 Rules:
 
-* archive is allowed
-* delete only if safe
-* if form has submissions, block delete and suggest archive
+* only PUBLISHED posts render publicly
+* DRAFT and ARCHIVED are hidden from public
+* Super Admin can view/edit all
 
-Security Requirements
+## Blog Post Fields
 
-* Only SUPER_ADMIN can access /admin/forms/[formId].
-* Super Admin should not see storage tokens.
-* Super Admin should not see OAuth tokens.
-* Super Admin should not see uploaded file contents.
-* Super Admin should not see full submission answers in this milestone.
-* Super Admin edit/support mode must not break owner permissions.
-* All actions must be server-side protected.
+Super Admin post editor should support:
 
-Out of Scope
+* Title
+* Slug
+* Excerpt
+* Content
+* Status
+* Featured Image URL / Path
+* Category
+* Meta Title
+* Meta Description
+* Published At
 
-Do not build full submission viewer for Super Admin.
-Do not expose uploaded files.
-Do not expose completed PDFs.
-Do not build impersonation.
-Do not build per-field edit history.
-Do not build CMS/blog/knowledge base in this milestone.
+## Blog Category Management
+
+Keep category management simple.
+
+Options:
+
+Preferred MVP:
+
+* allow category creation inline on blog post editor
+* or add basic category create field on /admin/blog
+
+Minimum acceptable:
+
+* category is optional
+* allow selecting existing categories
+* allow creating a new category through simple action
+
+Do not overbuild category management.
+
+## Content Editor
+
+Use a large textarea or existing safe editor style.
+
+Content can be simple HTML/Markdown-like content.
+
+If rendering HTML:
+
+* sanitize before public rendering
+* block script/iframe/object/embed/form/input/button tags
+* block event handler attributes
+* block javascript: URLs
+
+Do not allow arbitrary JavaScript.
+
+Use existing sanitize helper where possible.
+
+## Slug Rules
+
+Generate slug from title if missing.
+
+Validate:
+
+* lowercase
+* letters, numbers, hyphens only
+* no spaces
+* no slash
+* unique
+
+Reserved slugs should be blocked:
+
+* admin
+* dashboard
+* login
+* signup
+* api
+* f
+* p
+* blog
+* pricing
+* privacy-policy
+* terms-of-service
+* data-security
+* contact
+
+## SEO Metadata
+
+For /blog:
+
+* title: FormOS Blog
+* description: Tips, guides, and updates about online forms, signed agreements, document workflows, and FormOS.
+
+For /blog/[slug]:
+
+Use:
+
+* metaTitle if available, otherwise post title
+* metaDescription if available, otherwise excerpt
+
+Do not break build over dynamic metadata.
+
+## Public Header/Footer Integration
+
+Public header should include Blog link if practical.
+
+Footer should include Blog link if practical.
+
+Do not break CMS menu functionality.
+
+## Admin Blog List
+
+/admin/blog should show:
+
+* title
+* slug
+* status
+* category
+* published date
+* updated date
+* edit button
+* public view link if published
+* archive/delete action
+
+## Archive/Delete Rules
+
+Preferred:
+
+* archive by setting status = ARCHIVED
+* hard delete allowed only with confirmation if no important relation issues
+
+For MVP:
+
+* archive is enough
+* hard delete optional
+
+## Default Blog Content
+
+Optional:
+
+Seed one draft post:
+
+Welcome to FormOS
+
+Do not publish automatically unless safe.
+
+Do not overwrite existing posts.
+
+## Security
+
+* only SUPER_ADMIN can create/edit/archive/delete blog posts
+* public only sees published posts
+* sanitize content
+* no arbitrary scripts
+* no secrets exposed
+* no private user/form/submission data exposed
+
+## Out of Scope
+
+Do not build Knowledge Base.
+Do not build comments.
+Do not build newsletter.
+Do not build media library.
+Do not build tags unless simple.
+Do not build author profile pages.
+Do not build public search yet.
+Do not build RSS unless very simple.
 Do not integrate CommerceOS.
 
-Acceptance Criteria
+## Acceptance Criteria
 
-Milestone 27.1 is complete when:
+Milestone 29 is complete when:
 
-* /admin/forms/[formId] shows full form summary.
-* Super Admin can see owner context.
-* Super Admin can see field structure in order.
-* Super Admin can see required/visibility/type for each field.
-* Super Admin can preview the form structure safely.
-* Office-only fields are clearly marked or hidden in preview.
-* Super Admin can open/edit form as support if implemented.
-* Normal users cannot access admin form detail.
-* Staff cannot access admin form detail.
-* No storage tokens/secrets/uploaded file contents are exposed.
-* Existing owner form builder still works.
-* Existing public forms still work.
-* Existing billing/plans/workspace/security still works.
+* BlogPost model exists.
+* BlogCategory model exists.
+* Prisma migration exists.
+* /admin/blog exists.
+* /admin/blog/new exists.
+* /admin/blog/[postId] exists.
+* Super Admin can create a blog post.
+* Super Admin can edit a blog post.
+* Super Admin can publish/draft/archive a blog post.
+* Blog slug generation works.
+* Blog slug uniqueness is enforced.
+* Public /blog shows published posts.
+* Public /blog/[slug] shows published post content.
+* Draft/archived posts are hidden publicly.
+* Blog content is sanitized before rendering.
+* SEO metadata works where practical.
+* Public header/footer can link to Blog.
+* Existing CMS pages still work.
+* Existing public website still works.
+* Existing dashboard/admin still work.
+* Existing forms/submissions/billing/storage/PDF/email/audit flows still work.
 * npx prisma validate passes.
 * npx prisma generate passes.
+* npx prisma migrate dev --name add_blog_system creates migration.
 * npm run build passes.

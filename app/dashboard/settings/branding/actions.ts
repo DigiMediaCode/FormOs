@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { saveMediaFile } from "@/lib/media/storage";
 import { getUserPlanAccess } from "@/lib/plans/limits";
 import {
   DEFAULT_WORKSPACE_BRANDING,
@@ -23,6 +24,12 @@ function readString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function assertImageUpload(file: File) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Logo upload must be an image file.");
+  }
+}
+
 export async function updateBrandingSettings(formData: FormData) {
   const context = await requireWorkspaceOwner();
   const access = await getUserPlanAccess(context.ownerId);
@@ -33,16 +40,29 @@ export async function updateBrandingSettings(formData: FormData) {
 
   await getOrCreateUserWorkspace(context.ownerId);
 
-  const branding: WorkspaceBranding = {
-    logoUrl: readString(formData, "logoUrl"),
-    primaryColor:
-      readString(formData, "primaryColor") ||
-      DEFAULT_WORKSPACE_BRANDING.primaryColor,
-    publicFooterText: readString(formData, "publicFooterText"),
-    hidePoweredBy: formData.get("hidePoweredBy") === "on",
-  };
-
   try {
+    const logoFile = formData.get("logoFile");
+    let uploadedLogoPath: string | null = null;
+
+    if (logoFile instanceof File && logoFile.size > 0) {
+      assertImageUpload(logoFile);
+      const asset = await saveMediaFile({
+        file: logoFile,
+        altText: "Workspace logo",
+        createdById: context.user.id,
+      });
+      uploadedLogoPath = asset.publicPath;
+    }
+
+    const branding: WorkspaceBranding = {
+      logoUrl: uploadedLogoPath ?? readString(formData, "logoUrl"),
+      primaryColor:
+        readString(formData, "primaryColor") ||
+        DEFAULT_WORKSPACE_BRANDING.primaryColor,
+      publicFooterText: readString(formData, "publicFooterText"),
+      hidePoweredBy: formData.get("hidePoweredBy") === "on",
+    };
+
     await updateWorkspaceBranding(context.ownerId, branding);
   } catch (error) {
     redirectWith(

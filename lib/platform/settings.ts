@@ -297,7 +297,15 @@ export async function updatePlatformSettings(input: PlatformSettings) {
 }
 
 export function canRenderLocalPublicAsset(path: string) {
-  return path.startsWith("/") && !path.startsWith("//") && publicFileExists(path);
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    return false;
+  }
+
+  if (path.startsWith("/media/")) {
+    return true;
+  }
+
+  return publicFileExists(path);
 }
 
 export function getRenderablePlatformLogoUrl(settings: Pick<PlatformSettings, "logoUrl">) {

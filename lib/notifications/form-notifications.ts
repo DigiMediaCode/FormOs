@@ -2,6 +2,7 @@ import "server-only";
 
 import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmailTemplate } from "@/lib/email/templates";
 import { normalizeFormFields } from "@/lib/forms/fields";
 import { extractSubmitterEmail } from "@/lib/notifications/email-detection";
 import type { SendEmailAttachment } from "@/lib/email/send-email";
@@ -19,17 +20,28 @@ export async function sendNewSubmissionNotification(input: {
 }) {
   try {
     const submissionLink = `${getAppUrl()}/dashboard/forms/${input.formId}/submissions/${input.submissionId}`;
+    const email = await renderEmailTemplate({
+      key: "new_submission_owner",
+      variables: {
+        formTitle: input.formTitle,
+        submittedAt: input.submittedAt.toISOString(),
+        submissionLink,
+      },
+      fallback: {
+        subject: `New submission received: ${input.formTitle}`,
+        text: [
+          `Form: ${input.formTitle}`,
+          `Submitted: ${input.submittedAt.toISOString()}`,
+          `Review submission: ${submissionLink}`,
+          "",
+          "Log in to FormOS to review the submission and complete any office-use fields.",
+        ].join("\n"),
+      },
+    });
 
     await sendEmail({
       to: input.ownerEmail,
-      subject: `New submission received: ${input.formTitle}`,
-      text: [
-        `Form: ${input.formTitle}`,
-        `Submitted: ${input.submittedAt.toISOString()}`,
-        `Review submission: ${submissionLink}`,
-        "",
-        "Log in to FormOS to review the submission and complete any office-use fields.",
-      ].join("\n"),
+      ...email,
     });
   } catch (error) {
     logNotificationWarning("New submission notification failed safely.", {
@@ -59,15 +71,26 @@ export async function sendFormCompletedNotification(input: {
       return;
     }
 
+    const email = await renderEmailTemplate({
+      key: "form_completed_submitter",
+      variables: {
+        formTitle: input.formTitle,
+        completedAt: input.completedAt.toISOString(),
+      },
+      fallback: {
+        subject: `Your form has been completed: ${input.formTitle}`,
+        text: [
+          `Form: ${input.formTitle}`,
+          `Completed: ${input.completedAt.toISOString()}`,
+          "",
+          "The form owner has completed processing your submission.",
+        ].join("\n"),
+      },
+    });
+
     await sendEmail({
       to: submitterEmail,
-      subject: `Your form has been completed: ${input.formTitle}`,
-      text: [
-        `Form: ${input.formTitle}`,
-        `Completed: ${input.completedAt.toISOString()}`,
-        "",
-        "The form owner has completed processing your submission.",
-      ].join("\n"),
+      ...email,
     });
   } catch (error) {
     logNotificationWarning("Completed notification failed safely.", {
@@ -94,16 +117,28 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
   };
 
   try {
+    const ownerEmail = await renderEmailTemplate({
+      key: "completed_pdf_owner",
+      variables: {
+        formTitle: input.formTitle,
+        completedAt: input.completedAt.toISOString(),
+        submissionId: input.submissionId,
+      },
+      fallback: {
+        subject: `Completed submission: ${input.formTitle}`,
+        text: [
+          "Your completed submission PDF is attached.",
+          "",
+          `Form: ${input.formTitle}`,
+          `Completed: ${input.completedAt.toISOString()}`,
+          `Submission ID: ${input.submissionId}`,
+        ].join("\n"),
+      },
+    });
+
     await sendEmail({
       to: input.ownerEmail,
-      subject: `Completed submission: ${input.formTitle}`,
-      text: [
-        "Your completed submission PDF is attached.",
-        "",
-        `Form: ${input.formTitle}`,
-        `Completed: ${input.completedAt.toISOString()}`,
-        `Submission ID: ${input.submissionId}`,
-      ].join("\n"),
+      ...ownerEmail,
       attachments: [input.pdf],
     });
     result.ownerEmailSent = true;
@@ -131,15 +166,26 @@ export async function sendCompletedSubmissionPdfNotifications(input: {
       return result;
     }
 
+    const submitterEmailBody = await renderEmailTemplate({
+      key: "completed_pdf_submitter",
+      variables: {
+        formTitle: input.formTitle,
+        completedAt: input.completedAt.toISOString(),
+      },
+      fallback: {
+        subject: `Your completed form: ${input.formTitle}`,
+        text: [
+          "Your completed form is attached as a PDF.",
+          "",
+          `Form: ${input.formTitle}`,
+          `Completed: ${input.completedAt.toISOString()}`,
+        ].join("\n"),
+      },
+    });
+
     await sendEmail({
       to: submitterEmail,
-      subject: `Your completed form: ${input.formTitle}`,
-      text: [
-        "Your completed form is attached as a PDF.",
-        "",
-        `Form: ${input.formTitle}`,
-        `Completed: ${input.completedAt.toISOString()}`,
-      ].join("\n"),
+      ...submitterEmailBody,
       attachments: [input.pdf],
     });
     result.submitterEmailSent = true;
