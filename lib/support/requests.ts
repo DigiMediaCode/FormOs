@@ -131,6 +131,53 @@ export async function sendSupportRequestNotification(input: {
   };
 }
 
+export async function sendSupportReplyEmail(input: {
+  requestId: string;
+  recipientEmail: string;
+  recipientName: string | null;
+  subject: string;
+  message: string;
+  status: string;
+}) {
+  const appUrl = getAppUrl();
+  const safeName = input.recipientName || "there";
+  const text = [
+    `Hi ${safeName},`,
+    "",
+    input.message,
+    "",
+    `Support request: ${input.subject}`,
+    `Request ID: ${input.requestId}`,
+    `Status: ${input.status}`,
+    "",
+    "Regards,",
+    "FormOS Support",
+    "",
+    appUrl,
+  ].join("\n");
+  const html = `
+    <p>Hi ${escapeHtml(safeName)},</p>
+    <p>${escapeHtml(input.message).replace(/\n/g, "<br />")}</p>
+    <hr />
+    <p><strong>Support request:</strong> ${escapeHtml(input.subject)}</p>
+    <p><strong>Request ID:</strong> ${escapeHtml(input.requestId)}</p>
+    <p><strong>Status:</strong> ${escapeHtml(input.status)}</p>
+    <p>Regards,<br />FormOS Support</p>
+  `;
+
+  const result = await sendEmail({
+    to: input.recipientEmail,
+    subject: `Re: ${input.subject}`,
+    text,
+    html,
+  });
+
+  return {
+    ok: result.ok,
+    reason: result.error,
+  };
+}
+
 export function formatSupportDate(date: Date | null | undefined) {
   if (!date) {
     return "Not set";

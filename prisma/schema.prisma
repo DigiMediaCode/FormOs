@@ -74,6 +74,7 @@ model User {
   authTokens     AuthToken[]
   oauthAccounts  UserOAuthAccount[]
   supportRequests SupportRequest[]
+  supportMessages SupportRequestMessage[]
   ownedWorkspace Workspace?         @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   createdAt      DateTime           @default(now())
@@ -549,9 +550,32 @@ model SupportRequest {
   resolvedAt DateTime?
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages SupportRequestMessage[]
 
   @@index([userId])
   @@index([email])
   @@index([status])
   @@index([category])
+}
+
+model SupportRequestMessage {
+  id           String   @id @default(cuid())
+  requestId    String
+  authorType   String
+  authorUserId String?
+  authorName   String?
+  authorEmail  String?
+  visibility   String   @default("PUBLIC")
+  message      String
+  emailStatus  String?
+  emailSentAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  request SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author  User?          @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([authorUserId])
+  @@index([visibility])
+  @@index([createdAt])
 }
