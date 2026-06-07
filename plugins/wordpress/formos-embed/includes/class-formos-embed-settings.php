@@ -511,6 +511,13 @@ class FormOS_Embed_Settings {
             <p>
                 <?php esc_html_e('You can find the Form ID in FormOS on the form detail page. WordPress and Shopify apps can reuse the same embed URL foundation later.', 'formos-embed'); ?>
             </p>
+
+            <?php $preview_url = class_exists('FormOS_Embed_Shortcode') ? FormOS_Embed_Shortcode::preview_url('abc123') : ''; ?>
+            <?php if ($preview_url) : ?>
+                <h2><?php esc_html_e('Generated URL Preview', 'formos-embed'); ?></h2>
+                <p><?php esc_html_e('This is the kind of iframe URL the plugin should generate from your saved defaults. If your page iframe URL does not include these query parameters, the page is using an old/raw iframe or cached output.', 'formos-embed'); ?></p>
+                <pre><code><?php echo esc_html($preview_url); ?></code></pre>
+            <?php endif; ?>
         </div>
         <?php
     }

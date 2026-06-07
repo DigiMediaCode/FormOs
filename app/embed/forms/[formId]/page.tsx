@@ -103,11 +103,6 @@ export default async function EmbedFormPage({
       <section className="mx-auto max-w-3xl">
         <header
           className="overflow-hidden rounded-2xl border border-t-4 border-slate-200 bg-white shadow-sm"
-          style={
-            form.branding?.primaryColor
-              ? { borderTopColor: form.branding.primaryColor }
-              : undefined
-          }
         >
           <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-5 py-6 text-center sm:px-7">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">

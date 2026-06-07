@@ -109,6 +109,29 @@ class FormOS_Embed_Shortcode {
         );
     }
 
+    public static function preview_url($form_id = 'abc123') {
+        $options = FormOS_Embed_Settings::get_options();
+        $base_url = isset($options['base_url']) ? $options['base_url'] : '';
+
+        if ($base_url === '') {
+            return '';
+        }
+
+        $appearance = array(
+            'theme' => FormOS_Embed_Settings::allowed_text($options['theme'], FormOS_Embed_Settings::THEMES, 'light'),
+            'accent' => FormOS_Embed_Settings::sanitize_hex_color($options['accent']),
+            'bg' => FormOS_Embed_Settings::allowed_text($options['background'], FormOS_Embed_Settings::BACKGROUNDS, 'transparent'),
+            'surface' => FormOS_Embed_Settings::sanitize_optional_hex_color($options['surface']),
+            'text' => FormOS_Embed_Settings::sanitize_optional_hex_color($options['text']),
+            'border' => FormOS_Embed_Settings::sanitize_optional_hex_color($options['border']),
+            'radius' => (string) FormOS_Embed_Settings::allowed_int($options['radius'], FormOS_Embed_Settings::RADII, 12),
+            'compact' => empty($options['compact']) ? 'false' : 'true',
+            'font' => FormOS_Embed_Settings::allowed_text($options['font'], FormOS_Embed_Settings::FONTS, 'system'),
+        );
+
+        return self::embed_url($base_url, sanitize_text_field($form_id), $appearance);
+    }
+
     private static function render_iframe($base_url, $form_id, $height, $appearance) {
         $src = self::embed_url($base_url, $form_id, $appearance);
 

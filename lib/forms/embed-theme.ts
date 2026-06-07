@@ -129,9 +129,9 @@ export function getEmbedTheme(searchParams: EmbedThemeSearchParams) {
 
 export const embedThemeCss = `
 .formos-embed-scope {
-  background: var(--formos-embed-bg);
-  color: var(--formos-embed-text);
-  font-family: var(--formos-embed-font);
+  background: var(--formos-embed-bg) !important;
+  color: var(--formos-embed-text) !important;
+  font-family: var(--formos-embed-font) !important;
 }
 .formos-embed-scope section,
 .formos-embed-scope header,
@@ -147,54 +147,55 @@ export const embedThemeCss = `
 }
 .formos-embed-scope header,
 .formos-embed-scope .bg-white {
-  background: var(--formos-embed-surface);
+  background: var(--formos-embed-surface) !important;
 }
 .formos-embed-scope .shadow-sm {
-  box-shadow: none;
+  box-shadow: none !important;
 }
 .formos-embed-scope .bg-slate-50,
 .formos-embed-scope .from-white,
 .formos-embed-scope .to-slate-50 {
-  background: var(--formos-embed-muted-surface);
+  background: var(--formos-embed-muted-surface) !important;
+  background-image: none !important;
 }
 .formos-embed-scope .border-slate-100,
 .formos-embed-scope .border-slate-200,
 .formos-embed-scope .border-slate-300 {
-  border-color: var(--formos-embed-border);
+  border-color: var(--formos-embed-border) !important;
 }
 .formos-embed-scope .text-slate-950,
 .formos-embed-scope .text-slate-900,
 .formos-embed-scope .text-slate-800 {
-  color: var(--formos-embed-text);
+  color: var(--formos-embed-text) !important;
 }
 .formos-embed-scope .text-slate-700,
 .formos-embed-scope .text-slate-600,
 .formos-embed-scope .text-slate-500 {
-  color: var(--formos-embed-muted-text);
+  color: var(--formos-embed-muted-text) !important;
 }
 .formos-embed-scope input,
 .formos-embed-scope textarea,
 .formos-embed-scope select {
-  background: var(--formos-embed-surface);
-  border-color: var(--formos-embed-border);
-  color: var(--formos-embed-text);
+  background: var(--formos-embed-surface) !important;
+  border-color: var(--formos-embed-border) !important;
+  color: var(--formos-embed-text) !important;
 }
 .formos-embed-scope input:focus,
 .formos-embed-scope textarea:focus,
 .formos-embed-scope select:focus {
-  border-color: var(--formos-embed-accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--formos-embed-accent), transparent 82%);
+  border-color: var(--formos-embed-accent) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--formos-embed-accent), transparent 82%) !important;
 }
 .formos-embed-scope button[type="submit"],
 .formos-embed-scope input::file-selector-button {
-  background: var(--formos-embed-accent);
-  color: var(--formos-embed-accent-text);
+  background: var(--formos-embed-accent) !important;
+  color: var(--formos-embed-accent-text) !important;
 }
 .formos-embed-scope .text-blue-700 {
-  color: var(--formos-embed-accent);
+  color: var(--formos-embed-accent) !important;
 }
 .formos-embed-scope .border-t-4 {
-  border-top-color: var(--formos-embed-accent);
+  border-top-color: var(--formos-embed-accent) !important;
 }
 .formos-embed-scope [data-formos-embed-inner] {
   gap: var(--formos-embed-gap);
