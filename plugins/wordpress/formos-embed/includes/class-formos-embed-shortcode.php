@@ -92,21 +92,29 @@ class FormOS_Embed_Shortcode {
 
     private static function embed_url($base_url, $form_id, $appearance) {
         $url = trailingslashit($base_url) . 'embed/forms/' . rawurlencode($form_id);
-
-        return add_query_arg(
-            array(
-                'theme' => $appearance['theme'],
-                'accent' => $appearance['accent'],
-                'bg' => $appearance['bg'],
-                'surface' => $appearance['surface'],
-                'text' => $appearance['text'],
-                'border' => $appearance['border'],
-                'radius' => $appearance['radius'],
-                'compact' => $appearance['compact'],
-                'font' => $appearance['font'],
-            ),
-            $url
+        $query = array(
+            'theme' => $appearance['theme'],
+            'accent' => self::query_hex($appearance['accent']),
+            'bg' => $appearance['bg'],
+            'surface' => self::query_hex($appearance['surface']),
+            'text' => self::query_hex($appearance['text']),
+            'border' => self::query_hex($appearance['border']),
+            'radius' => $appearance['radius'],
+            'compact' => $appearance['compact'],
+            'font' => $appearance['font'],
         );
+
+        return $url . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private static function query_hex($value) {
+        $value = sanitize_text_field((string) $value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        return ltrim($value, '#');
     }
 
     public static function preview_url($form_id = 'abc123') {

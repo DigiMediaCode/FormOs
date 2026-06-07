@@ -36,7 +36,18 @@ function hexColor(value: string | undefined, fallback: string) {
   }
 
   const normalized = value.trim();
-  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized : fallback;
+  const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  return /^[0-9a-fA-F]{6}$/.test(hex) ? `#${hex}` : fallback;
+}
+
+function hasHexColor(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim();
+  const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  return /^[0-9a-fA-F]{6}$/.test(hex);
 }
 
 function booleanString(value: string | undefined) {
@@ -87,16 +98,10 @@ export function getEmbedTheme(searchParams: EmbedThemeSearchParams) {
   const defaultText = theme === "dark" ? "#f8fafc" : "#0f172a";
   const defaultMutedText = theme === "dark" ? "#cbd5e1" : "#475569";
   const surface = hexColor(searchParams.surface, defaultSurface);
-  const mutedSurface =
-    searchParams.surface && /^#[0-9a-fA-F]{6}$/.test(searchParams.surface.trim())
-      ? surface
-      : defaultMutedSurface;
+  const mutedSurface = hasHexColor(searchParams.surface) ? surface : defaultMutedSurface;
   const border = hexColor(searchParams.border, defaultBorder);
   const text = hexColor(searchParams.text, defaultText);
-  const mutedText =
-    searchParams.text && /^#[0-9a-fA-F]{6}$/.test(searchParams.text.trim())
-      ? text
-      : defaultMutedText;
+  const mutedText = hasHexColor(searchParams.text) ? text : defaultMutedText;
 
   const style = {
     "--formos-embed-accent": accent,
@@ -128,6 +133,10 @@ export function getEmbedTheme(searchParams: EmbedThemeSearchParams) {
 }
 
 export const embedThemeCss = `
+html,
+body {
+  background: transparent !important;
+}
 .formos-embed-scope {
   background: var(--formos-embed-bg) !important;
   color: var(--formos-embed-text) !important;
