@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Signatures and PDF delivery</title>
+  <desc id="desc">A FormOS themed document automation graphic with signature and PDF cards.</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <circle cx="965" cy="120" r="150" fill="#dbeafe"/>
+  <circle cx="170" cy="520" r="180" fill="#ede9fe"/>
+  <rect x="240" y="80" width="450" height="500" rx="34" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+  <rect x="300" y="145" width="240" height="24" rx="12" fill="#0f172a"/>
+  <rect x="300" y="205" width="320" height="14" rx="7" fill="#cbd5e1"/>
+  <rect x="300" y="240" width="270" height="14" rx="7" fill="#cbd5e1"/>
+  <rect x="300" y="275" width="330" height="14" rx="7" fill="#cbd5e1"/>
+  <rect x="300" y="350" width="300" height="90" rx="18" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+  <path d="M330 408c35-45 65-45 78-12 10 26 31 29 70-18 24-29 58-31 92 0" fill="none" stroke="#2563eb" stroke-width="10" stroke-linecap="round"/>
+  <text x="300" y="495" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="22">Signed and ready</text>
+  <rect x="625" y="225" width="330" height="230" rx="28" fill="#ffffff" stroke="#bfdbfe" stroke-width="3"/>
+  <rect x="665" y="270" width="92" height="112" rx="18" fill="#2563eb"/>
+  <path d="M692 300h32l18 18v42h-50z" fill="none" stroke="#ffffff" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M724 302v19h19" fill="none" stroke="#ffffff" stroke-width="8" stroke-linejoin="round"/>
+  <text x="785" y="304" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">PDF</text>
+  <text x="785" y="345" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="21">Generated and</text>
+  <text x="785" y="376" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="21">emailed automatically</text>
+</svg>

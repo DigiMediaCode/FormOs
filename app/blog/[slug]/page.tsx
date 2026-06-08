@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
 import {
@@ -133,6 +134,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </aside>
           ) : null}
         </article>
+        <PublicAdSection className="mt-10" slot="bottom" />
       </main>
       <PublicFooter />
     </div>

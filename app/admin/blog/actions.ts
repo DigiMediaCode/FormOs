@@ -104,5 +104,5 @@ export async function seedDefaultBlogPostAction() {
   await seedDefaultBlogPostIfMissing(user.id);
 
   revalidatePath(ADMIN_BLOG_PATH);
-  redirectWith("success", "Default draft blog post checked.");
+  redirectWith("success", "Starter blog posts checked.");
 }

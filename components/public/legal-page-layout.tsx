@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
 
@@ -27,6 +28,7 @@ export function LegalPageLayout({
           </div>
         </div>
       </section>
+      <PublicAdSection className="pb-12" slot="bottom" />
       <PublicFooter />
     </main>
   );

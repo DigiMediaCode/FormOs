@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpen, HelpCircle, Search } from "lucide-react";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
 import {
@@ -182,6 +183,7 @@ export default async function HelpPage({ searchParams }: HelpPageProps) {
             </Link>
           </section>
         </div>
+        <PublicAdSection className="mt-10" slot="middle" />
       </main>
       <PublicFooter />
     </div>

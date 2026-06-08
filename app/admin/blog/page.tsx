@@ -67,11 +67,11 @@ export default async function AdminBlogPage({ searchParams }: AdminBlogPageProps
             <form action={seedDefaultBlogPostAction}>
               <SubmitButton
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
-                pendingText="Checking draft..."
+                pendingText="Checking posts..."
                 showStatus={false}
               >
                 <Sparkles className="size-4 text-blue-600" />
-                Seed Draft
+                Seed Starter Posts
               </SubmitButton>
             </form>
             <Link

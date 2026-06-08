@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PricingCard } from "@/components/public/pricing-card";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
@@ -103,6 +104,8 @@ export default async function PricingPage() {
           <PricingCard href={planHref} key={plan.name} {...plan} />
         ))}
       </section>
+
+      <PublicAdSection className="pb-16" slot="middle" />
 
       <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-6">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

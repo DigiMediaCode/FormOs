@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
-import { getPublishedBlogPosts } from "@/lib/blog/posts";
+import {
+  getPublishedBlogPosts,
+  seedDefaultBlogContentIfMissing,
+} from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
   title: "FormOS Blog",
@@ -22,7 +26,12 @@ function formatDate(date: Date | null | undefined) {
 }
 
 export default async function BlogPage() {
-  const posts = await getPublishedBlogPosts();
+  let posts = await getPublishedBlogPosts();
+
+  if (posts.length === 0) {
+    await seedDefaultBlogContentIfMissing();
+    posts = await getPublishedBlogPosts();
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -101,6 +110,7 @@ export default async function BlogPage() {
             </section>
           )}
         </div>
+        <PublicAdSection className="mt-12" slot="middle" />
       </main>
       <PublicFooter />
     </div>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Google Drive and Dropbox uploads</title>
+  <desc id="desc">A FormOS upload workflow graphic with cloud storage cards.</desc>
+  <rect width="1200" height="630" fill="#f1f5f9"/>
+  <rect x="110" y="100" width="300" height="430" rx="36" fill="#ffffff" stroke="#dbeafe" stroke-width="3"/>
+  <rect x="165" y="165" width="190" height="52" rx="16" fill="#2563eb"/>
+  <text x="207" y="199" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">Upload</text>
+  <rect x="165" y="260" width="190" height="130" rx="22" fill="#eff6ff" stroke="#93c5fd" stroke-width="3" stroke-dasharray="10 10"/>
+  <path d="M260 342v-70m0 0-34 34m34-34 34 34" fill="none" stroke="#2563eb" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M410 315h220" fill="none" stroke="#2563eb" stroke-width="14" stroke-linecap="round"/>
+  <path d="M595 280l45 35-45 35" fill="none" stroke="#2563eb" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="690" y="130" width="360" height="150" rx="30" fill="#ffffff" stroke="#dbeafe" stroke-width="3"/>
+  <rect x="735" y="178" width="58" height="58" rx="16" fill="#dcfce7"/>
+  <path d="M763 185l31 54h-62z" fill="#16a34a"/>
+  <text x="825" y="195" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Google Drive</text>
+  <text x="825" y="232" fill="#64748b" font-family="Inter, Arial, sans-serif" font-size="20">Owner controlled folders</text>
+  <rect x="690" y="350" width="360" height="150" rx="30" fill="#ffffff" stroke="#dbeafe" stroke-width="3"/>
+  <rect x="735" y="398" width="58" height="58" rx="16" fill="#dbeafe"/>
+  <path d="M764 402l32 20-32 20-32-20zM764 442l32 20-32 20-32-20z" fill="#2563eb"/>
+  <text x="825" y="415" fill="#0f172a" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Dropbox</text>
+  <text x="825" y="452" fill="#64748b" font-family="Inter, Arial, sans-serif" font-size="20">Safe routed uploads</text>
+</svg>
