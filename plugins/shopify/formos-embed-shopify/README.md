@@ -128,3 +128,8 @@ Possible future milestones:
 - Prepare Shopify App Store submission.
 - Add Shopify billing if needed.
 
+#Testing Learnings
+- choose extension-only app
+- height range must have max 101 steps
+- use current theme and save changes
+- deploy extension if it needs to work outside dev preview
