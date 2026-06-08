@@ -1,0 +1,19 @@
+{
+  "name": "formos-embed-shopify",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone Shopify Theme App Extension scaffold for embedding FormOS forms.",
+  "scripts": {
+    "dev": "shopify app dev",
+    "deploy": "shopify app deploy",
+    "extension:check": "shopify app dev --help"
+  },
+  "keywords": [
+    "formos",
+    "shopify",
+    "theme-app-extension",
+    "forms"
+  ],
+  "license": "UNLICENSED"
+}
+

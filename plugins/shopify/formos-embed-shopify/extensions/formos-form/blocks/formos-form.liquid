@@ -1,0 +1,177 @@
+{% liquid
+  assign formos_base_url = block.settings.formos_base_url | strip | remove: ' ' | remove: '<' | remove: '>' | remove: '"' | remove: "'"
+  assign form_id = block.settings.form_id | strip | remove: ' ' | remove: '<' | remove: '>' | remove: '"' | remove: "'" | remove: '/' | remove: '?' | remove: '&' | remove: '#'
+  assign height = block.settings.height | default: 800 | plus: 0
+  assign theme = block.settings.theme | default: 'light'
+  assign accent = block.settings.accent | default: '#2563eb' | strip | remove: '#' | remove: ' ' | remove: '<' | remove: '>' | remove: '"' | remove: "'"
+  assign background = block.settings.background | default: 'white'
+  assign radius = block.settings.radius | default: '12'
+  assign compact = block.settings.compact
+  assign font = block.settings.font | default: 'system'
+
+  if height < 320
+    assign height = 320
+  endif
+
+  if height > 2400
+    assign height = 2400
+  endif
+
+  unless theme == 'light' or theme == 'dark' or theme == 'auto'
+    assign theme = 'light'
+  endunless
+
+  unless background == 'white' or background == 'transparent' or background == 'subtle' or background == 'none'
+    assign background = 'white'
+  endunless
+
+  unless radius == '0' or radius == '6' or radius == '8' or radius == '12' or radius == '16' or radius == '20'
+    assign radius = '12'
+  endunless
+
+  unless font == 'system' or font == 'sans' or font == 'inherit'
+    assign font = 'system'
+  endunless
+
+  if compact
+    assign compact_value = 'true'
+  else
+    assign compact_value = 'false'
+  endif
+%}
+
+{% if formos_base_url == blank or form_id == blank %}
+  <div class="formos-embed-placeholder" style="border:1px dashed rgba(99,102,241,.45);border-radius:12px;padding:24px;text-align:center;background:rgba(248,250,252,.92);color:#334155;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <strong style="display:block;color:#0f172a;">FormOS Form</strong>
+    <span style="display:block;margin-top:6px;font-size:14px;">Configure your FormOS Base URL and Form ID in the app block settings.</span>
+  </div>
+{% else %}
+  {% liquid
+    assign normalized_base_url = formos_base_url
+    assign protocol_https = normalized_base_url | slice: 0, 8
+    assign protocol_http = normalized_base_url | slice: 0, 7
+    if normalized_base_url contains 'javascript:'
+      assign normalized_base_url = ''
+    endif
+    if normalized_base_url contains 'data:'
+      assign normalized_base_url = ''
+    endif
+    if protocol_https != 'https://' and protocol_http != 'http://'
+      assign normalized_base_url = ''
+    endif
+    assign last_character = normalized_base_url | slice: -1, 1
+    if last_character == '/'
+      assign normalized_base_url_size = normalized_base_url.size | minus: 1
+      assign normalized_base_url = normalized_base_url | slice: 0, normalized_base_url_size
+    endif
+    assign embed_src = normalized_base_url | append: '/embed/forms/' | append: form_id | append: '?theme=' | append: theme | append: '&accent=' | append: accent | append: '&bg=' | append: background | append: '&radius=' | append: radius | append: '&compact=' | append: compact_value | append: '&font=' | append: font
+  %}
+
+  {% if normalized_base_url == blank %}
+    <div class="formos-embed-placeholder" style="border:1px dashed rgba(239,68,68,.45);border-radius:12px;padding:24px;text-align:center;background:rgba(254,242,242,.92);color:#991b1b;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <strong style="display:block;">Invalid FormOS Base URL</strong>
+      <span style="display:block;margin-top:6px;font-size:14px;">Enter a safe HTTPS FormOS Base URL in the app block settings.</span>
+    </div>
+  {% else %}
+    <iframe
+      src="{{ embed_src | escape }}"
+      width="100%"
+      height="{{ height | escape }}"
+      loading="lazy"
+      title="FormOS Form"
+      style="border:0;width:100%;min-height:{{ height | escape }}px;"
+    ></iframe>
+  {% endif %}
+{% endif %}
+
+{% schema %}
+{
+  "name": "FormOS Form",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "formos_base_url",
+      "label": "FormOS Base URL",
+      "default": "https://formos.com.au",
+      "info": "Example: https://formos.com.au. Do not include a trailing slash."
+    },
+    {
+      "type": "text",
+      "id": "form_id",
+      "label": "Form ID",
+      "info": "Paste the Form ID from the FormOS form detail page."
+    },
+    {
+      "type": "range",
+      "id": "height",
+      "label": "Height",
+      "min": 320,
+      "max": 2400,
+      "step": 20,
+      "unit": "px",
+      "default": 800
+    },
+    {
+      "type": "select",
+      "id": "theme",
+      "label": "Theme",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" },
+        { "value": "auto", "label": "Auto" }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "color",
+      "id": "accent",
+      "label": "Accent color",
+      "default": "#2563eb"
+    },
+    {
+      "type": "select",
+      "id": "background",
+      "label": "Background",
+      "options": [
+        { "value": "white", "label": "White" },
+        { "value": "transparent", "label": "Transparent" },
+        { "value": "subtle", "label": "Subtle" },
+        { "value": "none", "label": "None" }
+      ],
+      "default": "white"
+    },
+    {
+      "type": "select",
+      "id": "radius",
+      "label": "Border radius",
+      "options": [
+        { "value": "0", "label": "0px" },
+        { "value": "6", "label": "6px" },
+        { "value": "8", "label": "8px" },
+        { "value": "12", "label": "12px" },
+        { "value": "16", "label": "16px" },
+        { "value": "20", "label": "20px" }
+      ],
+      "default": "12"
+    },
+    {
+      "type": "checkbox",
+      "id": "compact",
+      "label": "Compact mode",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "font",
+      "label": "Font",
+      "options": [
+        { "value": "system", "label": "System" },
+        { "value": "sans", "label": "Sans" },
+        { "value": "inherit", "label": "Inherit" }
+      ],
+      "default": "system"
+    }
+  ]
+}
+{% endschema %}

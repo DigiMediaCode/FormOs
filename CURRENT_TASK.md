@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 33.1: Embed Theme Customization for WordPress + Generic Embeds
+# CURRENT TASK — FormOS Milestone 34: Shopify App / Theme App Extension for Form Embeds
 
 ## Project Context
 
@@ -8,280 +8,263 @@ Current state:
 
 * FormOS embed system works.
 * WordPress plugin works.
-* WordPress plugin can embed a FormOS form using form ID.
-* Embedded forms submit successfully.
-* FormOS public embed route exists.
+* WordPress shortcode embeds FormOS forms successfully.
+* Embed route exists at /embed/forms/{formId}.
+* Embed theme customization exists.
+* Public embed submissions work.
+* Forms, submissions, storage, PDF, email, audit, billing, plans, staff, and Super Admin features work.
 * Do not touch CommerceOS.
 
 ## Goal
 
-Improve embedded form styling so forms can better match the website where they are embedded.
+Create a Shopify app foundation that allows Shopify merchants to embed FormOS forms into their Shopify storefront.
 
-This is especially needed for WordPress sites where each website has its own color scheme and visual style.
+This should support:
+
+* Shopify Theme App Extension
+* App block for adding FormOS form to Shopify theme sections
+* Merchant-configurable form ID
+* Merchant-configurable embed appearance settings
+* FormOS iframe/embed URL
+* Future compatibility with a full Shopify app dashboard and API integration
 
 ## Important Direction
 
-Do not build full form editing inside WordPress yet.
+Create Shopify app/plugin code separately from the FormOS Next.js app.
 
-Do not build FormOS login inside WordPress yet.
+Do not mix Shopify app runtime into the FormOS app build.
 
-Do not build API token/OAuth connection for WordPress yet.
+Do not change the FormOS core app unless needed for documentation or embed compatibility.
 
-This milestone is only about embed styling and theme customization.
+Do not build Shopify App Store submission in this milestone.
 
-## Why Not Build Form Creation Inside WordPress Yet
+Do not build full FormOS login inside Shopify yet.
 
-Creating/editing forms inside WordPress would require:
+Do not build automatic form list fetching from FormOS yet.
 
-* WordPress plugin authentication to FormOS
-* API tokens or OAuth
-* FormOS API for listing/creating/editing forms
-* permissions
-* sync/error handling
-* more complex plugin UI
+Do not build billing inside Shopify.
 
-That should be a future milestone.
+Do not build CommerceOS integration.
 
-For now, embed customization gives immediate value with low risk.
+## Recommended Folder
 
-## Embed Styling Concept
+Create a separate folder:
 
-The embedded form should support safe theme query parameters.
+plugins/shopify/formos-embed-shopify/
 
-Example:
+This folder should contain the Shopify app / theme extension scaffold.
 
-/embed/forms/{formId}?theme=auto&accent=%232563eb&radius=12&bg=transparent
+It is stored in the FormOS repo for version control, but it is not part of the FormOS Hostinger runtime.
 
-Supported query parameters:
+Add a README explaining this.
 
-* theme
-* accent
-* bg
-* radius
-* compact
-* font
+## Shopify Architecture
 
-## Supported Theme Parameters
+Use Shopify’s modern app structure where practical.
 
-### theme
+Preferred:
 
-Allowed values:
+* Shopify CLI app scaffold
+* Embedded admin app shell if scaffolded
+* Theme App Extension
+* App block for FormOS embed
 
-* light
-* dark
-* auto
+Theme app extension should provide:
 
-Default:
+* FormOS Form app block
+* optional app embed block if useful
 
-light
+The first useful target is an app block merchants can add through the Shopify Theme Editor.
 
-### accent
+## Theme App Extension Block
 
-Hex color.
+Create a theme app extension block such as:
 
-Example:
+FormOS Form
 
-#2563eb
+Block settings:
 
-Rules:
-
-* must be valid hex color
-* reject unsafe values
-* fallback to default if invalid
-
-### bg
-
-Allowed values:
-
-* white
-* transparent
-* subtle
-* none
-
-Default:
-
-white
-
-### radius
-
-Allowed values:
-
-* 0
-* 6
-* 8
-* 12
-* 16
-* 20
-
-Default:
-
-12
-
-### compact
-
-Allowed values:
-
-* true
-* false
-
-Default:
-
-false
-
-### font
-
-Allowed values:
-
-* system
-* sans
-* inherit
-
-Default:
-
-system
-
-Note:
-
-Because iframe content is isolated from parent CSS, inherit cannot truly inherit parent page CSS unless CSS variables are passed. For MVP, treat inherit similar to system but keep option for future.
-
-## Embed Route Styling
-
-Update:
-
-/embed/forms/[formId]
-
-It should read safe query parameters and apply them to the embedded form UI.
-
-Requirements:
-
-* transparent background option should remove outer heavy background/card styling
-* accent color should affect submit button/focus styles where safe
-* radius should affect card/input/button border radius
-* compact should reduce spacing
-* dark theme should use dark background and readable text
-* auto can use prefers-color-scheme or default light if simpler
-
-Do not allow arbitrary CSS injection.
-
-Do not allow arbitrary style tags.
-
-Only safe predefined values and validated hex color.
-
-## WordPress Plugin Settings
-
-Update WordPress plugin settings page:
-
-Settings → FormOS Embed
-
-Add default embed appearance settings:
-
-* Default Theme: Light / Dark / Auto
-* Accent Color
-* Background: White / Transparent / Subtle / None
-* Border Radius
-* Compact Mode
-* Font Style
-
-These settings are used by shortcode unless overridden.
-
-## WordPress Shortcode Attributes
-
-Update shortcode:
-
-[formos_form id="FORM_ID"]
-
-Support optional attributes:
-
-* theme
-* accent
-* bg
-* radius
-* compact
-* font
-* height
-* js
-
-Examples:
-
-[formos_form id="abc123" theme="auto" accent="#7c3aed"]
-
-[formos_form id="abc123" bg="transparent" radius="16" compact="true"]
-
-Shortcode attributes should override plugin defaults.
-
-## WordPress Plugin Output
-
-The iframe src should include safe query params.
-
-Example:
-
-https://formos.com/embed/forms/abc123?theme=auto&accent=%237c3aed&bg=transparent&radius=16&compact=true
-
-Sanitize all attributes using WordPress sanitization functions.
-
-Do not allow arbitrary CSS or JavaScript.
-
-## Copy Embed Code in FormOS
-
-Update FormOS embed section if practical.
-
-Add simple theme options to generated embed code:
-
-* Theme
+* Form ID
+* Embed height
+* Theme: Light / Dark / Auto
 * Accent color
-* Background
-* Radius
+* Background: White / Transparent / Subtle / None
+* Border radius
 * Compact mode
+* Font style
+* Show FormOS branding if available or allow existing embed behaviour
 
-If this is too much, at minimum ensure embed route supports query params and WordPress plugin can use them.
+The block should render an iframe:
 
-## Plan Consideration
+<iframe
+  src="{formos_base_url}/embed/forms/{form_id}?theme={theme}&accent={accent}&bg={bg}&radius={radius}&compact={compact}&font={font}"
+  width="100%"
+  height="{height}"
+  loading="lazy"
+  style="border:0;width:100%;min-height:{height}px;"
+></iframe>
 
-Do not restrict theme customization by plan in this milestone.
+Use safe Liquid escaping.
 
-Later, advanced custom branding can become a paid feature.
+## FormOS Base URL
 
-For now, all embed users can use these simple style options.
+For MVP, the FormOS base URL can be configured in one of these ways:
+
+Option A:
+Hardcode development/default base URL in extension settings or snippet.
+
+Option B:
+Add theme block setting:
+
+FormOS Base URL
+
+Option C:
+App admin settings page stores base URL.
+
+Preferred MVP:
+
+Use a block setting:
+
+FormOS Base URL
+
+Default empty or your live FormOS domain.
+
+This keeps the extension simple.
+
+Later, a full Shopify app dashboard can store this globally.
+
+## Shopify App Admin Page
+
+If app scaffold includes an admin page, create a simple app page:
+
+FormOS Embed Settings
+
+Show:
+
+* short explanation
+* FormOS Base URL
+* instructions to find Form ID in FormOS
+* instructions to add the app block in Theme Editor
+* example embed preview/instructions
+
+Do not build API connection to FormOS yet.
+
+## Merchant Usage
+
+Merchant flow:
+
+1. Install Shopify app on development store.
+2. Open Shopify Theme Editor.
+3. Add app block: FormOS Form.
+4. Enter FormOS Base URL.
+5. Enter Form ID.
+6. Configure appearance.
+7. Save theme.
+8. Form appears on storefront.
+9. Submissions go to FormOS dashboard.
+
+## Shopify App Extension Settings
+
+Suggested block settings:
+
+* formos_base_url: text
+* form_id: text
+* height: number/range, default 800
+* theme: select light/dark/auto
+* accent: text color hex
+* background: select white/transparent/subtle/none
+* radius: select 0/6/8/12/16/20
+* compact: checkbox
+* font: select system/sans/inherit
+
+Validation in Liquid is limited, but keep output safe and escaped.
+
+## Embed Appearance
+
+The extension should pass the same query params supported by FormOS:
+
+* theme
+* accent
+* bg
+* radius
+* compact
+* font
+
+This keeps Shopify consistent with WordPress plugin embeds.
 
 ## Security
 
-* no arbitrary CSS input
-* no arbitrary JS input
-* validate hex color
-* whitelist theme/bg/font/radius values
-* WordPress plugin must sanitize shortcode attributes
-* FormOS embed route must validate query params server-side
-* do not expose secrets
+* Do not expose FormOS secrets.
+* Do not use FormOS API tokens in this milestone.
+* Do not proxy submissions through Shopify.
+* Do not store submissions in Shopify.
+* Use iframe pointing to FormOS embed route.
+* Escape merchant-entered settings.
+* Do not allow arbitrary JavaScript.
+* Do not allow merchants to paste raw script code.
+
+## Future Compatibility
+
+Design so future milestones can add:
+
+* Shopify app OAuth/store install flow
+* App admin dashboard
+* FormOS account connection
+* API token/OAuth connection to FormOS
+* list forms from FormOS
+* select form from dropdown
+* per-store default FormOS base URL
+* Shopify app billing if needed
+* Shopify App Store submission
+
+But do not build these now.
+
+## Local Development / Documentation
+
+Add README with:
+
+* how to install Shopify CLI if needed
+* how to run the Shopify app locally
+* how to connect to development store
+* how to add the app block in theme editor
+* how to enter FormOS form ID
+* how to test submission
+* how to package/deploy later
+
+## FormOS Core App
+
+Do not change FormOS core app unless needed.
+
+If FormOS embed route already supports all query params, no core changes should be required.
+
+If a small compatibility fix is needed, keep it minimal and run FormOS build.
 
 ## Out of Scope
 
-Do not build WordPress form creation.
-Do not build WordPress FormOS login.
-Do not build API keys.
-Do not build Shopify app.
-Do not build custom CSS editor.
-Do not build full theme designer.
-Do not build per-form theme presets.
-Do not change core submission logic.
+Do not build Shopify App Store submission.
+Do not build Shopify billing.
+Do not build FormOS login inside Shopify.
+Do not build FormOS API token connection.
+Do not fetch/list forms from FormOS.
+Do not store submissions in Shopify.
+Do not build app proxy in this milestone unless absolutely necessary.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 33.1 is complete when:
+Milestone 34 is complete when:
 
-* Embed route accepts safe theme query parameters.
-* Accent color affects embedded form styling.
-* Background option works.
-* Border radius option works.
-* Compact mode works.
-* Dark/light/auto theme works or gracefully falls back.
-* Invalid theme parameters are ignored or safely defaulted.
-* WordPress plugin settings include default appearance options.
-* WordPress shortcode accepts appearance attributes.
-* Shortcode attributes override plugin defaults.
-* WordPress plugin sanitizes all appearance inputs.
-* Embedded form visually adapts better to WordPress sites.
-* Existing embed submissions still work.
-* Existing iframe embed still works.
-* Existing public form route still works.
-* FormOS build passes.
+* Shopify app/plugin folder exists separately from FormOS core app.
+* Theme app extension exists.
+* FormOS Form app block exists.
+* Merchant can enter FormOS Base URL.
+* Merchant can enter Form ID.
+* Merchant can configure height/theme/accent/background/radius/compact/font.
+* App block renders iframe to FormOS embed route.
+* Form appears on Shopify storefront.
+* Submission goes to FormOS.
+* Theme block output is escaped/safe.
+* No FormOS secrets are exposed.
+* README explains setup/testing.
+* FormOS core app still builds if touched.
+* Existing WordPress plugin remains unaffected.
