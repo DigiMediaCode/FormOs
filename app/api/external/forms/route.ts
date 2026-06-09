@@ -4,8 +4,25 @@ import { getAppUrl } from "@/lib/app-url";
 import { authenticateApiToken } from "@/lib/api-tokens";
 import { prisma } from "@/lib/prisma";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      ...CORS_HEADERS,
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 function unauthorized() {
-  return NextResponse.json({ error: "Invalid or revoked API token." }, { status: 401 });
+  return jsonResponse({ error: "Invalid or revoked API token." }, { status: 401 });
 }
 
 function readBearerToken(request: Request) {
@@ -40,7 +57,7 @@ export async function GET(request: Request) {
   const status = normalizeStatus(url.searchParams.get("status"));
 
   if (!status) {
-    return NextResponse.json(
+    return jsonResponse(
       { error: "Invalid status filter." },
       { status: 400 },
     );
@@ -62,7 +79,7 @@ export async function GET(request: Request) {
     },
   });
 
-  return NextResponse.json({
+  return jsonResponse({
     data: forms.map((form) => ({
       id: form.id,
       title: form.title,
@@ -71,5 +88,12 @@ export async function GET(request: Request) {
       updatedAt: form.updatedAt.toISOString(),
       embedUrl: `${appUrl}/embed/forms/${form.id}`,
     })),
+  });
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: CORS_HEADERS,
   });
 }
