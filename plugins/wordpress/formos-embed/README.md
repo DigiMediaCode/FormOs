@@ -11,7 +11,10 @@ FormOS Embed is a small WordPress plugin for embedding FormOS forms in WordPress
 
    `https://formos.com.au`
 
-5. Save settings.
+5. Create a FormOS API token in **FormOS Dashboard -> API Tokens**.
+6. Paste the token into **FormOS API Token**.
+7. Save settings.
+8. The settings page will show your published FormOS forms and shortcodes.
 
 ## Shortcodes
 
@@ -55,7 +58,8 @@ Supported appearance attributes:
 
 To match a WordPress theme more closely, set `bg="transparent"` and copy the theme's button/accent, card background, text, and border colors into `accent`, `surface`, `text`, and `border`.
 
-You can find the Form ID in FormOS on the form detail page.
+You can find the Form ID in FormOS on the form detail page, or connect the plugin
+with an API token and choose a form from the WordPress block editor.
 
 ## WordPress Block Editor
 
@@ -64,14 +68,16 @@ The plugin also adds a Gutenberg block:
 1. Open a WordPress page or post.
 2. Click the block inserter.
 3. Search for **FormOS Form**.
-4. Enter the Form ID in the block settings sidebar.
+4. Choose a published FormOS form from the dropdown.
 5. Adjust height, auto-height, theme, accent color, background, radius, compact mode, or font if needed.
 
 The block renders the same reliable FormOS embed as the shortcode.
 
+If the dropdown is empty, open **Settings -> FormOS Embed**, save your FormOS Base URL and API token, then click **Refresh FormOS forms** inside the block sidebar.
+
 ## Security
 
-The plugin does not store FormOS API keys or secrets. It only stores a FormOS Base URL, default height, and the auto-height preference. Output uses WordPress escaping helpers and renders a FormOS iframe by default.
+The plugin stores the FormOS API token in WordPress options so editors can fetch published form metadata. The token is not shown again after saving and is only used server-side by WordPress to call `/api/external/forms`. Output uses WordPress escaping helpers and renders a FormOS iframe by default.
 
 ## Gutenberg Block
 

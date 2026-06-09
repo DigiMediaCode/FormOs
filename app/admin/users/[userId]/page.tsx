@@ -51,6 +51,7 @@ const booleanOverrideFields = [
   ["allowTeamMembers", "Team members"],
   ["allowAdFreeForms", "Ad-free public forms"],
   ["allowEmbeds", "Form embeds"],
+  ["allowApiAccess", "API access"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -175,6 +176,15 @@ export default async function AdminUserDetailPage({
             },
           },
         },
+        apiTokens: {
+          orderBy: {
+            lastUsedAt: "desc",
+          },
+          select: {
+            lastUsedAt: true,
+            revokedAt: true,
+          },
+        },
       },
     }),
     prisma.subscriptionPlan.findMany({
@@ -208,6 +218,7 @@ export default async function AdminUserDetailPage({
 
   const overrideLimits = override?.limits;
   const normalizedOverride = override ? normalizePlanLimits(override.limits) : null;
+  const lastApiTokenUsed = user.apiTokens.find((token) => token.lastUsedAt)?.lastUsedAt;
 
   return (
     <main className="px-6 py-10">
@@ -350,6 +361,29 @@ export default async function AdminUserDetailPage({
               <p className="text-sm text-slate-500">Plan allows team</p>
               <p className="mt-1 text-sm font-medium text-slate-950">
                 {access.limits.allowTeamMembers ? "Yes" : "No"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Plan allows API access</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {access.limits.allowApiAccess ? "Yes" : "No"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Active API tokens</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {user.apiTokens.filter((token) => !token.revokedAt).length}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Last API token used</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">
+                {lastApiTokenUsed
+                  ? new Intl.DateTimeFormat("en", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(lastApiTokenUsed)
+                  : "Never"}
               </p>
             </div>
             <div>

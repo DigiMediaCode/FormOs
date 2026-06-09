@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StorageProvider, UserRole } from "@prisma/client";
+import { KeyRound } from "lucide-react";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { GOOGLE_DRIVE_SCOPE, getGoogleDriveIntegrationStatus } from "@/lib/integrations/google-drive/client";
@@ -85,6 +86,35 @@ export default async function IntegrationsPage({
             Choose an active upload storage provider before using image upload fields.
           </p>
         ) : null}
+
+        <section className="rounded-md border border-blue-100 bg-blue-50 p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+                  <KeyRound className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-950">
+                    Shopify and external embeds
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">
+                    Create an API token for the FormOS Shopify app so it can
+                    fetch your published forms and help you copy the correct
+                    Form ID.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              className="inline-flex w-fit items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+              href="/dashboard/settings/api-tokens"
+            >
+              Open API Tokens
+            </Link>
+          </div>
+        </section>
 
         <section className="rounded-md border border-slate-200 bg-white p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">

@@ -9,6 +9,10 @@
     var RangeControl = components.RangeControl;
     var SelectControl = components.SelectControl;
     var Notice = components.Notice;
+    var Button = components.Button;
+    var useEffect = element.useEffect;
+    var useState = element.useState;
+    var apiFetch = window.wp.apiFetch;
 
     blocks.registerBlockType('formos/embed-form', {
         title: __('FormOS Form', 'formos-embed'),
@@ -73,6 +77,19 @@
         edit: function (props) {
             var attributes = props.attributes;
             var setAttributes = props.setAttributes;
+            var formosConfig = window.formosEmbedBlock || {};
+            var hasConnection = !!formosConfig.hasConnection;
+            var settingsUrl = formosConfig.settingsUrl || 'options-general.php?page=formos-embed';
+            var formsEndpoint = formosConfig.formsEndpoint || '/wp-json/formos-embed/v1/forms';
+            var formsState = useState([]);
+            var forms = formsState[0];
+            var setForms = formsState[1];
+            var loadingState = useState(false);
+            var isLoadingForms = loadingState[0];
+            var setIsLoadingForms = loadingState[1];
+            var errorState = useState('');
+            var formsError = errorState[0];
+            var setFormsError = errorState[1];
             var blockProps = useBlockProps({
                 className: 'formos-embed-editor-card'
             });
@@ -93,6 +110,37 @@
                 (attributes.font ? ' font="' + attributes.font + '"' : '') +
                 ']';
 
+            function fetchFormosForms() {
+                if (!hasConnection || !apiFetch) {
+                    return;
+                }
+
+                setIsLoadingForms(true);
+                setFormsError('');
+
+                apiFetch({ url: formsEndpoint })
+                    .then(function (response) {
+                        var items = response && response.data && Array.isArray(response.data)
+                            ? response.data
+                            : [];
+                        setForms(items);
+                    })
+                    .catch(function (error) {
+                        setFormsError(
+                            error && error.message
+                                ? error.message
+                                : __('Unable to fetch FormOS forms.', 'formos-embed')
+                        );
+                    })
+                    .finally(function () {
+                        setIsLoadingForms(false);
+                    });
+            }
+
+            useEffect(function () {
+                fetchFormosForms();
+            }, []);
+
             return el(
                 'div',
                 blockProps,
@@ -105,9 +153,78 @@
                             title: __('FormOS Embed Settings', 'formos-embed'),
                             initialOpen: true
                         },
+                        !hasConnection
+                            ? el(
+                                Notice,
+                                {
+                                    status: 'warning',
+                                    isDismissible: false
+                                },
+                                el(
+                                    'span',
+                                    {},
+                                    __('Connect WordPress to FormOS in Settings > FormOS Embed to choose forms from a dropdown. ', 'formos-embed'),
+                                    el(
+                                        'a',
+                                        {
+                                            href: settingsUrl,
+                                            target: '_blank',
+                                            rel: 'noreferrer'
+                                        },
+                                        __('Open settings', 'formos-embed')
+                                    )
+                                )
+                            )
+                            : null,
+                        hasConnection
+                            ? el(SelectControl, {
+                                label: __('Choose FormOS form', 'formos-embed'),
+                                help: forms.length
+                                    ? __('Selecting a form fills the Form ID automatically.', 'formos-embed')
+                                    : __('Fetches published forms from your connected FormOS account.', 'formos-embed'),
+                                value: attributes.formId,
+                                options: [
+                                    { label: __('Select a form', 'formos-embed'), value: '' }
+                                ].concat(
+                                    forms.map(function (form) {
+                                        return {
+                                            label: (form.title || __('Untitled form', 'formos-embed')) + ' - ' + form.id,
+                                            value: form.id
+                                        };
+                                    })
+                                ),
+                                onChange: function (value) {
+                                    setAttributes({ formId: value });
+                                }
+                            })
+                            : null,
+                        hasConnection
+                            ? el(
+                                Button,
+                                {
+                                    variant: 'secondary',
+                                    isBusy: isLoadingForms,
+                                    disabled: isLoadingForms,
+                                    onClick: fetchFormosForms
+                                },
+                                isLoadingForms
+                                    ? __('Fetching forms...', 'formos-embed')
+                                    : __('Refresh FormOS forms', 'formos-embed')
+                            )
+                            : null,
+                        formsError
+                            ? el(
+                                Notice,
+                                {
+                                    status: 'error',
+                                    isDismissible: false
+                                },
+                                formsError
+                            )
+                            : null,
                         el(TextControl, {
                             label: __('Form ID', 'formos-embed'),
-                            help: __('Find this in your FormOS form detail page.', 'formos-embed'),
+                            help: __('You can still paste a Form ID manually if needed.', 'formos-embed'),
                             value: attributes.formId,
                             onChange: function (value) {
                                 setAttributes({ formId: value });

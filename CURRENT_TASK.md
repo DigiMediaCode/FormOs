@@ -1,4 +1,4 @@
-# CURRENT TASK — FormOS Milestone 34: Shopify App / Theme App Extension for Form Embeds
+# CURRENT TASK — FormOS Milestone 34.1: Shopify App Account Connection + Form Picker
 
 ## Project Context
 
@@ -6,265 +6,326 @@ FormOS is a standalone SaaS-style form builder project.
 
 Current state:
 
-* FormOS embed system works.
-* WordPress plugin works.
-* WordPress shortcode embeds FormOS forms successfully.
-* Embed route exists at /embed/forms/{formId}.
-* Embed theme customization exists.
-* Public embed submissions work.
-* Forms, submissions, storage, PDF, email, audit, billing, plans, staff, and Super Admin features work.
-* Do not touch CommerceOS.
+- FormOS embed system works.
+- WordPress plugin works.
+- Shopify Theme App Extension works.
+- Shopify app block can render FormOS forms on Shopify storefront.
+- Shopify block currently requires manual FormOS Base URL and Form ID.
+- Public embed route exists at /embed/forms/{formId}.
+- Embed theme customization works.
+- FormOS public embed submissions work.
+- Forms, submissions, storage, PDF, email, audit, billing, plans, staff, and Super Admin features work.
+- Do not touch CommerceOS.
 
 ## Goal
 
-Create a Shopify app foundation that allows Shopify merchants to embed FormOS forms into their Shopify storefront.
+Improve the Shopify integration so merchants can connect their FormOS account and select a form from a dropdown instead of manually typing a Form ID.
 
-This should support:
+This milestone should build the foundation for a real Shopify app experience.
 
-* Shopify Theme App Extension
-* App block for adding FormOS form to Shopify theme sections
-* Merchant-configurable form ID
-* Merchant-configurable embed appearance settings
-* FormOS iframe/embed URL
-* Future compatibility with a full Shopify app dashboard and API integration
+## Product Behaviour
+
+A Shopify merchant should be able to:
+
+1. Install/open the FormOS Shopify app.
+2. Enter or connect a FormOS API token.
+3. Save the connection.
+4. See a list of their published FormOS forms.
+5. Copy/use the selected form ID in the theme app block.
+6. In the theme editor, select or enter the FormOS form.
+7. Render the form on the storefront.
 
 ## Important Direction
 
-Create Shopify app/plugin code separately from the FormOS Next.js app.
+Do not build full Shopify App Store submission yet.
 
-Do not mix Shopify app runtime into the FormOS app build.
+Do not build Shopify billing.
 
-Do not change the FormOS core app unless needed for documentation or embed compatibility.
+Do not sync Shopify customers/orders.
 
-Do not build Shopify App Store submission in this milestone.
+Do not store FormOS submissions in Shopify.
 
-Do not build full FormOS login inside Shopify yet.
+Do not proxy form submissions through Shopify.
 
-Do not build automatic form list fetching from FormOS yet.
+Do not build a full FormOS form builder inside Shopify.
 
-Do not build billing inside Shopify.
+The app should only connect to FormOS and help merchants select/embed forms.
 
-Do not build CommerceOS integration.
+## FormOS API Token Foundation
 
-## Recommended Folder
+Add a secure API token system in FormOS.
 
-Create a separate folder:
+Users should be able to generate an API token for external integrations.
+
+Create dashboard route:
+
+/dashboard/settings/api-tokens
+
+Add dashboard nav link:
+
+API Tokens
+
+User can:
+
+- create token
+- name token
+- view token once after creation
+- revoke token
+- see created date
+- see last used date if implemented
+
+Token rules:
+
+- raw token shown only once
+- store only token hash
+- token belongs to user
+- token can be revoked
+- token should support scopes if simple
+
+Suggested scopes:
+
+- forms:read
+- embeds:read
+
+For this milestone, forms:read is enough.
+
+## Prisma Model
+
+Add:
+
+ApiToken {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  tokenHash   String   @unique
+  scopes      Json?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+Create migration:
+
+npx prisma migrate dev --name add_api_tokens
+
+Do not use prisma db push.
+
+## FormOS API Endpoint For Shopify
+
+Create API endpoint:
+
+GET /api/external/forms
+
+Authentication:
+
+Authorization: Bearer {apiToken}
+
+Returns only the authenticated user's forms.
+
+Return only safe fields:
+
+[
+  {
+    "id": "formId",
+    "title": "Vehicle Hire Agreement",
+    "status": "PUBLISHED",
+    "mode": "AGREEMENT",
+    "updatedAt": "...",
+    "embedUrl": "https://formos.com.au/embed/forms/formId"
+  }
+]
+
+Rules:
+
+- only return forms owned by token user
+- preferably return published forms by default
+- do not return submissions
+- do not return private answers
+- do not return storage tokens
+- do not return owner private data
+
+Optional query:
+
+?status=PUBLISHED
+
+## External API Security
+
+- require valid non-revoked token
+- token hash lookup only
+- update lastUsedAt if practical
+- return 401 for invalid token
+- return safe JSON errors
+- rate limit if existing helper exists
+- do not log raw tokens
+
+## Shopify App Admin Connection
+
+In the Shopify app folder:
 
 plugins/shopify/formos-embed-shopify/
 
-This folder should contain the Shopify app / theme extension scaffold.
+Add or update app admin UI if scaffold supports it.
 
-It is stored in the FormOS repo for version control, but it is not part of the FormOS Hostinger runtime.
+If current app is extension-only and no admin runtime exists, create clear documentation and a lightweight config approach.
 
-Add a README explaining this.
+Preferred if possible:
 
-## Shopify Architecture
+Create app admin/settings page:
 
-Use Shopify’s modern app structure where practical.
+FormOS Connection
 
-Preferred:
+Fields:
 
-* Shopify CLI app scaffold
-* Embedded admin app shell if scaffolded
-* Theme App Extension
-* App block for FormOS embed
+- FormOS Base URL
+- FormOS API Token
 
-Theme app extension should provide:
+Actions:
 
-* FormOS Form app block
-* optional app embed block if useful
-
-The first useful target is an app block merchants can add through the Shopify Theme Editor.
-
-## Theme App Extension Block
-
-Create a theme app extension block such as:
-
-FormOS Form
-
-Block settings:
-
-* Form ID
-* Embed height
-* Theme: Light / Dark / Auto
-* Accent color
-* Background: White / Transparent / Subtle / None
-* Border radius
-* Compact mode
-* Font style
-* Show FormOS branding if available or allow existing embed behaviour
-
-The block should render an iframe:
-
-<iframe
-  src="{formos_base_url}/embed/forms/{form_id}?theme={theme}&accent={accent}&bg={bg}&radius={radius}&compact={compact}&font={font}"
-  width="100%"
-  height="{height}"
-  loading="lazy"
-  style="border:0;width:100%;min-height:{height}px;"
-></iframe>
-
-Use safe Liquid escaping.
-
-## FormOS Base URL
-
-For MVP, the FormOS base URL can be configured in one of these ways:
-
-Option A:
-Hardcode development/default base URL in extension settings or snippet.
-
-Option B:
-Add theme block setting:
-
-FormOS Base URL
-
-Option C:
-App admin settings page stores base URL.
-
-Preferred MVP:
-
-Use a block setting:
-
-FormOS Base URL
-
-Default empty or your live FormOS domain.
-
-This keeps the extension simple.
-
-Later, a full Shopify app dashboard can store this globally.
-
-## Shopify App Admin Page
-
-If app scaffold includes an admin page, create a simple app page:
-
-FormOS Embed Settings
+- Save connection
+- Test connection
+- Fetch Forms
 
 Show:
 
-* short explanation
-* FormOS Base URL
-* instructions to find Form ID in FormOS
-* instructions to add the app block in Theme Editor
-* example embed preview/instructions
+- connection status
+- list of forms from FormOS
+- copy form ID button
+- instructions to add app block in Theme Editor
 
-Do not build API connection to FormOS yet.
+If a full admin app is not available in the current scaffold, update README and prepare the next scaffold step.
 
-## Merchant Usage
+## Shopify Theme App Extension Update
 
-Merchant flow:
+Update FormOS Form app block settings.
 
-1. Install Shopify app on development store.
-2. Open Shopify Theme Editor.
-3. Add app block: FormOS Form.
-4. Enter FormOS Base URL.
-5. Enter Form ID.
-6. Configure appearance.
-7. Save theme.
-8. Form appears on storefront.
-9. Submissions go to FormOS dashboard.
+Current settings can remain:
 
-## Shopify App Extension Settings
+- FormOS Base URL
+- Form ID
+- height/theme/accent/background/radius/compact/font
 
-Suggested block settings:
+If Shopify app block cannot dynamically populate dropdown from app backend yet, keep manual Form ID field but improve instructions.
 
-* formos_base_url: text
-* form_id: text
-* height: number/range, default 800
-* theme: select light/dark/auto
-* accent: text color hex
-* background: select white/transparent/subtle/none
-* radius: select 0/6/8/12/16/20
-* compact: checkbox
-* font: select system/sans/inherit
+Add helper text:
 
-Validation in Liquid is limited, but keep output safe and escaped.
+Connect your FormOS account in the app settings to find your Form ID.
 
-## Embed Appearance
+If dynamic source/settings are supported, add a form picker.
 
-The extension should pass the same query params supported by FormOS:
+## Form Picker Strategy
 
-* theme
-* accent
-* bg
-* radius
-* compact
-* font
+Best MVP:
 
-This keeps Shopify consistent with WordPress plugin embeds.
+- Shopify app admin page fetches forms and shows Copy Form ID
+- Theme block still uses Form ID text input
+
+Future:
+
+- app block dynamic dropdown populated by app backend
+
+Do not overbuild dynamic dropdown if Shopify extension architecture makes it difficult.
+
+## Installation / Usage Flow
+
+Document clearly:
+
+1. In FormOS, create API token from Dashboard → API Tokens.
+2. In Shopify app, paste FormOS Base URL and API token.
+3. Click Test Connection.
+4. Select/copy desired Form ID.
+5. Go to Theme Editor.
+6. Add FormOS Form app block.
+7. Paste Form ID.
+8. Save theme.
+
+## Plan / Package Controls
+
+Add plan limit:
+
+allowApiAccess: boolean
+
+Default suggestion:
+
+Free: false  
+Starter: false  
+Pro: true  
+Business: true  
+Unlimited: true
+
+Update:
+
+- plan editor
+- user quota overrides
+- effective limits
+
+When user tries to create API token:
+
+- check allowApiAccess
+- if false, block with friendly error:
+  API access is not included in your current plan.
+
+This makes Shopify/advanced integrations a paid feature.
+
+## Super Admin Visibility
+
+Update Super Admin user detail if practical:
+
+- API token count
+- last API token usage
+- API access allowed by plan
+
+Do not expose raw tokens or token hashes.
 
 ## Security
 
-* Do not expose FormOS secrets.
-* Do not use FormOS API tokens in this milestone.
-* Do not proxy submissions through Shopify.
-* Do not store submissions in Shopify.
-* Use iframe pointing to FormOS embed route.
-* Escape merchant-entered settings.
-* Do not allow arbitrary JavaScript.
-* Do not allow merchants to paste raw script code.
-
-## Future Compatibility
-
-Design so future milestones can add:
-
-* Shopify app OAuth/store install flow
-* App admin dashboard
-* FormOS account connection
-* API token/OAuth connection to FormOS
-* list forms from FormOS
-* select form from dropdown
-* per-store default FormOS base URL
-* Shopify app billing if needed
-* Shopify App Store submission
-
-But do not build these now.
-
-## Local Development / Documentation
-
-Add README with:
-
-* how to install Shopify CLI if needed
-* how to run the Shopify app locally
-* how to connect to development store
-* how to add the app block in theme editor
-* how to enter FormOS form ID
-* how to test submission
-* how to package/deploy later
-
-## FormOS Core App
-
-Do not change FormOS core app unless needed.
-
-If FormOS embed route already supports all query params, no core changes should be required.
-
-If a small compatibility fix is needed, keep it minimal and run FormOS build.
+- raw API token shown once only
+- token hash stored only
+- revoked tokens cannot be used
+- external API returns only safe form data
+- no submissions exposed
+- no storage tokens exposed
+- no billing data exposed
+- no private user data exposed
+- plan allowApiAccess enforced server-side
 
 ## Out of Scope
 
-Do not build Shopify App Store submission.
+Do not build full Shopify App Store submission.
 Do not build Shopify billing.
-Do not build FormOS login inside Shopify.
-Do not build FormOS API token connection.
-Do not fetch/list forms from FormOS.
-Do not store submissions in Shopify.
-Do not build app proxy in this milestone unless absolutely necessary.
+Do not build Shopify customer/order sync.
+Do not build form builder inside Shopify.
+Do not build WordPress API connection.
+Do not expose submissions API.
+Do not build API token scopes beyond forms read unless simple.
 Do not integrate CommerceOS.
 
 ## Acceptance Criteria
 
-Milestone 34 is complete when:
+Milestone 34.1 is complete when:
 
-* Shopify app/plugin folder exists separately from FormOS core app.
-* Theme app extension exists.
-* FormOS Form app block exists.
-* Merchant can enter FormOS Base URL.
-* Merchant can enter Form ID.
-* Merchant can configure height/theme/accent/background/radius/compact/font.
-* App block renders iframe to FormOS embed route.
-* Form appears on Shopify storefront.
-* Submission goes to FormOS.
-* Theme block output is escaped/safe.
-* No FormOS secrets are exposed.
-* README explains setup/testing.
-* FormOS core app still builds if touched.
-* Existing WordPress plugin remains unaffected.
+- ApiToken model exists.
+- Prisma migration exists.
+- User can create API token in FormOS.
+- Raw token is shown only once.
+- Token hash is stored.
+- User can revoke token.
+- Plan limit allowApiAccess exists.
+- API token creation respects allowApiAccess.
+- GET /api/external/forms exists.
+- External forms API authenticates Bearer token.
+- External forms API returns only safe form list.
+- Revoked/invalid token is rejected.
+- Shopify app documentation explains API token connection.
+- Shopify app can test/fetch forms if admin runtime exists, or README documents current manual flow.
+- Shopify theme block still works.
+- Existing embed route still works.
+- Existing WordPress plugin still works.
+- Existing FormOS app features still work.
+- npx prisma validate passes.
+- npx prisma generate passes.
+- npm run build passes.

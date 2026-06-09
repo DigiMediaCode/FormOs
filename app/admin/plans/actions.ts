@@ -93,6 +93,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowTeamMembers: readBoolean(formData, "allowTeamMembers"),
     allowAdFreeForms: readBoolean(formData, "allowAdFreeForms"),
     allowEmbeds: readBoolean(formData, "allowEmbeds"),
+    allowApiAccess: readBoolean(formData, "allowApiAccess"),
     allowedFieldTypes,
   });
 }

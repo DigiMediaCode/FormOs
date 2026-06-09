@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BadgeDollarSign,
   Brush,
+  KeyRound,
   FileText,
   Gauge,
   HelpCircle,
@@ -46,6 +47,12 @@ const NAV_ITEMS = [
     label: "Branding",
     ownerOnly: true,
     icon: Brush,
+  },
+  {
+    href: "/dashboard/settings/api-tokens",
+    label: "API Tokens",
+    ownerOnly: true,
+    icon: KeyRound,
   },
   {
     href: "/help",

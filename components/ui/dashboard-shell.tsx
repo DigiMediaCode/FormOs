@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Settings, ShieldCheck, UserCircle } from "lucide-react";
+import { KeyRound, LogOut, Settings, ShieldCheck, UserCircle } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { DashboardNav } from "@/components/ui/dashboard-nav";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -113,6 +113,15 @@ export function DashboardShell({
               </p>
             </div>
             <div className="flex gap-2">
+              {canManageOwnerSettings ? (
+                <Link
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  href="/dashboard/settings/api-tokens"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  API Tokens
+                </Link>
+              ) : null}
               <Link
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 href="/dashboard/forms"

@@ -18,9 +18,19 @@ class FormOS_Embed_Block {
         wp_register_script(
             'formos-embed-block',
             FORMOS_EMBED_PLUGIN_URL . 'assets/block.js',
-            array('wp-blocks', 'wp-block-editor', 'wp-components', 'wp-element', 'wp-i18n'),
+            array('wp-api-fetch', 'wp-blocks', 'wp-block-editor', 'wp-components', 'wp-element', 'wp-i18n'),
             FORMOS_EMBED_VERSION,
             true
+        );
+
+        wp_localize_script(
+            'formos-embed-block',
+            'formosEmbedBlock',
+            array(
+                'formsEndpoint' => esc_url_raw(rest_url('formos-embed/v1/forms')),
+                'hasConnection' => FormOS_Embed_Settings::has_connection(),
+                'settingsUrl' => esc_url_raw(admin_url('options-general.php?page=formos-embed')),
+            )
         );
 
         register_block_type(

@@ -19,6 +19,7 @@ class FormOS_Embed_Settings {
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'add_settings_page'));
         add_action('admin_init', array(__CLASS__, 'register_settings'));
+        add_action('rest_api_init', array(__CLASS__, 'register_rest_routes'));
     }
 
     public static function add_settings_page() {
@@ -53,6 +54,14 @@ class FormOS_Embed_Settings {
             'base_url',
             __('FormOS Base URL', 'formos-embed'),
             array(__CLASS__, 'render_base_url_field'),
+            'formos-embed',
+            'formos_embed_main'
+        );
+
+        add_settings_field(
+            'api_token',
+            __('FormOS API Token', 'formos-embed'),
+            array(__CLASS__, 'render_api_token_field'),
             'formos-embed',
             'formos_embed_main'
         );
@@ -156,6 +165,7 @@ class FormOS_Embed_Settings {
     public static function default_options() {
         return array(
             'base_url' => '',
+            'api_token' => '',
             'default_height' => 800,
             'use_auto_height' => 0,
             'theme' => 'light',
@@ -181,7 +191,9 @@ class FormOS_Embed_Settings {
         }
 
         $input = is_array($input) ? $input : array();
+        $existing = self::get_options();
         $base_url = isset($input['base_url']) ? sanitize_text_field(wp_unslash($input['base_url'])) : '';
+        $api_token = isset($input['api_token']) ? sanitize_text_field(wp_unslash($input['api_token'])) : '';
         $default_height = isset($input['default_height']) ? absint($input['default_height']) : 800;
         $theme = isset($input['theme']) ? sanitize_text_field(wp_unslash($input['theme'])) : 'light';
         $accent = isset($input['accent']) ? sanitize_text_field(wp_unslash($input['accent'])) : '#2563eb';
@@ -193,6 +205,7 @@ class FormOS_Embed_Settings {
         $font = isset($input['font']) ? sanitize_text_field(wp_unslash($input['font'])) : 'system';
 
         $base_url = self::sanitize_base_url($base_url);
+        $api_token = self::sanitize_api_token($api_token, $existing['api_token']);
         $theme = self::allowed_text($theme, self::THEMES, 'light');
         $accent = self::sanitize_hex_color($accent);
         $background = self::allowed_text($background, self::BACKGROUNDS, 'transparent');
@@ -212,6 +225,7 @@ class FormOS_Embed_Settings {
 
         return array(
             'base_url' => $base_url,
+            'api_token' => $api_token,
             'default_height' => $default_height,
             'use_auto_height' => empty($input['use_auto_height']) ? 0 : 1,
             'theme' => $theme,
@@ -284,8 +298,118 @@ class FormOS_Embed_Settings {
         return untrailingslashit($url);
     }
 
+    private static function sanitize_api_token($value, $existing) {
+        $value = trim($value);
+
+        if ($value === '') {
+            return is_string($existing) ? $existing : '';
+        }
+
+        if (
+            preg_match('/<[^>]*>/', $value) ||
+            preg_match('/^\s*(javascript|data):/i', $value)
+        ) {
+            add_settings_error(
+                self::OPTION_NAME,
+                'formos_embed_unsafe_api_token',
+                __('FormOS API token was rejected because it is unsafe.', 'formos-embed')
+            );
+            return is_string($existing) ? $existing : '';
+        }
+
+        return substr($value, 0, 300);
+    }
+
+    public static function has_connection() {
+        $options = self::get_options();
+        return !empty($options['base_url']) && !empty($options['api_token']);
+    }
+
+    public static function fetch_forms() {
+        $options = self::get_options();
+
+        if (empty($options['base_url']) || empty($options['api_token'])) {
+            return new WP_Error(
+                'formos_embed_missing_connection',
+                __('Add your FormOS Base URL and API token first.', 'formos-embed')
+            );
+        }
+
+        $response = wp_remote_get(
+            trailingslashit($options['base_url']) . 'api/external/forms',
+            array(
+                'timeout' => 15,
+                'headers' => array(
+                    'Accept' => 'application/json',
+                    'Authorization' => 'Bearer ' . $options['api_token'],
+                ),
+            )
+        );
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $status_code = (int) wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($status_code < 200 || $status_code >= 300) {
+            return new WP_Error(
+                'formos_embed_connection_failed',
+                isset($body['error']) ? sanitize_text_field((string) $body['error']) : __('FormOS rejected the connection.', 'formos-embed')
+            );
+        }
+
+        $forms = array();
+        $items = isset($body['data']) && is_array($body['data']) ? $body['data'] : (is_array($body) ? $body : array());
+
+        foreach ($items as $item) {
+            if (!is_array($item) || empty($item['id'])) {
+                continue;
+            }
+
+            $forms[] = array(
+                'id' => sanitize_text_field((string) $item['id']),
+                'title' => isset($item['title']) ? sanitize_text_field((string) $item['title']) : __('Untitled form', 'formos-embed'),
+                'status' => isset($item['status']) ? sanitize_text_field((string) $item['status']) : '',
+                'mode' => isset($item['mode']) ? sanitize_text_field((string) $item['mode']) : '',
+                'updatedAt' => isset($item['updatedAt']) ? sanitize_text_field((string) $item['updatedAt']) : '',
+                'embedUrl' => isset($item['embedUrl']) ? esc_url_raw((string) $item['embedUrl']) : '',
+            );
+        }
+
+        return $forms;
+    }
+
+    public static function register_rest_routes() {
+        register_rest_route(
+            'formos-embed/v1',
+            '/forms',
+            array(
+                'methods' => 'GET',
+                'callback' => array(__CLASS__, 'rest_get_forms'),
+                'permission_callback' => function () {
+                    return current_user_can('edit_posts');
+                },
+            )
+        );
+    }
+
+    public static function rest_get_forms() {
+        $forms = self::fetch_forms();
+
+        if (is_wp_error($forms)) {
+            return new WP_REST_Response(
+                array('error' => $forms->get_error_message()),
+                400
+            );
+        }
+
+        return rest_ensure_response(array('data' => $forms));
+    }
+
     public static function render_section_intro() {
-        echo '<p>' . esc_html__('Connect WordPress to your FormOS website. The shortcode renders a secure iframe by default.', 'formos-embed') . '</p>';
+        echo '<p>' . esc_html__('Connect WordPress to your FormOS website. Add an API token to fetch your published forms in the editor, then insert a shortcode or FormOS block.', 'formos-embed') . '</p>';
     }
 
     public static function render_appearance_intro() {
@@ -305,6 +429,29 @@ class FormOS_Embed_Settings {
         <p class="description">
             <?php esc_html_e('Example: https://formos.com.au. The trailing slash is removed automatically.', 'formos-embed'); ?>
         </p>
+        <?php
+    }
+
+    public static function render_api_token_field() {
+        $options = self::get_options();
+        ?>
+        <input
+            autocomplete="off"
+            class="regular-text"
+            name="<?php echo esc_attr(self::OPTION_NAME); ?>[api_token]"
+            placeholder="<?php echo empty($options['api_token']) ? esc_attr__('Paste your FormOS API token', 'formos-embed') : esc_attr__('Token saved - paste a new token to replace it', 'formos-embed'); ?>"
+            type="password"
+            value=""
+        />
+        <p class="description">
+            <?php esc_html_e('Create this in FormOS Dashboard -> API Tokens. The saved token is not shown again.', 'formos-embed'); ?>
+        </p>
+        <?php if (!empty($options['api_token'])) : ?>
+            <p class="description">
+                <strong><?php esc_html_e('Token saved.', 'formos-embed'); ?></strong>
+                <?php esc_html_e('Leave this field blank to keep the current token.', 'formos-embed'); ?>
+            </p>
+        <?php endif; ?>
         <?php
     }
 
@@ -497,6 +644,48 @@ class FormOS_Embed_Settings {
                 submit_button();
                 ?>
             </form>
+
+            <hr />
+
+            <h2><?php esc_html_e('Connected FormOS Forms', 'formos-embed'); ?></h2>
+            <?php if (!self::has_connection()) : ?>
+                <p><?php esc_html_e('Save your FormOS Base URL and API token to fetch forms here and inside the block editor.', 'formos-embed'); ?></p>
+            <?php else : ?>
+                <?php $forms = self::fetch_forms(); ?>
+                <?php if (is_wp_error($forms)) : ?>
+                    <div class="notice notice-error inline">
+                        <p><?php echo esc_html($forms->get_error_message()); ?></p>
+                    </div>
+                <?php else : ?>
+                    <div class="notice notice-success inline">
+                        <p><?php echo esc_html(sprintf(__('Connected. %d published form(s) found.', 'formos-embed'), count($forms))); ?></p>
+                    </div>
+                    <?php if (!empty($forms)) : ?>
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Title', 'formos-embed'); ?></th>
+                                    <th><?php esc_html_e('Mode', 'formos-embed'); ?></th>
+                                    <th><?php esc_html_e('Status', 'formos-embed'); ?></th>
+                                    <th><?php esc_html_e('Form ID', 'formos-embed'); ?></th>
+                                    <th><?php esc_html_e('Shortcode', 'formos-embed'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($forms as $form) : ?>
+                                    <tr>
+                                        <td><?php echo esc_html($form['title']); ?></td>
+                                        <td><?php echo esc_html($form['mode']); ?></td>
+                                        <td><?php echo esc_html($form['status']); ?></td>
+                                        <td><code><?php echo esc_html($form['id']); ?></code></td>
+                                        <td><code><?php echo esc_html('[formos_form id="' . $form['id'] . '"]'); ?></code></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                <?php endif; ?>
+            <?php endif; ?>
 
             <hr />
 

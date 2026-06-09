@@ -43,6 +43,7 @@ function formos_embed_activate() {
         FormOS_Embed_Settings::OPTION_NAME,
         array(
             'base_url' => '',
+            'api_token' => '',
             'default_height' => 800,
             'use_auto_height' => 0,
         )
