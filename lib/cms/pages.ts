@@ -158,8 +158,21 @@ export async function seedDefaultCmsPagesIfMissing(createdById?: string) {
       title: "Privacy Policy",
       slug: "privacy-policy",
       excerpt: "How FormOS handles account data, submissions, uploads, integrations, and advertising.",
-      content:
-        "This editable privacy policy placeholder should be reviewed before publishing. FormOS may display third-party advertising on public pages or free-plan public forms. Ad providers may use cookies or similar technologies subject to their own policies.",
+      content: `<p>This editable privacy policy should be reviewed before publishing. FormOS handles account data, form submissions, connected storage metadata, integrations, and advertising disclosures.</p>
+<h2>Google User Data and Google Drive Integration</h2>
+<h3>Google Data We Access</h3>
+<p>When a FormOS user connects Google Drive, FormOS may access basic Google account information such as the connected Google account email address or profile identifier, Google Drive folder information selected or created by the user for FormOS storage, Google Drive file and folder metadata needed to create folders, upload files, organize submissions, and display upload status, files uploaded through FormOS forms that the form owner chooses to store in their connected Google Drive, and generated FormOS documents such as completed PDFs when saved or sent as part of a form workflow.</p>
+<h3>How We Use Google User Data</h3>
+<p>FormOS uses Google user data only to connect the user's Google Drive account, let the user select or configure a Google Drive storage folder, create organized folders for forms and submissions, upload respondent files into the connected Drive folder, store generated PDFs or documents related to submissions, display integration status, upload status, and submission file metadata, and troubleshoot Drive upload issues when support is requested.</p>
+<h3>What We Do Not Do</h3>
+<p>FormOS does not sell Google user data, does not use Google user data for advertising, does not use Google user data to train AI models, does not transfer Google user data to third parties except as necessary to provide the requested FormOS service, comply with law, or protect platform security, and does not expose Google Drive OAuth tokens to public form submitters.</p>
+<h3>Storage and Retention</h3>
+<p>Uploaded files are stored in the connected user's Google Drive account. FormOS may store limited metadata such as file name, Google Drive file ID, file URL or reference, upload time, form ID, submission ID, and upload status. FormOS stores OAuth connection data and tokens securely server-side to keep the integration working. Disconnecting Google Drive stops future uploads through FormOS. Files already stored in the user's Google Drive remain under the user's control.</p>
+<h3>User Control and Revocation</h3>
+<p>Users can disconnect Google Drive from FormOS. Users can also revoke FormOS access from their Google Account permissions page. After revocation, FormOS cannot upload files to that Drive account unless the user reconnects it.</p>
+<h3>Data Protection</h3>
+<p>Dashboard and integration pages require authentication. Ownership checks protect forms and submissions. OAuth tokens are not exposed to public users. FormOS uses reasonable technical and organizational safeguards to protect connected storage metadata and integration credentials.</p>
+<p>FormOS may display third-party advertising on public pages or free-plan public forms. Ad providers may use cookies or similar technologies subject to their own policies. Contact staff@mediacode.com.au for privacy questions.</p>`,
       showInFooter: true,
       sortOrder: 10,
     },
