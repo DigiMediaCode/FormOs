@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, FileText } from "lucide-react";
 import { updateCmsPageAction } from "@/app/admin/pages/actions";
 import { CmsPageForm } from "@/app/admin/pages/page-form";
 import { requireSuperAdmin } from "@/lib/admin/auth";
+import { getCmsPublicPath } from "@/lib/cms/pages";
 import { prisma } from "@/lib/prisma";
 
 type EditCmsPageProps = {
@@ -31,6 +32,8 @@ export default async function EditCmsPage({
     notFound();
   }
 
+  const publicPath = getCmsPublicPath(page.slug);
+
   return (
     <main className="px-4 py-6 lg:px-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-5">
@@ -52,14 +55,14 @@ export default async function EditCmsPage({
                   CMS
                 </p>
                 <h2 className="text-2xl font-semibold text-slate-950">{page.title}</h2>
-                <p className="mt-1 text-xs text-slate-500">/p/{page.slug}</p>
+                <p className="mt-1 text-xs text-slate-500">{publicPath}</p>
               </div>
             </div>
           </div>
           {page.status === "PUBLISHED" ? (
             <Link
               className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
-              href={`/p/${page.slug}`}
+              href={publicPath}
             >
               <ExternalLink className="size-4" />
               View Public Page

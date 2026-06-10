@@ -185,7 +185,7 @@ export function RichContentEditor({
       return;
     }
 
-    const onLoad = () => initializeVisualEditor();
+    const onLoad = () => initializeVisualEditor(true);
     iframe.addEventListener("load", onLoad);
     initializeVisualEditor(true);
 

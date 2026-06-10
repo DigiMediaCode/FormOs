@@ -5,9 +5,13 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
   Heading2,
   Image,
   Link as LinkIcon,
+  Minus,
   MousePointerClick,
   Plus,
   Rows3,
@@ -16,11 +20,19 @@ import {
 } from "lucide-react";
 import { RichContentEditor } from "@/components/admin/rich-content-editor";
 
-type CmsBlockType = "heading" | "paragraph" | "image" | "button" | "section" | "html";
+type CmsBlockType =
+  | "heading"
+  | "paragraph"
+  | "image"
+  | "button"
+  | "section"
+  | "divider"
+  | "html";
 
 type CmsBlock = {
   id: string;
   type: CmsBlockType;
+  headingLevel?: "h1" | "h2" | "h3";
   heading?: string;
   text?: string;
   src?: string;
@@ -41,14 +53,17 @@ const blockTypes: Array<{
   { type: "section", label: "Section", icon: Rows3 },
   { type: "image", label: "Image", icon: Image },
   { type: "button", label: "Button", icon: MousePointerClick },
+  { type: "divider", label: "Divider", icon: Minus },
   { type: "html", label: "Safe HTML", icon: LinkIcon },
 ];
+
+const BUILDER_MARKER = "FORMOS_PAGE_BUILDER:";
 
 function createBlock(type: CmsBlockType): CmsBlock {
   const id = crypto.randomUUID();
 
   if (type === "heading") {
-    return { id, type, heading: "New heading", align: "left" };
+    return { id, type, heading: "New heading", headingLevel: "h2", align: "left" };
   }
 
   if (type === "paragraph") {
@@ -72,22 +87,71 @@ function createBlock(type: CmsBlockType): CmsBlock {
     return { id, type, label: "Learn more", href: "/", align: "left" };
   }
 
+  if (type === "divider") {
+    return { id, type };
+  }
+
   return { id, type, html: "<p>Add safe HTML here.</p>" };
+}
+
+function encodeBuilderState(blocks: CmsBlock[]) {
+  const json = JSON.stringify({ version: 1, blocks });
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function decodeBuilderState(value: string): CmsBlock[] | null {
+  try {
+    const binary = atob(value);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as {
+      blocks?: CmsBlock[];
+    };
+
+    if (!Array.isArray(payload.blocks)) {
+      return null;
+    }
+
+    return payload.blocks.filter((block) => block?.id && block?.type);
+  } catch {
+    return null;
+  }
+}
+
+function contentWithoutBuilderState(content: string) {
+  return content.replace(/<!--FORMOS_PAGE_BUILDER:[\s\S]*?-->/g, "").trim();
 }
 
 function initialBlocks(content: string): CmsBlock[] {
   if (!content.trim()) {
-  return [
-    { id: "initial-heading", type: "heading", heading: "Page heading", align: "center" },
-    { id: "initial-paragraph", type: "paragraph", text: "Write your introduction here." },
+    return [
+      {
+        id: "initial-heading",
+        type: "heading",
+        heading: "Page heading",
+        headingLevel: "h2",
+        align: "center",
+      },
+      { id: "initial-paragraph", type: "paragraph", text: "Write your introduction here." },
     ];
+  }
+
+  const markerMatch = content.match(/<!--FORMOS_PAGE_BUILDER:([A-Za-z0-9+/=_-]+)-->/);
+  const savedBlocks = markerMatch ? decodeBuilderState(markerMatch[1]) : null;
+
+  if (savedBlocks?.length) {
+    return savedBlocks;
   }
 
   return [
     {
       id: "initial-html",
       type: "html",
-      html: content,
+      html: contentWithoutBuilderState(content),
     },
   ];
 }
@@ -133,7 +197,18 @@ function renderBlock(block: CmsBlock) {
   const alignClass = block.align === "center" ? "text-center" : "";
 
   if (block.type === "heading") {
-    return `<h2 class="${alignClass} text-3xl font-semibold tracking-tight text-slate-950">${escapeHtml(block.heading ?? "")}</h2>`;
+    const level =
+      block.headingLevel === "h1" || block.headingLevel === "h3"
+        ? block.headingLevel
+        : "h2";
+    const className =
+      level === "h1"
+        ? `${alignClass} text-4xl font-semibold tracking-tight text-slate-950`
+        : level === "h3"
+          ? `${alignClass} text-xl font-semibold text-slate-950`
+          : `${alignClass} text-3xl font-semibold tracking-tight text-slate-950`;
+
+    return `<${level} class="${className}">${escapeHtml(block.heading ?? "")}</${level}>`;
   }
 
   if (block.type === "paragraph") {
@@ -166,6 +241,10 @@ function renderBlock(block: CmsBlock) {
     return `<p class="${alignClass}"><a class="inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm" href="${escapeHtml(href)}">${escapeHtml(block.label ?? "Open")}</a></p>`;
   }
 
+  if (block.type === "divider") {
+    return `<hr class="border-0 border-t border-slate-200" />`;
+  }
+
   return stripUnsafeHtml(block.html ?? "");
 }
 
@@ -188,9 +267,29 @@ function moveBlock(blocks: CmsBlock[], index: number, direction: -1 | 1) {
 
 export function CmsPageBuilder({ initialContent }: { initialContent: string }) {
   const [blocks, setBlocks] = useState<CmsBlock[]>(() => initialBlocks(initialContent));
+  const [collapsedBlockIds, setCollapsedBlockIds] = useState<Set<string>>(() => new Set());
   const [uploadingBlockId, setUploadingBlockId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const content = useMemo(() => blocks.map(renderBlock).filter(Boolean).join("\n\n"), [blocks]);
+  const renderedContent = useMemo(
+    () => blocks.map(renderBlock).filter(Boolean).join("\n\n"),
+    [blocks],
+  );
+  const content = useMemo(
+    () => `${renderedContent}\n\n<!--${BUILDER_MARKER}${encodeBuilderState(blocks)}-->`,
+    [blocks, renderedContent],
+  );
+
+  function toggleBlock(blockId: string) {
+    setCollapsedBlockIds((current) => {
+      const next = new Set(current);
+      if (next.has(blockId)) {
+        next.delete(blockId);
+      } else {
+        next.add(blockId);
+      }
+      return next;
+    });
+  }
 
   async function uploadImage(blockId: string, file: File | null) {
     if (!file) {
@@ -235,50 +334,85 @@ export function CmsPageBuilder({ initialContent }: { initialContent: string }) {
     <section className="grid gap-3">
       <input name="content" type="hidden" value={content} />
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-semibold text-slate-950">Page Builder</p>
             <p className="text-xs text-slate-500">
-              Add content blocks. The saved output is sanitized HTML.
+              Elementor-style blocks. Saved output is sanitized HTML.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+            {blocks.length} block{blocks.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-[210px_minmax(0,1fr)_340px]">
+        <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-auto">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Add Blocks
+          </p>
+          <div className="grid gap-2">
             {blockTypes.map((blockType) => {
               const Icon = blockType.icon;
               return (
                 <button
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-blue-50 hover:text-blue-700"
+                  className="flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                   key={blockType.type}
                   onClick={() => setBlocks((current) => [...current, createBlock(blockType.type)])}
                   type="button"
                 >
-                  <Icon className="size-3.5" />
-                  {blockType.label}
+                  <span className="inline-flex items-center gap-2">
+                    <Icon className="size-4 text-blue-600" />
+                    {blockType.label}
+                  </span>
+                  <Plus className="size-3.5 text-slate-400" />
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
+          <p className="mt-3 text-[11px] leading-4 text-slate-500">
+            Add blocks here, then use the arrow controls on each block to position them.
+          </p>
+        </aside>
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-3">
+        <div className="grid content-start gap-2">
           {blocks.map((block, index) => (
             <article
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               key={block.id}
             >
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div>
-                  <p className="text-sm font-semibold capitalize text-slate-950">
-                    {block.type}
-                  </p>
-                  <p className="text-xs text-slate-500">Block {index + 1}</p>
-                </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
+                <button
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  onClick={() => toggleBlock(block.id)}
+                  type="button"
+                >
+                  <GripVertical className="size-4 shrink-0 text-slate-300" />
+                  {collapsedBlockIds.has(block.id) ? (
+                    <ChevronRight className="size-4 shrink-0 text-slate-500" />
+                  ) : (
+                    <ChevronDown className="size-4 shrink-0 text-slate-500" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold capitalize text-slate-950">
+                      {block.type === "divider"
+                        ? "Divider"
+                        : block.heading || block.label || block.alt || block.type}
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      {String(index + 1).padStart(2, "0")} - {block.type}
+                      {block.type === "heading"
+                        ? ` - ${(block.headingLevel ?? "h2").toUpperCase()}`
+                        : ""}
+                      {collapsedBlockIds.has(block.id) ? " - collapsed" : ""}
+                    </span>
+                  </span>
+                </button>
                 <div className="flex gap-2">
                   <button
-                    className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                    className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
                     disabled={index === 0}
                     onClick={() => setBlocks((current) => moveBlock(current, index, -1))}
                     title="Move up"
@@ -287,7 +421,7 @@ export function CmsPageBuilder({ initialContent }: { initialContent: string }) {
                     <ArrowUp className="size-4" />
                   </button>
                   <button
-                    className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                    className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
                     disabled={index === blocks.length - 1}
                     onClick={() => setBlocks((current) => moveBlock(current, index, 1))}
                     title="Move down"
@@ -308,168 +442,199 @@ export function CmsPageBuilder({ initialContent }: { initialContent: string }) {
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-3">
-                {block.type === "heading" || block.type === "section" ? (
-                  <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                    Heading
-                    <input
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      onChange={(event) =>
-                        setBlocks((current) =>
-                          updateBlock(current, block.id, { heading: event.target.value }),
-                        )
-                      }
-                      value={block.heading ?? ""}
-                    />
-                  </label>
-                ) : null}
+              {!collapsedBlockIds.has(block.id) ? (
+                <div className="grid gap-3 p-3">
+                  {block.type === "heading" || block.type === "section" ? (
+                    <label className="grid gap-1.5 text-xs font-medium text-slate-600">
+                      Heading
+                      <input
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        onChange={(event) =>
+                          setBlocks((current) =>
+                            updateBlock(current, block.id, { heading: event.target.value }),
+                          )
+                        }
+                        value={block.heading ?? ""}
+                      />
+                    </label>
+                  ) : null}
 
-                {block.type === "paragraph" ? (
-                  <RichContentEditor
-                    help="Format text and insert photos or videos. Uploaded media is stored in the FormOS Media Library."
-                    initialHtml={block.html ?? escapeHtml(block.text ?? "")}
-                    label="Paragraph content"
-                    name={`paragraph-editor-${block.id}`}
-                    onHtmlChange={(value) =>
-                      setBlocks((current) => updateBlock(current, block.id, { html: value }))
-                    }
-                  />
-                ) : null}
-
-                {block.type === "section" ? (
-                  <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                    Text
-                    <textarea
-                      className="min-h-28 rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      onChange={(event) =>
-                        setBlocks((current) =>
-                          updateBlock(current, block.id, { text: event.target.value }),
-                        )
-                      }
-                      value={block.text ?? ""}
-                    />
-                  </label>
-                ) : null}
-
-                {block.type === "image" ? (
-                  <div className="grid gap-3">
+                  {block.type === "heading" ? (
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                        Image URL / Path
+                        Heading Level
+                        <select
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          onChange={(event) =>
+                            setBlocks((current) =>
+                              updateBlock(current, block.id, {
+                                headingLevel: event.target.value as "h1" | "h2" | "h3",
+                              }),
+                            )
+                          }
+                          value={block.headingLevel ?? "h2"}
+                        >
+                          <option value="h1">H1</option>
+                          <option value="h2">H2</option>
+                          <option value="h3">H3</option>
+                        </select>
+                      </label>
+                    </div>
+                  ) : null}
+
+                  {block.type === "paragraph" ? (
+                    <RichContentEditor
+                      help="Format text and insert photos or videos. Uploaded media is stored in the FormOS Media Library."
+                      initialHtml={block.html ?? escapeHtml(block.text ?? "")}
+                      label="Paragraph content"
+                      name={`paragraph-editor-${block.id}`}
+                      onHtmlChange={(value) =>
+                        setBlocks((current) => updateBlock(current, block.id, { html: value }))
+                      }
+                    />
+                  ) : null}
+
+                  {block.type === "section" ? (
+                    <label className="grid gap-1.5 text-xs font-medium text-slate-600">
+                      Text
+                      <textarea
+                        className="min-h-28 rounded-lg border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                        onChange={(event) =>
+                          setBlocks((current) =>
+                            updateBlock(current, block.id, { text: event.target.value }),
+                          )
+                        }
+                        value={block.text ?? ""}
+                      />
+                    </label>
+                  ) : null}
+
+                  {block.type === "image" ? (
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className="grid gap-1.5 text-xs font-medium text-slate-600">
+                          Image URL / Path
+                          <input
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(event) =>
+                              setBlocks((current) =>
+                                updateBlock(current, block.id, { src: event.target.value }),
+                              )
+                            }
+                            placeholder="/media/... or https://..."
+                            value={block.src ?? ""}
+                          />
+                        </label>
+                        <label className="grid gap-1.5 text-xs font-medium text-slate-600">
+                          Alt text
+                          <input
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(event) =>
+                              setBlocks((current) =>
+                                updateBlock(current, block.id, { alt: event.target.value }),
+                              )
+                            }
+                            value={block.alt ?? ""}
+                          />
+                        </label>
+                      </div>
+                      <label className="grid gap-1.5 rounded-xl border border-dashed border-blue-200 bg-blue-50 p-3 text-xs font-medium text-blue-900">
+                        Upload to Media Library
+                        <input
+                          accept="image/*"
+                          className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
+                          disabled={uploadingBlockId === block.id}
+                          onChange={(event) => {
+                            void uploadImage(block.id, event.target.files?.[0] ?? null);
+                            event.target.value = "";
+                          }}
+                          type="file"
+                        />
+                        <span className="text-[11px] font-normal leading-5 text-blue-800">
+                          {uploadingBlockId === block.id
+                            ? "Uploading image..."
+                            : "Uploaded CMS/email assets are stored in FormOS media, not owner Drive or Dropbox."}
+                        </span>
+                      </label>
+                      {uploadError && uploadingBlockId === null ? (
+                        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                          {uploadError}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {block.type === "button" ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="grid gap-1.5 text-xs font-medium text-slate-600">
+                        Button Label
                         <input
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           onChange={(event) =>
                             setBlocks((current) =>
-                              updateBlock(current, block.id, { src: event.target.value }),
+                              updateBlock(current, block.id, { label: event.target.value }),
                             )
                           }
-                          placeholder="/media/... or https://..."
-                          value={block.src ?? ""}
+                          value={block.label ?? ""}
                         />
                       </label>
                       <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                        Alt text
+                        Link
                         <input
                           className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           onChange={(event) =>
                             setBlocks((current) =>
-                              updateBlock(current, block.id, { alt: event.target.value }),
+                              updateBlock(current, block.id, { href: event.target.value }),
                             )
                           }
-                          value={block.alt ?? ""}
+                          value={block.href ?? ""}
                         />
                       </label>
                     </div>
-                    <label className="grid gap-1.5 rounded-xl border border-dashed border-blue-200 bg-blue-50 p-3 text-xs font-medium text-blue-900">
-                      Upload to Media Library
-                      <input
-                        accept="image/*"
-                        className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
-                        disabled={uploadingBlockId === block.id}
-                        onChange={(event) => {
-                          void uploadImage(block.id, event.target.files?.[0] ?? null);
-                          event.target.value = "";
-                        }}
-                        type="file"
-                      />
-                      <span className="text-[11px] font-normal leading-5 text-blue-800">
-                        {uploadingBlockId === block.id
-                          ? "Uploading image..."
-                          : "Uploaded CMS/email assets are stored in FormOS media, not owner Drive or Dropbox."}
-                      </span>
-                    </label>
-                    {uploadError && uploadingBlockId === null ? (
-                      <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                        {uploadError}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
+                  ) : null}
 
-                {block.type === "button" ? (
-                  <div className="grid gap-3 md:grid-cols-2">
+                  {(block.type === "heading" || block.type === "button") ? (
                     <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                      Button Label
-                      <input
+                      Alignment
+                      <select
                         className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         onChange={(event) =>
                           setBlocks((current) =>
-                            updateBlock(current, block.id, { label: event.target.value }),
+                            updateBlock(current, block.id, {
+                              align: event.target.value as "left" | "center",
+                            }),
                           )
                         }
-                        value={block.label ?? ""}
-                      />
+                        value={block.align ?? "left"}
+                      >
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                      </select>
                     </label>
+                  ) : null}
+
+                  {block.type === "html" ? (
                     <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                      Link
-                      <input
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      Safe HTML
+                      <textarea
+                        className="min-h-52 rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-6 text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         onChange={(event) =>
                           setBlocks((current) =>
-                            updateBlock(current, block.id, { href: event.target.value }),
+                            updateBlock(current, block.id, { html: event.target.value }),
                           )
                         }
-                        value={block.href ?? ""}
+                        value={block.html ?? ""}
                       />
                     </label>
-                  </div>
-                ) : null}
+                  ) : null}
 
-                {(block.type === "heading" || block.type === "button") ? (
-                  <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                    Alignment
-                    <select
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      onChange={(event) =>
-                        setBlocks((current) =>
-                          updateBlock(current, block.id, {
-                            align: event.target.value as "left" | "center",
-                          }),
-                        )
-                      }
-                      value={block.align ?? "left"}
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                    </select>
-                  </label>
-                ) : null}
-
-                {block.type === "html" ? (
-                  <label className="grid gap-1.5 text-xs font-medium text-slate-600">
-                    Safe HTML
-                    <textarea
-                      className="min-h-40 rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-6 text-slate-950 shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      onChange={(event) =>
-                        setBlocks((current) =>
-                          updateBlock(current, block.id, { html: event.target.value }),
-                        )
-                      }
-                      value={block.html ?? ""}
-                    />
-                  </label>
-                ) : null}
-              </div>
+                  {block.type === "divider" ? (
+                    <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
+                      Divider block. Use the arrows in the block header to position it between sections.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </article>
           ))}
 
@@ -483,11 +648,11 @@ export function CmsPageBuilder({ initialContent }: { initialContent: string }) {
           </button>
         </div>
 
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto">
+        <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-auto">
           <p className="text-sm font-semibold text-slate-950">Live Preview</p>
           <div
-            className="mt-4 space-y-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
-            dangerouslySetInnerHTML={{ __html: content || "<p>This page is empty.</p>" }}
+            className="mt-3 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
+            dangerouslySetInnerHTML={{ __html: renderedContent || "<p>This page is empty.</p>" }}
           />
         </aside>
       </div>

@@ -22,7 +22,20 @@ export const RESERVED_CMS_SLUGS = new Set([
   "pricing",
   "privacy-policy",
   "terms-of-service",
+  "data-security",
+  "contact",
 ]);
+
+const DIRECT_CMS_ROUTE_SLUGS = new Set([
+  "privacy-policy",
+  "terms-of-service",
+  "data-security",
+  "contact",
+]);
+
+export function getCmsPublicPath(slug: string) {
+  return DIRECT_CMS_ROUTE_SLUGS.has(slug) ? `/${slug}` : `/p/${slug}`;
+}
 
 const BLOCKED_TAGS = [
   "script",
@@ -61,10 +74,6 @@ export function validateCmsSlug(slug: string) {
     return "Slug cannot contain repeated hyphens.";
   }
 
-  if (RESERVED_CMS_SLUGS.has(slug)) {
-    return "This slug is reserved. Please choose another slug.";
-  }
-
   return null;
 }
 
@@ -77,10 +86,14 @@ export async function assertCmsSlugAvailable(slug: string, pageId?: string) {
   if (existing && existing.id !== pageId) {
     throw new Error("A page with this slug already exists.");
   }
+
+  if (RESERVED_CMS_SLUGS.has(slug) && existing?.id !== pageId) {
+    throw new Error("This slug is reserved. Please choose another slug.");
+  }
 }
 
 export function sanitizeCmsHtml(content: string) {
-  let safe = content;
+  let safe = content.replace(/<!--FORMOS_PAGE_BUILDER:[\s\S]*?-->/g, "");
 
   for (const tag of BLOCKED_TAGS) {
     safe = safe.replace(

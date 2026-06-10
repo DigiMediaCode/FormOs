@@ -6,6 +6,7 @@ import { requireSuperAdmin } from "@/lib/admin/auth";
 import {
   assertCmsSlugAvailable,
   cmsPageDataFromForm,
+  getCmsPublicPath,
   seedDefaultCmsPagesIfMissing,
 } from "@/lib/cms/pages";
 import { prisma } from "@/lib/prisma";
@@ -76,7 +77,7 @@ export async function updateCmsPageAction(pageId: string, formData: FormData) {
   revalidatePath(ADMIN_PAGES_PATH);
   revalidatePath(`${ADMIN_PAGES_PATH}/${pageId}`);
   revalidatePath("/");
-  revalidatePath(`/p/${savedSlug}`);
+  revalidatePath(getCmsPublicPath(savedSlug));
   redirectToPage(pageId, "success", "Page saved.");
 }
 
@@ -96,7 +97,7 @@ export async function archiveCmsPageAction(pageId: string) {
   revalidatePath(ADMIN_PAGES_PATH);
   revalidatePath(`${ADMIN_PAGES_PATH}/${pageId}`);
   revalidatePath("/");
-  revalidatePath(`/p/${page.slug}`);
+  revalidatePath(getCmsPublicPath(page.slug));
   redirectWith("success", "Page archived.");
 }
 
