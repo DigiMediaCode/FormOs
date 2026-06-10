@@ -111,10 +111,11 @@ It includes:
 - FormOS API Token input
 - Save Connection button
 - Test Connection button
-- Fetch Forms button
+- Refresh Forms button
 - Connection status
-- Forms list returned from FormOS
-- Copy Form ID button
+- Forms list returned from FormOS automatically after save and on page refresh
+- Form picker for choosing the form to paste into the Shopify Theme Editor block
+- Copy Form ID and Base URL buttons
 - Theme Editor setup instructions
 
 The API token is encrypted before storage and is not returned to the browser after save.
@@ -129,10 +130,10 @@ The API token is encrypted before storage and is not returned to the browser aft
    - FormOS Base URL: `https://formos.com.au`
    - FormOS API Token
 6. Click **Save Connection**.
-7. Click **Test Connection**.
-8. Click **Fetch Forms**.
-9. Copy a Form ID from the returned forms table.
-10. Paste the Form ID into the Theme Editor app block.
+7. Published forms load immediately after a successful save.
+8. Reopen or refresh the Shopify app page to refresh the forms list from FormOS.
+9. Choose a form in the app page and copy the Form ID/Base URL.
+10. Paste the Form ID and Base URL into the Theme Editor app block.
 
 The app calls:
 
@@ -167,11 +168,15 @@ The app also tolerates a raw array with the same form objects.
 3. Open the page/template where you want the form.
 4. Add an app block named **FormOS Form**.
 5. Enter:
-   - **FormOS Base URL**: `https://formos.com.au`
-   - **Form ID**: the ID copied from the **FormOS Embed** app page or FormOS form detail page
+   - **FormOS Base URL**: copied from the **FormOS Embed** app page, usually `https://formos.com.au`
+   - **Form ID**: copied from the **FormOS Embed** app page form picker or FormOS form detail page
    - **Height**: for example `800`
 6. Adjust appearance settings if needed.
 7. Save the theme.
+
+### Why The Theme Block Uses A Manual Form ID
+
+WordPress Gutenberg blocks can fetch FormOS forms and show a live dropdown in the editor. Shopify Theme App Extension block settings are static Liquid schema, so they cannot safely populate a live external dropdown from FormOS inside the Theme Editor. For Shopify, the connected form picker lives in the **FormOS Embed** admin app page, and the Theme Editor block remains a reliable manual Base URL/Form ID embed.
 
 ## Block Settings
 
@@ -225,8 +230,8 @@ It does not return submissions, fields, storage credentials, billing data, or ow
 
 1. Publish the target form in FormOS.
 2. Open the Shopify app admin page.
-3. Save and test a valid FormOS API token.
-4. Fetch forms and copy the desired Form ID.
+3. Save a valid FormOS API token.
+4. Confirm forms load automatically and copy the desired Form ID.
 5. Add the Shopify app block to a development theme.
 6. Enter the FormOS Base URL and copied Form ID.
 7. Open the storefront page.
@@ -250,6 +255,7 @@ It does not return submissions, fields, storage credentials, billing data, or ow
 Possible future milestones:
 
 - Select a form directly from the app page and write it into app block settings if Shopify provides a safe flow.
+- Add a dynamic Theme Editor dropdown if Shopify introduces externally populated block settings.
 - Store a per-store default FormOS Base URL.
 - Add an app proxy if needed.
 - Prepare Shopify App Store submission.

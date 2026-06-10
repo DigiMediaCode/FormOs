@@ -5,8 +5,8 @@ FormOS Embed is a small WordPress plugin for embedding FormOS forms in WordPress
 ## Install
 
 1. Copy the `formos-embed` folder into `wp-content/plugins/`.
-2. Activate **FormOS Embed** in WordPress Admin → Plugins.
-3. Open WordPress Admin → Settings → FormOS Embed.
+2. Activate **FormOS Embed** in WordPress Admin -> Plugins.
+3. Open WordPress Admin -> Settings -> FormOS Embed.
 4. Set **FormOS Base URL** to your FormOS site, for example:
 
    `https://formos.com.au`
@@ -14,7 +14,7 @@ FormOS Embed is a small WordPress plugin for embedding FormOS forms in WordPress
 5. Create a FormOS API token in **FormOS Dashboard -> API Tokens**.
 6. Paste the token into **FormOS API Token**.
 7. Save settings.
-8. The settings page will show your published FormOS forms and shortcodes.
+8. The settings page will automatically show your published FormOS forms and shortcodes.
 
 ## Shortcodes
 
@@ -58,8 +58,7 @@ Supported appearance attributes:
 
 To match a WordPress theme more closely, set `bg="transparent"` and copy the theme's button/accent, card background, text, and border colors into `accent`, `surface`, `text`, and `border`.
 
-You can find the Form ID in FormOS on the form detail page, or connect the plugin
-with an API token and choose a form from the WordPress block editor.
+You can find the Form ID in FormOS on the form detail page, or connect the plugin with an API token and choose a form from the WordPress block editor.
 
 ## WordPress Block Editor
 
@@ -73,7 +72,7 @@ The plugin also adds a Gutenberg block:
 
 The block renders the same reliable FormOS embed as the shortcode.
 
-If the dropdown is empty, open **Settings -> FormOS Embed**, save your FormOS Base URL and API token, then click **Refresh FormOS forms** inside the block sidebar.
+The block fetches the latest published forms when the editor opens. If the dropdown is empty, open **Settings -> FormOS Embed**, save your FormOS Base URL and API token, then click **Refresh FormOS forms** inside the block sidebar.
 
 ## Security
 

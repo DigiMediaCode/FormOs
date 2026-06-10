@@ -109,16 +109,20 @@ export default function HomePage() {
     return parseFormsResponse(body);
   }
 
-  function saveConnection() {
+  async function saveConnection() {
     try {
+      setLoadingAction('save');
       const nextConnection = validateInputs();
       setSavedConnection(nextConnection);
       setFormosBaseUrl(nextConnection.formosBaseUrl);
       setApiToken('');
-      setForms([]);
-      setSuccess('Connection saved in this app session. Token is hidden after save.');
+      const fetchedForms = await fetchForms(nextConnection);
+      setForms(fetchedForms);
+      setSuccess(`Connection saved in this app session and ${fetchedForms.length} published form${fetchedForms.length === 1 ? '' : 's'} loaded. Token is hidden after save.`);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Unable to save connection.');
+    } finally {
+      setLoadingAction('');
     }
   }
 
@@ -176,8 +180,8 @@ export default function HomePage() {
         <s-stack gap="base">
           <s-paragraph>Step 1: Create an API token in FormOS Dashboard -&gt; API Tokens.</s-paragraph>
           <s-paragraph>Step 2: Paste FormOS Base URL and API token here.</s-paragraph>
-          <s-paragraph>Step 3: Save and fetch forms.</s-paragraph>
-          <s-paragraph>Step 4: Copy the Form ID.</s-paragraph>
+          <s-paragraph>Step 3: Save. Forms load immediately after a successful connection.</s-paragraph>
+          <s-paragraph>Step 4: Copy the Form ID from the loaded forms.</s-paragraph>
           <s-paragraph>Step 5: Go to Shopify Theme Editor.</s-paragraph>
           <s-paragraph>Step 6: Add the FormOS Form app block.</s-paragraph>
           <s-paragraph>Step 7: Paste FormOS Base URL and Form ID, then save theme.</s-paragraph>
@@ -206,14 +210,14 @@ export default function HomePage() {
           />
 
           <s-stack direction="inline" gap="small">
-            <s-button variant="primary" onClick={saveConnection}>
-              Save Connection
+            <s-button variant="primary" disabled={loadingAction === 'save'} onClick={saveConnection}>
+              {loadingAction === 'save' ? 'Saving...' : 'Save Connection'}
             </s-button>
             <s-button disabled={!canCallFormOS || loadingAction === 'test'} onClick={testConnection}>
               {loadingAction === 'test' ? 'Testing...' : 'Test Connection'}
             </s-button>
             <s-button disabled={!canCallFormOS || loadingAction === 'fetch'} onClick={fetchFormList}>
-              {loadingAction === 'fetch' ? 'Fetching...' : 'Fetch Forms'}
+              {loadingAction === 'fetch' ? 'Refreshing...' : 'Refresh Forms'}
             </s-button>
           </s-stack>
 
@@ -266,7 +270,7 @@ export default function HomePage() {
             <s-stack gap="small" alignItems="center">
               <s-heading>No forms fetched yet</s-heading>
               <s-paragraph>
-                Save your FormOS connection, then click Fetch Forms to list published forms.
+                Save your FormOS connection to load published forms. Use Refresh Forms when you add or publish more forms in FormOS.
               </s-paragraph>
               <s-paragraph>
                 Current embed base URL preview: {normalizedBaseUrl}/embed/forms/FORM_ID

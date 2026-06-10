@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { useMemo, useState } from "react";
 import {
   Badge,
   BlockStack,
@@ -13,6 +14,7 @@ import {
   Layout,
   Link,
   Page,
+  Select,
   Text,
   TextField,
 } from "@shopify/polaris";
@@ -30,10 +32,26 @@ type ActionData = {
   forms?: FormosFormSummary[];
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const connection = await prisma.formosConnection.findUnique({
-    where: { shop: session.shop },
+function serializeConnection(
+  connection: {
+    formosBaseUrl: string;
+    connectedAt: Date;
+    lastTestedAt: Date | null;
+    lastError: string | null;
+  } | null,
+) {
+  return connection
+    ? {
+        ...connection,
+        connectedAt: connection.connectedAt.toISOString(),
+        lastTestedAt: connection.lastTestedAt?.toISOString() ?? null,
+      }
+    : null;
+}
+
+async function getConnection(shop: string) {
+  return prisma.formosConnection.findUnique({
+    where: { shop },
     select: {
       formosBaseUrl: true,
       connectedAt: true,
@@ -41,16 +59,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       lastError: true,
     },
   });
+}
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  let connection = await getConnection(session.shop);
+  let forms: FormosFormSummary[] = [];
+  let loadMessage: ActionData | null = null;
+
+  if (connection) {
+    try {
+      forms = await testSavedConnection(session.shop);
+      loadMessage = {
+        status: "success",
+        message: `Connected to FormOS. ${forms.length} published form${forms.length === 1 ? "" : "s"} available.`,
+      };
+    } catch (error) {
+      loadMessage = {
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to refresh FormOS forms.",
+      };
+    }
+
+    connection = await getConnection(session.shop);
+  }
 
   return json({
     shop: session.shop,
-    connection: connection
-      ? {
-          ...connection,
-          connectedAt: connection.connectedAt.toISOString(),
-          lastTestedAt: connection.lastTestedAt?.toISOString() ?? null,
-        }
-      : null,
+    connection: serializeConnection(connection),
+    forms,
+    loadMessage,
   });
 };
 
@@ -66,10 +107,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         formosBaseUrl: String(formData.get("formosBaseUrl") ?? ""),
         formosApiToken: String(formData.get("formosApiToken") ?? ""),
       });
+      const forms = await testSavedConnection(session.shop);
 
       return json<ActionData>({
         status: "success",
-        message: "FormOS connection saved. The API token is stored securely and hidden.",
+        message: `FormOS connection saved and ${forms.length} published form${forms.length === 1 ? "" : "s"} loaded. The API token is stored securely and hidden.`,
+        forms,
       });
     }
 
@@ -116,11 +159,27 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default function FormosEmbedApp() {
-  const { connection } = useLoaderData<typeof loader>();
+  const { connection, forms: loaderForms, loadMessage } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isBusy = navigation.state !== "idle";
-  const forms = actionData?.forms ?? [];
+  const forms = actionData?.forms ?? loaderForms ?? [];
+  const statusMessage = actionData ?? loadMessage;
+  const [selectedFormId, setSelectedFormId] = useState(forms[0]?.id ?? "");
+  const selectedForm = useMemo(
+    () => forms.find((form) => form.id === selectedFormId) ?? forms[0] ?? null,
+    [forms, selectedFormId],
+  );
+  const selectedEmbedUrl = selectedForm
+    ? `${connection?.formosBaseUrl ?? "https://formos.com.au"}/embed/forms/${selectedForm.id}`
+    : "";
+  const selectedFormOptions = [
+    { label: "Choose a published FormOS form", value: "" },
+    ...forms.map((form) => ({
+      label: `${form.title || "Untitled form"} (${form.mode})`,
+      value: form.id,
+    })),
+  ];
 
   const formRows = forms.map((form) => [
     form.title,
@@ -135,7 +194,7 @@ export default function FormosEmbedApp() {
       onClick={() => navigator.clipboard?.writeText(form.id)}
       size="slim"
     >
-      Copy Form ID
+      Copy ID
     </Button>,
   ]);
 
@@ -153,13 +212,13 @@ export default function FormosEmbedApp() {
                 forms. Tokens are hidden after saving and submissions still go
                 directly to FormOS.
               </Text>
-              {actionData ? (
+              {statusMessage ? (
                 <Box
-                  background={actionData.status === "success" ? "bg-surface-success" : "bg-surface-critical"}
+                  background={statusMessage.status === "success" ? "bg-surface-success" : "bg-surface-critical"}
                   borderRadius="300"
                   padding="300"
                 >
-                  <Text as="p">{actionData.message}</Text>
+                  <Text as="p">{statusMessage.message}</Text>
                 </Box>
               ) : null}
               <Form method="post">
@@ -197,7 +256,7 @@ export default function FormosEmbedApp() {
                 <Form method="post">
                   <input name="intent" type="hidden" value="fetch" />
                   <Button submit loading={isBusy && navigation.formData?.get("intent") === "fetch"}>
-                    Fetch Forms
+                    Refresh Forms
                   </Button>
                 </Form>
               </InlineStack>
@@ -229,9 +288,9 @@ export default function FormosEmbedApp() {
               </Text>
               <Text as="p">1. Create an API token in FormOS.</Text>
               <Text as="p">2. Paste the token here and save.</Text>
-              <Text as="p">3. Test the connection.</Text>
-              <Text as="p">4. Fetch forms and copy a Form ID.</Text>
-              <Text as="p">5. Add the FormOS Form block in Theme Editor.</Text>
+              <Text as="p">3. Forms load after saving and refresh whenever this page opens.</Text>
+              <Text as="p">4. Choose a form below and copy the Form ID.</Text>
+              <Text as="p">5. Add the FormOS Form block in Theme Editor and paste the Base URL/Form ID.</Text>
               <Link url="https://formos.com.au/dashboard/settings/api-tokens" target="_blank">
                 Open FormOS API Tokens
               </Link>
@@ -246,14 +305,50 @@ export default function FormosEmbedApp() {
                 Published FormOS forms
               </Text>
               {forms.length > 0 ? (
+                <Card>
+                  <BlockStack gap="300">
+                    <Select
+                      label="Choose form for Shopify Theme Editor"
+                      options={selectedFormOptions}
+                      value={selectedForm?.id ?? selectedFormId}
+                      onChange={setSelectedFormId}
+                      helpText="Shopify theme block settings cannot load live external dropdowns, so choose the form here and paste the ID into the FormOS Form block."
+                    />
+                    {selectedForm ? (
+                      <InlineStack gap="300" align="space-between" blockAlign="center">
+                        <BlockStack gap="100">
+                          <Text as="p">
+                            <strong>{selectedForm.title}</strong>
+                          </Text>
+                          <Text as="p" tone="subdued">
+                            Form ID: <code>{selectedForm.id}</code>
+                          </Text>
+                          <Text as="p" tone="subdued">
+                            Embed URL: <code>{selectedEmbedUrl}</code>
+                          </Text>
+                        </BlockStack>
+                        <InlineStack gap="200">
+                          <Button onClick={() => navigator.clipboard?.writeText(selectedForm.id)}>
+                            Copy Form ID
+                          </Button>
+                          <Button onClick={() => navigator.clipboard?.writeText(connection?.formosBaseUrl ?? "https://formos.com.au")}>
+                            Copy Base URL
+                          </Button>
+                        </InlineStack>
+                      </InlineStack>
+                    ) : null}
+                  </BlockStack>
+                </Card>
+              ) : null}
+              {forms.length > 0 ? (
                 <DataTable
                   columnContentTypes={["text", "text", "text", "text", "text", "text"]}
-                  headings={["Title", "Mode", "Status", "Updated", "Form ID", "Action"]}
+                  headings={["Title", "Mode", "Status", "Updated", "Form ID", "Copy"]}
                   rows={formRows}
                 />
               ) : (
                 <Text as="p" tone="subdued">
-                  Click Fetch Forms after saving a valid FormOS API token.
+                  Save a valid FormOS API token to load published forms. Connected stores also refresh forms each time this page opens.
                 </Text>
               )}
             </BlockStack>
