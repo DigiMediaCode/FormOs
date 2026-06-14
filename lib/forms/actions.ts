@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
 import {
   assertCanCreateForm,
+  assertCanUseConditionalLogic,
   assertCanUseFieldTypes,
   assertCanUseOfficeFields,
 } from "@/lib/plans/limits";
@@ -282,12 +283,13 @@ export async function updateFormFields(formId: string, formData: FormData) {
 
   try {
     await assertCanUseFieldTypes(context.ownerId, validation.fields);
+    await assertCanUseConditionalLogic(context.ownerId, validation.fields);
   } catch (error) {
     errorRedirect(
       errorPath,
       error instanceof Error
         ? error.message
-        : "Your current plan does not allow one or more field types.",
+        : "Your current plan does not allow one or more field settings.",
     );
   }
 

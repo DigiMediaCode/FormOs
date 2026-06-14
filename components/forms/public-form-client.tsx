@@ -2,6 +2,10 @@
 
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
+import {
+  isFieldVisible,
+  type FieldConditionalLogic,
+} from "@/lib/forms/conditional-logic";
 
 export const RESTORE_SIGNATURE_EVENT = "formos:restore-signature";
 
@@ -120,8 +124,15 @@ export function PublicFormDraftScript({
 }
 
 type RequiredPublicField = {
+  conditionalLogic?: FieldConditionalLogic;
   id: string;
   label: string;
+  type: string;
+};
+
+type ConditionalPublicField = {
+  conditionalLogic?: FieldConditionalLogic;
+  id: string;
   type: string;
 };
 
@@ -129,6 +140,7 @@ type PublicFormClientProps = {
   action: (formData: FormData) => void;
   children: ReactNode;
   clearDraft?: boolean;
+  conditionalFields: ConditionalPublicField[];
   formId: string;
   requiredFields: RequiredPublicField[];
 };
@@ -155,6 +167,7 @@ export function PublicFormClient({
   action,
   children,
   clearDraft = false,
+  conditionalFields,
   formId,
   requiredFields,
 }: PublicFormClientProps) {
@@ -183,6 +196,94 @@ export function PublicFormClient({
     }
 
     return values;
+  }
+
+  function collectCurrentValues(form: HTMLFormElement) {
+    const formData = new FormData(form);
+    const values: Record<string, string | boolean> = {};
+
+    for (const element of Array.from(form.elements)) {
+      if (
+        !(
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        )
+      ) {
+        continue;
+      }
+
+      if (!element.name || element.type === "file") {
+        continue;
+      }
+
+      if (element instanceof HTMLInputElement && element.type === "checkbox") {
+        values[element.name] = formData.get(element.name) === "on";
+        continue;
+      }
+
+      values[element.name] = String(formData.get(element.name) ?? "");
+    }
+
+    return values;
+  }
+
+  function clearFieldControls(container: HTMLElement) {
+    for (const element of Array.from(container.querySelectorAll("input, textarea, select"))) {
+      if (
+        !(
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        )
+      ) {
+        continue;
+      }
+
+      if (element instanceof HTMLInputElement && element.type === "checkbox") {
+        element.checked = false;
+      } else if (element instanceof HTMLInputElement && element.type === "file") {
+        element.value = "";
+      } else {
+        element.value = "";
+      }
+
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+
+  function applyConditionalVisibility(form: HTMLFormElement) {
+    const values = collectCurrentValues(form);
+
+    for (const field of conditionalFields) {
+      const wrapper = form.querySelector<HTMLElement>(
+        `[data-formos-field-id="${field.id}"]`,
+      );
+
+      if (!wrapper) {
+        continue;
+      }
+
+      const visible = isFieldVisible(field, values);
+      const wasHidden = wrapper.dataset.formosHidden === "true";
+      wrapper.hidden = !visible;
+      wrapper.dataset.formosHidden = visible ? "false" : "true";
+
+      for (const element of Array.from(wrapper.querySelectorAll("input, textarea, select"))) {
+        if (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        ) {
+          element.disabled = !visible;
+        }
+      }
+
+      if (!visible && !wasHidden) {
+        clearFieldControls(wrapper);
+      }
+    }
   }
 
   function persistDraft(form: HTMLFormElement) {
@@ -255,11 +356,29 @@ export function PublicFormClient({
     }
   }, [clearDraft, draftKey, formId]);
 
+  useEffect(() => {
+    const form = document.querySelector<HTMLFormElement>(
+      `form[data-public-form-id="${formId}"]`,
+    );
+
+    if (!form) {
+      return;
+    }
+
+    applyConditionalVisibility(form);
+    persistDraft(form);
+  }, [conditionalFields, formId]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    applyConditionalVisibility(event.currentTarget);
     persistDraft(event.currentTarget);
 
     const formData = new FormData(event.currentTarget);
-    const missingField = requiredFields.find((field) => valueIsMissing(field, formData));
+    const currentValues = collectCurrentValues(event.currentTarget);
+    const missingField = requiredFields.find(
+      (field) =>
+        isFieldVisible(field, currentValues) && valueIsMissing(field, formData),
+    );
 
     if (!missingField) {
       setError("");
@@ -285,8 +404,14 @@ export function PublicFormClient({
       action={action}
       className="mt-6 flex flex-col gap-5"
       data-public-form-id={formId}
-      onChange={(event) => persistDraft(event.currentTarget)}
-      onInput={(event) => persistDraft(event.currentTarget)}
+      onChange={(event) => {
+        applyConditionalVisibility(event.currentTarget);
+        persistDraft(event.currentTarget);
+      }}
+      onInput={(event) => {
+        applyConditionalVisibility(event.currentTarget);
+        persistDraft(event.currentTarget);
+      }}
       onSubmit={handleSubmit}
     >
       {error ? (

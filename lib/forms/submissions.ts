@@ -8,6 +8,7 @@ import {
   normalizeFormFields,
   type FormBuilderField,
 } from "@/lib/forms/fields";
+import { isFieldVisible } from "@/lib/forms/conditional-logic";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceMember } from "@/lib/workspaces/access";
@@ -244,7 +245,12 @@ export function buildSubmissionAnswers(
   const submittedFiles = isRecord(files) ? files : {};
 
   return fields
-    .filter((field) => isPublicField(field) && !DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
+    .filter(
+      (field) =>
+        isPublicField(field) &&
+        isFieldVisible(field, submittedData) &&
+        !DISPLAY_ONLY_FIELD_TYPES.includes(field.type),
+    )
     .map((field) => {
       const rawSignature = submittedSignatures[field.id];
       const imageDataUrl = isValidImageDataUrl(rawSignature)
@@ -268,9 +274,16 @@ export function buildSubmissionAnswers(
     });
 }
 
-export function buildSubmissionContext(fields: FormBuilderField[]) {
+export function buildSubmissionContext(fields: FormBuilderField[], data: unknown = {}) {
+  const submittedData = isRecord(data) ? data : {};
+
   return fields
-    .filter((field) => isPublicField(field) && DISPLAY_ONLY_FIELD_TYPES.includes(field.type))
+    .filter(
+      (field) =>
+        isPublicField(field) &&
+        isFieldVisible(field, submittedData) &&
+        DISPLAY_ONLY_FIELD_TYPES.includes(field.type),
+    )
     .map((field) => ({
       id: field.id,
       type: field.type,
@@ -428,7 +441,7 @@ export async function getFormSubmissionById(formId: string, submissionId: string
         submission.signatures,
         submission.files,
       ),
-      context: buildSubmissionContext(snapshot.fields),
+      context: buildSubmissionContext(snapshot.fields, submission.data),
       officeFields: buildOfficeFieldAnswers(snapshot.fields, submission.officeData),
       metadata: isRecord(submission.metadata) ? submission.metadata : {},
     },

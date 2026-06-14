@@ -1,3 +1,11 @@
+import {
+  CONDITIONAL_SOURCE_FIELD_TYPES,
+  NUMBER_CONDITIONAL_OPERATORS,
+  normalizeConditionalLogic,
+  operatorNeedsValue,
+  type FieldConditionalLogic,
+} from "@/lib/forms/conditional-logic";
+
 export const SUPPORTED_FIELD_TYPES = [
   "text",
   "textarea",
@@ -30,6 +38,7 @@ export type FormBuilderField = {
   order: number;
   options: string[];
   content: string;
+  conditionalLogic: FieldConditionalLogic;
   settings: Record<string, unknown>;
   visibility: FormFieldVisibility;
 };
@@ -121,6 +130,7 @@ export function normalizeFormFields(value: unknown): FormBuilderField[] {
         order: Number.isFinite(Number(field.order)) ? Number(field.order) : index + 1,
         options: normalizeOptions(field.options),
         content: String(field.content ?? ""),
+        conditionalLogic: normalizeConditionalLogic(field.conditionalLogic),
         settings: isRecord(field.settings) ? field.settings : {},
         visibility: isSupportedFieldVisibility(String(field.visibility ?? "PUBLIC"))
           ? String(field.visibility ?? "PUBLIC") as FormFieldVisibility
@@ -236,9 +246,70 @@ export function validateFormFields(value: unknown) {
       order,
       options,
       content,
+      conditionalLogic: normalizeConditionalLogic(rawField.conditionalLogic),
       settings: isRecord(rawField.settings) ? rawField.settings : {},
       visibility,
     });
+  }
+
+  const fieldById = new Map(fields.map((field) => [field.id, field]));
+
+  for (const field of fields) {
+    const logic = field.conditionalLogic;
+
+    if (!logic.enabled) {
+      continue;
+    }
+
+    if (!logic.sourceFieldId) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} needs a source field for conditional visibility.`,
+      };
+    }
+
+    if (logic.sourceFieldId === field.id) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} cannot depend on itself.`,
+      };
+    }
+
+    const sourceField = fieldById.get(logic.sourceFieldId);
+
+    if (!sourceField) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} has an invalid conditional source field.`,
+      };
+    }
+
+    if (
+      sourceField.visibility !== "PUBLIC" ||
+      !CONDITIONAL_SOURCE_FIELD_TYPES.includes(sourceField.type)
+    ) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} must use a public input field as its conditional source.`,
+      };
+    }
+
+    if (
+      NUMBER_CONDITIONAL_OPERATORS.includes(logic.operator) &&
+      !["number", "currency"].includes(sourceField.type)
+    ) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} can only use number comparisons with number or currency source fields.`,
+      };
+    }
+
+    if (operatorNeedsValue(logic.operator) && !logic.value) {
+      return {
+        fields: null,
+        error: `${field.label || field.id} needs a condition value.`,
+      };
+    }
   }
 
   return {

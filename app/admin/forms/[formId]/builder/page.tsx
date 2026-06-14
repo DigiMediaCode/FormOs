@@ -164,6 +164,8 @@ export default async function AdminSupportBuilderPage({
           formId={form.id}
           initialFields={fields}
           allowedFieldTypes={limits.allowedFieldTypes}
+          allowConditionalLogic={limits.allowConditionalLogic}
+          maxConditionalRules={limits.maxConditionalRules}
           saveAction={saveAction}
         />
       </div>

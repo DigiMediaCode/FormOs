@@ -83,6 +83,7 @@ function readLimits(formData: FormData): PlanLimits {
     maxForms: readNumericLimit(formData, "maxForms"),
     maxMonthlySubmissions: readNumericLimit(formData, "maxMonthlySubmissions"),
     maxTeamMembers: readNumericLimit(formData, "maxTeamMembers"),
+    maxConditionalRules: readNumericLimit(formData, "maxConditionalRules"),
     allowGoogleDrive: readBoolean(formData, "allowGoogleDrive"),
     allowDropbox: readBoolean(formData, "allowDropbox"),
     allowPdfGeneration: readBoolean(formData, "allowPdfGeneration"),
@@ -94,6 +95,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowAdFreeForms: readBoolean(formData, "allowAdFreeForms"),
     allowEmbeds: readBoolean(formData, "allowEmbeds"),
     allowApiAccess: readBoolean(formData, "allowApiAccess"),
+    allowConditionalLogic: readBoolean(formData, "allowConditionalLogic"),
     allowedFieldTypes,
   });
 }

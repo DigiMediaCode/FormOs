@@ -8,6 +8,7 @@ import {
   normalizeFormFields,
   type FormBuilderField,
 } from "@/lib/forms/fields";
+import { isFieldVisible } from "@/lib/forms/conditional-logic";
 
 type CompletedSubmissionPdfInput = {
   formTitle: string;
@@ -442,6 +443,10 @@ export async function generateCompletedSubmissionPdf(
   drawHeader(context, input.formTitle);
 
   for (const field of fields) {
+    if (!isOfficeField(field) && !isFieldVisible(field, publicData)) {
+      continue;
+    }
+
     if (field.type === "image_upload") {
       continue;
     }

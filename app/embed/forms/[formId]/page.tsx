@@ -77,10 +77,16 @@ export default async function EmbedFormPage({
   const requiredFields = publicFields
     .filter((field) => field.required)
     .map((field) => ({
+      conditionalLogic: field.conditionalLogic,
       id: field.id,
       label: field.label,
       type: field.type,
     }));
+  const conditionalFields = publicFields.map((field) => ({
+    conditionalLogic: field.conditionalLogic,
+    id: field.id,
+    type: field.type,
+  }));
   const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
   const firstSignatureFieldId =
     publicFields.find((field) => field.type === "signature")?.id ?? null;
@@ -124,6 +130,7 @@ export default async function EmbedFormPage({
         <PublicFormClient
           action={submitAction}
           clearDraft={Boolean(success)}
+          conditionalFields={conditionalFields}
           formId={form.id}
           requiredFields={requiredFields}
         >

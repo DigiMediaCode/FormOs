@@ -9,6 +9,7 @@ import {
   normalizeFormFields,
   type FormBuilderField,
 } from "@/lib/forms/fields";
+import { isFieldVisible } from "@/lib/forms/conditional-logic";
 import {
   ensureFormFolder,
   ensureSubmissionFolder,
@@ -183,6 +184,20 @@ function readSubmissionValue(field: FormBuilderField, formData: FormData) {
   }
 
   return String(formData.get(field.id) ?? "").trim();
+}
+
+function collectConditionalAnswers(fields: FormBuilderField[], formData: FormData) {
+  const values: Record<string, string | boolean> = {};
+
+  for (const field of fields) {
+    if (!isPublicField(field) || !isInputField(field)) {
+      continue;
+    }
+
+    values[field.id] = readSubmissionValue(field, formData);
+  }
+
+  return values;
 }
 
 function getIpAddress(headerStore: Headers) {
@@ -402,6 +417,7 @@ async function submitFormInternal(
   const submittedData: Record<string, string | boolean> = {};
   const submittedSignatures: Record<string, string> = {};
   const uploadRequests: UploadRequest[] = [];
+  const conditionalAnswers = collectConditionalAnswers(formSnapshot.fields, formData);
   const uploadProvider = await getResolvedUploadProvider(form.ownerId);
   let uploadsAvailable = uploadProvider.uploadsAvailable;
 
@@ -422,6 +438,10 @@ async function submitFormInternal(
 
   for (const field of formSnapshot.fields) {
     if (!isPublicField(field)) {
+      continue;
+    }
+
+    if (!isFieldVisible(field, conditionalAnswers)) {
       continue;
     }
 

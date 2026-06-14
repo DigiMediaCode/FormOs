@@ -1,331 +1,134 @@
-# CURRENT TASK — FormOS Milestone 34.1: Shopify App Account Connection + Form Picker
+# CURRENT TASK - FormOS Milestone 36: Conditional Logic / Branching MVP
 
-## Project Context
+## Strategic Direction
 
-FormOS is a standalone SaaS-style form builder project.
+FormOS is no longer positioned as a generic form builder. It is positioned as:
 
-Current state:
+**FormOS - the form builder that finishes the job.**
 
-- FormOS embed system works.
-- WordPress plugin works.
-- Shopify Theme App Extension works.
-- Shopify app block can render FormOS forms on Shopify storefront.
-- Shopify block currently requires manual FormOS Base URL and Form ID.
-- Public embed route exists at /embed/forms/{formId}.
-- Embed theme customization works.
-- FormOS public embed submissions work.
-- Forms, submissions, storage, PDF, email, audit, billing, plans, staff, and Super Admin features work.
-- Do not touch CommerceOS.
+FormOS is for businesses that need forms, signatures, uploads, office processing, and finalized PDFs.
 
 ## Goal
 
-Improve the Shopify integration so merchants can connect their FormOS account and select a form from a dropdown instead of manually typing a Form ID.
+Allow form owners to add simple conditional visibility rules so fields can show or hide based on previous answers.
 
-This milestone should build the foundation for a real Shopify app experience.
+## MVP Scope
 
-## Product Behaviour
+- Field visibility logic only.
+- Show field when condition matches.
+- Hide field when condition matches.
+- One condition per field.
+- No redirects.
+- No calculations.
+- No email routing logic.
+- No payment logic.
+- No multi-step branching pages.
 
-A Shopify merchant should be able to:
+## Supported Operators
 
-1. Install/open the FormOS Shopify app.
-2. Enter or connect a FormOS API token.
-3. Save the connection.
-4. See a list of their published FormOS forms.
-5. Copy/use the selected form ID in the theme app block.
-6. In the theme editor, select or enter the FormOS form.
-7. Render the form on the storefront.
+- equals
+- not equals
+- contains
+- is empty
+- is not empty
+- greater than, for number/currency sources
+- less than, for number/currency sources
 
-## Important Direction
+## Supported Source Fields
 
-Do not build full Shopify App Store submission yet.
+Conditions can be based on public input fields:
 
-Do not build Shopify billing.
+- text
+- textarea
+- email
+- phone
+- number
+- currency
+- date
+- select/dropdown
+- checkbox
 
-Do not sync Shopify customers/orders.
+Do not allow conditions based on signature, initials, file upload, static text, section heading, HTML content, or office-only fields.
 
-Do not store FormOS submissions in Shopify.
+## Data Structure
 
-Do not proxy form submissions through Shopify.
+Store rules in each field:
 
-Do not build a full FormOS form builder inside Shopify.
+```ts
+conditionalLogic: {
+  enabled: boolean;
+  action: "SHOW" | "HIDE";
+  sourceFieldId: string;
+  operator:
+    | "EQUALS"
+    | "NOT_EQUALS"
+    | "CONTAINS"
+    | "IS_EMPTY"
+    | "IS_NOT_EMPTY"
+    | "GREATER_THAN"
+    | "LESS_THAN";
+  value?: string;
+}
+```
 
-The app should only connect to FormOS and help merchants select/embed forms.
+## Builder Requirements
 
-## FormOS API Token Foundation
+- Add Conditional Visibility section in each field settings panel.
+- Show enable toggle.
+- Show action selector.
+- Show source field dropdown excluding current field.
+- Show operator dropdown.
+- Show value input where needed.
+- If the plan does not allow conditional logic, show:
+  "Conditional logic is available on Pro and Business plans."
 
-Add a secure API token system in FormOS.
+## Public Renderer Requirements
 
-Users should be able to generate an API token for external integrations.
+- Evaluate conditional logic client-side.
+- Hidden fields are not shown.
+- Hidden required fields do not block submission.
+- If a field becomes hidden, clear its value where safe.
+- Office-only fields remain hidden from public users.
 
-Create dashboard route:
+## Server-Side Validation
 
-/dashboard/settings/api-tokens
+- Server validation must respect conditional visibility.
+- Required fields hidden by logic must not be required.
+- Submitted values for hidden fields should be ignored.
+- Office-only fields remain ignored for public submissions.
+- Display-only fields are not answer fields.
 
-Add dashboard nav link:
-
-API Tokens
-
-User can:
-
-- create token
-- name token
-- view token once after creation
-- revoke token
-- see created date
-- see last used date if implemented
-
-Token rules:
-
-- raw token shown only once
-- store only token hash
-- token belongs to user
-- token can be revoked
-- token should support scopes if simple
-
-Suggested scopes:
-
-- forms:read
-- embeds:read
-
-For this milestone, forms:read is enough.
-
-## Prisma Model
+## Plan Limits
 
 Add:
 
-ApiToken {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  tokenHash   String   @unique
-  scopes      Json?
-  lastUsedAt  DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([tokenHash])
-}
-
-Create migration:
-
-npx prisma migrate dev --name add_api_tokens
-
-Do not use prisma db push.
-
-## FormOS API Endpoint For Shopify
-
-Create API endpoint:
-
-GET /api/external/forms
-
-Authentication:
-
-Authorization: Bearer {apiToken}
-
-Returns only the authenticated user's forms.
-
-Return only safe fields:
-
-[
-  {
-    "id": "formId",
-    "title": "Vehicle Hire Agreement",
-    "status": "PUBLISHED",
-    "mode": "AGREEMENT",
-    "updatedAt": "...",
-    "embedUrl": "https://formos.com.au/embed/forms/formId"
-  }
-]
-
-Rules:
-
-- only return forms owned by token user
-- preferably return published forms by default
-- do not return submissions
-- do not return private answers
-- do not return storage tokens
-- do not return owner private data
-
-Optional query:
-
-?status=PUBLISHED
-
-## External API Security
-
-- require valid non-revoked token
-- token hash lookup only
-- update lastUsedAt if practical
-- return 401 for invalid token
-- return safe JSON errors
-- rate limit if existing helper exists
-- do not log raw tokens
-
-## Shopify App Admin Connection
-
-In the Shopify app folder:
-
-plugins/shopify/formos-embed-shopify/
-
-Add or update app admin UI if scaffold supports it.
-
-If current app is extension-only and no admin runtime exists, create clear documentation and a lightweight config approach.
-
-Preferred if possible:
-
-Create app admin/settings page:
-
-FormOS Connection
-
-Fields:
-
-- FormOS Base URL
-- FormOS API Token
-
-Actions:
-
-- Save connection
-- Test connection
-- Fetch Forms
-
-Show:
-
-- connection status
-- list of forms from FormOS
-- copy form ID button
-- instructions to add app block in Theme Editor
-
-If a full admin app is not available in the current scaffold, update README and prepare the next scaffold step.
-
-## Shopify Theme App Extension Update
-
-Update FormOS Form app block settings.
-
-Current settings can remain:
-
-- FormOS Base URL
-- Form ID
-- height/theme/accent/background/radius/compact/font
-
-If Shopify app block cannot dynamically populate dropdown from app backend yet, keep manual Form ID field but improve instructions.
-
-Add helper text:
-
-Connect your FormOS account in the app settings to find your Form ID.
-
-If dynamic source/settings are supported, add a form picker.
-
-## Form Picker Strategy
-
-Best MVP:
-
-- Shopify app admin page fetches forms and shows Copy Form ID
-- Theme block still uses Form ID text input
-
-Future:
-
-- app block dynamic dropdown populated by app backend
-
-Do not overbuild dynamic dropdown if Shopify extension architecture makes it difficult.
-
-## Installation / Usage Flow
-
-Document clearly:
-
-1. In FormOS, create API token from Dashboard → API Tokens.
-2. In Shopify app, paste FormOS Base URL and API token.
-3. Click Test Connection.
-4. Select/copy desired Form ID.
-5. Go to Theme Editor.
-6. Add FormOS Form app block.
-7. Paste Form ID.
-8. Save theme.
-
-## Plan / Package Controls
-
-Add plan limit:
-
-allowApiAccess: boolean
-
-Default suggestion:
-
-Free: false  
-Starter: false  
-Pro: true  
-Business: true  
-Unlimited: true
-
-Update:
-
-- plan editor
-- user quota overrides
-- effective limits
-
-When user tries to create API token:
-
-- check allowApiAccess
-- if false, block with friendly error:
-  API access is not included in your current plan.
-
-This makes Shopify/advanced integrations a paid feature.
-
-## Super Admin Visibility
-
-Update Super Admin user detail if practical:
-
-- API token count
-- last API token usage
-- API access allowed by plan
-
-Do not expose raw tokens or token hashes.
-
-## Security
-
-- raw API token shown once only
-- token hash stored only
-- revoked tokens cannot be used
-- external API returns only safe form data
-- no submissions exposed
-- no storage tokens exposed
-- no billing data exposed
-- no private user data exposed
-- plan allowApiAccess enforced server-side
-
-## Out of Scope
-
-Do not build full Shopify App Store submission.
-Do not build Shopify billing.
-Do not build Shopify customer/order sync.
-Do not build form builder inside Shopify.
-Do not build WordPress API connection.
-Do not expose submissions API.
-Do not build API token scopes beyond forms read unless simple.
-Do not integrate CommerceOS.
+- allowConditionalLogic: boolean
+- maxConditionalRules: number | null
+
+Defaults:
+
+- Free: allowConditionalLogic false, maxConditionalRules 0
+- Starter: allowConditionalLogic false, maxConditionalRules 0
+- Pro: allowConditionalLogic true, maxConditionalRules null
+- Business: allowConditionalLogic true, maxConditionalRules null
+- Unlimited: allowConditionalLogic true, maxConditionalRules null
 
 ## Acceptance Criteria
 
-Milestone 34.1 is complete when:
-
-- ApiToken model exists.
-- Prisma migration exists.
-- User can create API token in FormOS.
-- Raw token is shown only once.
-- Token hash is stored.
-- User can revoke token.
-- Plan limit allowApiAccess exists.
-- API token creation respects allowApiAccess.
-- GET /api/external/forms exists.
-- External forms API authenticates Bearer token.
-- External forms API returns only safe form list.
-- Revoked/invalid token is rejected.
-- Shopify app documentation explains API token connection.
-- Shopify app can test/fetch forms if admin runtime exists, or README documents current manual flow.
-- Shopify theme block still works.
-- Existing embed route still works.
-- Existing WordPress plugin still works.
-- Existing FormOS app features still work.
-- npx prisma validate passes.
-- npx prisma generate passes.
+- Builder has Conditional Visibility section.
+- User can configure one condition per field.
+- Conditional rules are saved in field schema.
+- Published public forms evaluate conditional visibility.
+- Hidden required fields do not block public submission.
+- Server-side validation respects hidden conditional fields.
+- Plan limits include allowConditionalLogic.
+- Plan limits include maxConditionalRules.
+- Super Admin plan editor can control these limits.
+- Server-side builder save enforces these limits.
+- Existing forms without conditional logic still work.
+- Existing submissions still display.
+- PDF generation still works.
+- Embeds still work.
+- WordPress embeds still work.
+- Shopify embeds still work.
 - npm run build passes.

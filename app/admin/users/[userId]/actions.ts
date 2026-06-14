@@ -74,6 +74,10 @@ function readQuotaOverride(formData: FormData) {
     "maxMonthlySubmissions",
   );
   const maxTeamMembers = readOverrideNumericLimit(formData, "maxTeamMembers");
+  const maxConditionalRules = readOverrideNumericLimit(
+    formData,
+    "maxConditionalRules",
+  );
 
   if (maxForms !== undefined) {
     limits.maxForms = maxForms;
@@ -85,6 +89,10 @@ function readQuotaOverride(formData: FormData) {
 
   if (maxTeamMembers !== undefined) {
     limits.maxTeamMembers = maxTeamMembers;
+  }
+
+  if (maxConditionalRules !== undefined) {
+    limits.maxConditionalRules = maxConditionalRules;
   }
 
   for (const key of [
@@ -99,6 +107,7 @@ function readQuotaOverride(formData: FormData) {
     "allowAdFreeForms",
     "allowEmbeds",
     "allowApiAccess",
+    "allowConditionalLogic",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

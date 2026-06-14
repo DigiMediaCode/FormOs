@@ -1,4 +1,5 @@
 import { FormMode, FormStatus } from "@prisma/client";
+import { defaultConditionalLogic } from "@/lib/forms/conditional-logic";
 import type { FormBuilderField, FormFieldType, FormFieldVisibility } from "@/lib/forms/fields";
 
 export const VEHICLE_HIRE_AGREEMENT_TEMPLATE = {
@@ -35,6 +36,7 @@ function createTemplateFields(items: TemplateFieldInput[]): FormBuilderField[] {
     order: index + 1,
     options: item.type === "select" ? item.options ?? [] : [],
     content: item.content ?? "",
+    conditionalLogic: defaultConditionalLogic(),
     settings: item.settings ?? {},
     visibility: item.visibility ?? "PUBLIC",
   }));

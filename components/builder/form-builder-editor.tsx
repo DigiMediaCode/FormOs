@@ -24,6 +24,13 @@ import {
   Type,
 } from "lucide-react";
 import {
+  defaultConditionalLogic,
+  isConditionalSourceField,
+  NUMBER_CONDITIONAL_OPERATORS,
+  operatorNeedsValue,
+  type ConditionalLogicOperator,
+} from "@/lib/forms/conditional-logic";
+import {
   DISPLAY_ONLY_FIELD_TYPES,
   fieldTypeLabel,
   type FormBuilderField,
@@ -36,6 +43,8 @@ type FormBuilderEditorProps = {
   formId: string;
   initialFields: FormBuilderField[];
   allowedFieldTypes: FormFieldType[] | null;
+  allowConditionalLogic: boolean;
+  maxConditionalRules: number | null;
   saveAction: (formData: FormData) => void;
 };
 
@@ -94,6 +103,26 @@ const FIELD_TYPE_ICONS: Record<FormFieldType, ReactNode> = {
   textarea: <Rows3 className="h-4 w-4" />,
 };
 
+const BASE_CONDITIONAL_OPERATORS: Array<{
+  label: string;
+  value: ConditionalLogicOperator;
+}> = [
+  { label: "equals", value: "EQUALS" },
+  { label: "does not equal", value: "NOT_EQUALS" },
+  { label: "contains", value: "CONTAINS" },
+  { label: "is empty", value: "IS_EMPTY" },
+  { label: "is not empty", value: "IS_NOT_EMPTY" },
+];
+
+const NUMBER_CONDITIONAL_OPERATOR_OPTIONS: Array<{
+  label: string;
+  value: ConditionalLogicOperator;
+}> = [
+  ...BASE_CONDITIONAL_OPERATORS,
+  { label: "is greater than", value: "GREATER_THAN" },
+  { label: "is less than", value: "LESS_THAN" },
+];
+
 function isDisplayOnlyField(type: FormFieldType) {
   return DISPLAY_ONLY_FIELD_TYPES.includes(type);
 }
@@ -108,6 +137,7 @@ function createField(type: FormFieldType, order: number): FormBuilderField {
     order,
     options: type === "select" ? ["Option 1", "Option 2"] : [],
     content: "",
+    conditionalLogic: defaultConditionalLogic(),
     settings: {},
     visibility: "PUBLIC",
   };
@@ -189,8 +219,10 @@ function FieldHelper({ field }: { field: FormBuilderField }) {
 }
 
 export function FormBuilderEditor({
+  allowConditionalLogic,
   allowedFieldTypes,
   initialFields,
+  maxConditionalRules,
   saveAction,
 }: FormBuilderEditorProps) {
   const firstAllowedFieldType =
@@ -213,6 +245,10 @@ export function FormBuilderEditor({
             .filter((fieldType) => !allowedFieldTypes.includes(fieldType))
             .map(fieldTypeLabel),
     [allowedFieldTypes, fields],
+  );
+  const conditionalRuleCount = useMemo(
+    () => fields.filter((field) => field.conditionalLogic?.enabled).length,
+    [fields],
   );
 
   function isAllowedFieldType(type: FormFieldType) {
@@ -237,6 +273,30 @@ export function FormBuilderEditor({
             required: isDisplayOnlyField(nextField.type)
               ? false
               : updates.required ?? field.required,
+          };
+        }),
+      ),
+    );
+  }
+
+  function updateConditionalLogic(
+    fieldId: string,
+    updates: Partial<FormBuilderField["conditionalLogic"]>,
+  ) {
+    setFields((currentFields) =>
+      normalizeOrders(
+        currentFields.map((field) => {
+          if (field.id !== fieldId) {
+            return field;
+          }
+
+          return {
+            ...field,
+            conditionalLogic: {
+              ...defaultConditionalLogic(),
+              ...field.conditionalLogic,
+              ...updates,
+            },
           };
         }),
       ),
@@ -409,6 +469,23 @@ export function FormBuilderEditor({
     );
   }
 
+  function conditionalSourceOptions(field: FormBuilderField) {
+    return fields.filter(
+      (sourceField) =>
+        sourceField.id !== field.id && isConditionalSourceField(sourceField),
+    );
+  }
+
+  function conditionalOperatorOptions(sourceFieldId: string) {
+    const sourceField = fields.find((field) => field.id === sourceFieldId);
+
+    if (sourceField && ["number", "currency"].includes(sourceField.type)) {
+      return NUMBER_CONDITIONAL_OPERATOR_OPTIONS;
+    }
+
+    return BASE_CONDITIONAL_OPERATORS;
+  }
+
   return (
     <form action={saveAction} className="grid gap-0 xl:grid-cols-[15rem_minmax(0,1fr)_20rem]">
       <input name="fields" type="hidden" value={serializedFields} />
@@ -560,6 +637,16 @@ export function FormBuilderEditor({
           const supportsContent = CONTENT_FIELD_TYPES.includes(field.type);
           const isDisplayOnly = isDisplayOnlyField(field.type);
           const isExpanded = expandedFieldIds.has(field.id);
+          const sourceOptions = conditionalSourceOptions(field);
+          const operatorOptions = conditionalOperatorOptions(
+            field.conditionalLogic?.sourceFieldId ?? "",
+          );
+          const selectedOperatorIsAllowed = operatorOptions.some(
+            (operator) => operator.value === field.conditionalLogic?.operator,
+          );
+          const selectedOperator = selectedOperatorIsAllowed
+            ? field.conditionalLogic.operator
+            : "EQUALS";
 
           return (
             <article
@@ -621,6 +708,9 @@ export function FormBuilderEditor({
                         ) : null}
                         {field.type === "signature" || field.type === "initials" ? (
                           <Badge tone="teal">Signature Field</Badge>
+                        ) : null}
+                        {field.conditionalLogic?.enabled ? (
+                          <Badge tone="indigo">Conditional</Badge>
                         ) : null}
                       </div>
                       <span className="mt-1 flex min-w-0 items-center gap-2">
@@ -813,6 +903,143 @@ export function FormBuilderEditor({
                     />
                   </label>
                 ) : null}
+
+                <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-950">
+                        Conditional Visibility
+                      </h4>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        Show or hide this field based on one previous public answer.
+                      </p>
+                    </div>
+                    {allowConditionalLogic ? (
+                      <Badge tone="teal">
+                        {conditionalRuleCount} / {maxConditionalRules === null ? "Unlimited" : maxConditionalRules}
+                      </Badge>
+                    ) : (
+                      <Badge tone="amber">Upgrade required</Badge>
+                    )}
+                  </div>
+
+                  {!allowConditionalLogic ? (
+                    <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                      Conditional logic is available on Pro and Business plans.
+                    </p>
+                  ) : sourceOptions.length === 0 ? (
+                    <p className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-600">
+                      Add a public text, number, dropdown, date, email, phone, currency,
+                      or checkbox field to use as a condition source.
+                    </p>
+                  ) : (
+                    <div className="mt-3 grid gap-3">
+                      <label className="flex items-center gap-2 text-sm font-normal text-slate-700">
+                        <input
+                          checked={Boolean(field.conditionalLogic?.enabled)}
+                          className="h-4 w-4"
+                          onChange={(event) =>
+                            updateConditionalLogic(field.id, {
+                              enabled: event.target.checked,
+                              sourceFieldId:
+                                field.conditionalLogic?.sourceFieldId ||
+                                sourceOptions[0]?.id ||
+                                "",
+                            })
+                          }
+                          type="checkbox"
+                        />
+                        Enable conditional visibility
+                      </label>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <label className="flex flex-col gap-1.5 text-sm font-normal text-slate-700">
+                          Action
+                          <select
+                            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            disabled={!field.conditionalLogic?.enabled}
+                            onChange={(event) =>
+                              updateConditionalLogic(field.id, {
+                                action: event.target.value === "HIDE" ? "HIDE" : "SHOW",
+                              })
+                            }
+                            value={field.conditionalLogic?.action ?? "SHOW"}
+                          >
+                            <option value="SHOW">Show this field when</option>
+                            <option value="HIDE">Hide this field when</option>
+                          </select>
+                        </label>
+
+                        <label className="flex flex-col gap-1.5 text-sm font-normal text-slate-700">
+                          Source field
+                          <select
+                            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            disabled={!field.conditionalLogic?.enabled}
+                            onChange={(event) => {
+                              const sourceField = fields.find(
+                                (candidate) => candidate.id === event.target.value,
+                              );
+                              const nextOperator =
+                                sourceField &&
+                                !["number", "currency"].includes(sourceField.type) &&
+                                NUMBER_CONDITIONAL_OPERATORS.includes(selectedOperator)
+                                  ? "EQUALS"
+                                  : selectedOperator;
+
+                              updateConditionalLogic(field.id, {
+                                sourceFieldId: event.target.value,
+                                operator: nextOperator,
+                              });
+                            }}
+                            value={field.conditionalLogic?.sourceFieldId || sourceOptions[0]?.id || ""}
+                          >
+                            {sourceOptions.map((sourceField) => (
+                              <option key={sourceField.id} value={sourceField.id}>
+                                {sourceField.label || sourceField.content || fieldTypeLabel(sourceField.type)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="flex flex-col gap-1.5 text-sm font-normal text-slate-700">
+                          Operator
+                          <select
+                            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                            disabled={!field.conditionalLogic?.enabled}
+                            onChange={(event) =>
+                              updateConditionalLogic(field.id, {
+                                operator: event.target.value as ConditionalLogicOperator,
+                              })
+                            }
+                            value={selectedOperator}
+                          >
+                            {operatorOptions.map((operator) => (
+                              <option key={operator.value} value={operator.value}>
+                                {operator.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        {operatorNeedsValue(selectedOperator) ? (
+                          <label className="flex flex-col gap-1.5 text-sm font-normal text-slate-700">
+                            Value
+                            <input
+                              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                              disabled={!field.conditionalLogic?.enabled}
+                              onChange={(event) =>
+                                updateConditionalLogic(field.id, { value: event.target.value })
+                              }
+                              placeholder="Value to compare"
+                              type="text"
+                              value={field.conditionalLogic?.value ?? ""}
+                            />
+                          </label>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </section>
 
                 <FieldHelper field={field} />
               </div>

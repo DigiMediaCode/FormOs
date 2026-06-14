@@ -295,10 +295,12 @@ export function renderFieldsWithAds(
 
   fields.forEach((field, index) => {
     output.push(
-      renderField(field, uploadsAvailable, {
-        firstSignatureFieldId: options.firstSignatureFieldId,
-        uploadProvider: options.uploadProvider,
-      }),
+      <div data-formos-field-id={field.id} key={field.id}>
+        {renderField(field, uploadsAvailable, {
+          firstSignatureFieldId: options.firstSignatureFieldId,
+          uploadProvider: options.uploadProvider,
+        })}
+      </div>,
     );
 
     if (!options.publicAds.enabled || !isAdSafeField(field)) {
@@ -407,10 +409,16 @@ export default async function PublicFormPage({
   const requiredFields = publicFields
     .filter((field) => field.required)
     .map((field) => ({
+      conditionalLogic: field.conditionalLogic,
       id: field.id,
       label: field.label,
       type: field.type,
     }));
+  const conditionalFields = publicFields.map((field) => ({
+    conditionalLogic: field.conditionalLogic,
+    id: field.id,
+    type: field.type,
+  }));
   const hasUploadFields = publicFields.some((field) => field.type === "image_upload");
   const firstSignatureFieldId =
     publicFields.find((field) => field.type === "signature")?.id ?? null;
@@ -468,6 +476,7 @@ export default async function PublicFormPage({
         <PublicFormClient
           action={submitAction}
           clearDraft={Boolean(success)}
+          conditionalFields={conditionalFields}
           formId={form.id}
           requiredFields={requiredFields}
         >

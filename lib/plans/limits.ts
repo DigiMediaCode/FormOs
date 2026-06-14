@@ -26,7 +26,9 @@ export type PlanLimits = {
   allowAdFreeForms: boolean;
   allowEmbeds: boolean;
   allowApiAccess: boolean;
+  allowConditionalLogic: boolean;
   maxTeamMembers: NumericLimit;
+  maxConditionalRules: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
 };
 
@@ -57,6 +59,7 @@ const NUMERIC_LIMIT_KEYS = [
   "maxForms",
   "maxMonthlySubmissions",
   "maxTeamMembers",
+  "maxConditionalRules",
 ] as const;
 const BOOLEAN_LIMIT_KEYS = [
   "allowGoogleDrive",
@@ -70,6 +73,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowAdFreeForms",
   "allowEmbeds",
   "allowApiAccess",
+  "allowConditionalLogic",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -86,7 +90,9 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowAdFreeForms: true,
   allowEmbeds: true,
   allowApiAccess: true,
+  allowConditionalLogic: true,
   maxTeamMembers: null,
+  maxConditionalRules: null,
   allowedFieldTypes: null,
 };
 
@@ -135,7 +141,9 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowAdFreeForms: false,
     allowEmbeds: true,
     allowApiAccess: false,
+    allowConditionalLogic: false,
     maxTeamMembers: 0,
+    maxConditionalRules: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
 }
@@ -177,7 +185,9 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowAdFreeForms: true,
       allowEmbeds: true,
       allowApiAccess: false,
+      allowConditionalLogic: false,
       maxTeamMembers: 0,
+      maxConditionalRules: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
   },
@@ -205,7 +215,9 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowAdFreeForms: true,
       allowEmbeds: true,
       allowApiAccess: true,
+      allowConditionalLogic: true,
       maxTeamMembers: 0,
+      maxConditionalRules: null,
       allowedFieldTypes: null,
     },
   },
@@ -233,7 +245,9 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowAdFreeForms: true,
       allowEmbeds: true,
       allowApiAccess: true,
+      allowConditionalLogic: true,
       maxTeamMembers: 5,
+      maxConditionalRules: null,
       allowedFieldTypes: null,
     },
   },
@@ -387,7 +401,9 @@ export async function seedDefaultPlansIfMissing() {
           "maxTeamMembers" in plan.limits &&
           "allowAdFreeForms" in plan.limits &&
           "allowEmbeds" in plan.limits &&
-          "allowApiAccess" in plan.limits
+          "allowApiAccess" in plan.limits &&
+          "allowConditionalLogic" in plan.limits &&
+          "maxConditionalRules" in plan.limits
         ) {
           return Promise.resolve();
         }
@@ -411,6 +427,8 @@ export async function seedDefaultPlansIfMissing() {
               allowAdFreeForms: defaults.limits.allowAdFreeForms,
               allowEmbeds: defaults.limits.allowEmbeds,
               allowApiAccess: defaults.limits.allowApiAccess,
+              allowConditionalLogic: defaults.limits.allowConditionalLogic,
+              maxConditionalRules: defaults.limits.maxConditionalRules,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -663,6 +681,7 @@ export function featureLabels(limits: PlanLimits) {
     { label: "Ad-free public forms", allowed: limits.allowAdFreeForms },
     { label: "Form embeds", allowed: limits.allowEmbeds },
     { label: "API access", allowed: limits.allowApiAccess },
+    { label: "Conditional logic", allowed: limits.allowConditionalLogic },
   ];
 }
 
@@ -713,6 +732,32 @@ export async function assertCanUseFieldTypes(
   if (disallowedLabels.length > 0) {
     throw new Error(
       `Your current plan does not allow these field types: ${disallowedLabels.join(", ")}.`,
+    );
+  }
+}
+
+export async function assertCanUseConditionalLogic(
+  userId: string,
+  fields: Pick<FormBuilderField, "conditionalLogic">[],
+) {
+  const ruleCount = fields.filter((field) => field.conditionalLogic?.enabled).length;
+
+  if (ruleCount === 0) {
+    return;
+  }
+
+  const limits = await getUserEffectiveLimits(userId);
+
+  if (!limits.allowConditionalLogic) {
+    throw new Error("Conditional logic is available on Pro and Business plans.");
+  }
+
+  if (
+    limits.maxConditionalRules !== null &&
+    ruleCount > limits.maxConditionalRules
+  ) {
+    throw new Error(
+      `Your current plan allows up to ${formatLimit(limits.maxConditionalRules)} conditional rules.`,
     );
   }
 }

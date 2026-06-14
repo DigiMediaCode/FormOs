@@ -50,6 +50,7 @@ const booleanLimitFields = [
   ["allowAdFreeForms", "Ad-free public forms"],
   ["allowEmbeds", "Form embeds"],
   ["allowApiAccess", "API access"],
+  ["allowConditionalLogic", "Conditional logic"],
 ] as const;
 
 function moneyValue(value: unknown) {
@@ -126,6 +127,25 @@ function LimitInputs({ limits }: { limits: PlanLimits }) {
               className="size-3.5"
               defaultChecked={limits.maxTeamMembers === null}
               name="maxTeamMembersUnlimited"
+              type="checkbox"
+            />
+            Unlimited
+          </span>
+        </label>
+        <label className={tinyLabelClass()}>
+          Conditional rules
+          <input
+            className={inputClass()}
+            defaultValue={limits.maxConditionalRules ?? ""}
+            min={0}
+            name="maxConditionalRules"
+            type="number"
+          />
+          <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500">
+            <input
+              className="size-3.5"
+              defaultChecked={limits.maxConditionalRules === null}
+              name="maxConditionalRulesUnlimited"
               type="checkbox"
             />
             Unlimited

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
 import {
+  assertCanUseConditionalLogic,
   assertCanUseFieldTypes,
   assertCanUseOfficeFields,
 } from "@/lib/plans/limits";
@@ -103,13 +104,14 @@ export async function updateAdminFormFieldsAction(
 
   try {
     await assertCanUseFieldTypes(existingForm.ownerId, validation.fields);
+    await assertCanUseConditionalLogic(existingForm.ownerId, validation.fields);
   } catch (error) {
     redirectTo(
       errorPath,
       "error",
       error instanceof Error
         ? error.message
-        : "The owner's current plan does not allow one or more field types.",
+        : "The owner's current plan does not allow one or more field settings.",
     );
   }
 
