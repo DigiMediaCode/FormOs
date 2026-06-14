@@ -5,7 +5,7 @@ export const PRIVACY_POLICY_HTML = String.raw`
 <p><strong>Effective Date:</strong> [Effective Date]<br />
 <strong>Website:</strong> <a href="https://formos.com.au">https://formos.com.au</a><br />
 <strong>Product:</strong> FormOS<br />
-<strong>Contact:</strong> <a href="mailto:staff@mediacode.com.au">staff@mediacode.com.au</a></p>
+<strong>Contact:</strong> <a href="mailto:info@formos.com.au">info@formos.com.au</a></p>
 
 <p>FormOS is an online form builder that allows users to create forms, collect submissions, upload files, generate documents, and integrate with external storage and website platforms.</p>
 
@@ -312,7 +312,7 @@ export const PRIVACY_POLICY_HTML = String.raw`
 
 <p>To make a privacy request, contact us at:</p>
 
-<p><a href="mailto:staff@mediacode.com.au">staff@mediacode.com.au</a></p>
+<p><a href="mailto:info@formos.com.au">info@formos.com.au</a></p>
 
 <hr />
 
@@ -339,6 +339,6 @@ export const PRIVACY_POLICY_HTML = String.raw`
 <p>For privacy questions or requests, contact:</p>
 
 <p><strong>FormOS</strong><br />
-Email: <a href="mailto:staff@mediacode.com.au">staff@mediacode.com.au</a><br />
+Email: <a href="mailto:info@formos.com.au">info@formos.com.au</a><br />
 Website: <a href="https://formos.com.au">https://formos.com.au</a></p>
 `;
