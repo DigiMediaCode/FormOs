@@ -96,6 +96,7 @@ function readLimits(formData: FormData): PlanLimits {
     allowEmbeds: readBoolean(formData, "allowEmbeds"),
     allowApiAccess: readBoolean(formData, "allowApiAccess"),
     allowConditionalLogic: readBoolean(formData, "allowConditionalLogic"),
+    allowBasicAnalytics: readBoolean(formData, "allowBasicAnalytics"),
     allowedFieldTypes,
   });
 }

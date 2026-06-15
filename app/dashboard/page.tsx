@@ -7,6 +7,7 @@ import {
 } from "@/app/dashboard/onboarding-actions";
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { getOwnerAnalyticsSummary } from "@/lib/forms/analytics";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { prisma } from "@/lib/prisma";
 import {
@@ -39,7 +40,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const workspaceContext = await getWorkspaceContextForCurrentUser();
   const user = workspaceContext?.user ?? null;
   const ownerId = workspaceContext?.ownerId ?? user?.id;
-  const [access, businessProfile, uploadProvider, onboardingState, formStats] = ownerId
+  const [
+    access,
+    businessProfile,
+    uploadProvider,
+    onboardingState,
+    formStats,
+    analyticsSummary,
+  ] = ownerId
     ? await Promise.all([
         getUserPlanAccess(ownerId),
         prisma.businessProfile.findUnique({
@@ -71,8 +79,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             },
           },
         }),
+        getOwnerAnalyticsSummary(ownerId),
       ])
-    : [null, null, null, null, []];
+    : [null, null, null, null, [], null];
   const shouldShowVerificationBanner =
     user && !user.emailVerifiedAt && user.role !== UserRole.SUPER_ADMIN;
   const shouldShowBusinessProfilePrompt =
@@ -454,6 +463,69 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </span>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {access?.limits.allowBasicAnalytics && analyticsSummary ? (
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                  Analytics
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Last 30 days
+                </h2>
+              </div>
+              <Link
+                className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+                href="/dashboard/forms"
+              >
+                Review forms
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Form views</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.views}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Submissions</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.submissions}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Completion rate</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.averageCompletionRate}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Top performing form</p>
+                {analyticsSummary.topForm ? (
+                  <Link
+                    className="mt-2 block text-base font-semibold leading-6 text-slate-950 hover:text-blue-700"
+                    href={`/dashboard/forms/${analyticsSummary.topForm.id}`}
+                  >
+                    {analyticsSummary.topForm.title}
+                    <span className="mt-1 block text-xs font-medium text-slate-500">
+                      {analyticsSummary.topForm.submissions} submissions
+                    </span>
+                  </Link>
+                ) : (
+                  <p className="mt-2 text-sm font-medium text-slate-600">
+                    No submissions yet
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : access && !access.limits.allowBasicAnalytics ? (
+          <section className="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+            Basic analytics are not included in your current plan.
           </section>
         ) : null}
 

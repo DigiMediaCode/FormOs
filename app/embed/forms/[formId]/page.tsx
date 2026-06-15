@@ -1,4 +1,5 @@
 import { GoogleAdSenseScript } from "@/components/ads/google-adsense-script";
+import { headers } from "next/headers";
 import { EmbedHeightScript } from "@/components/forms/embed-height-script";
 import {
   PublicFormClient,
@@ -13,6 +14,7 @@ import {
 } from "@/app/f/[formSlug]/page";
 import { isPublicField } from "@/lib/forms/fields";
 import { embedThemeCss, getEmbedTheme } from "@/lib/forms/embed-theme";
+import { recordFormView } from "@/lib/forms/analytics";
 import {
   getEmbeddedFormForPublicView,
   submitEmbeddedForm,
@@ -32,6 +34,7 @@ type EmbedFormPageProps = {
     radius?: string;
     surface?: string;
     success?: string;
+    source?: string;
     text?: string;
     theme?: string;
   }>;
@@ -70,6 +73,15 @@ export default async function EmbedFormPage({
       </main>
     );
   }
+
+  await recordFormView({
+    formId: form.id,
+    ownerId: form.ownerId,
+    context: {
+      headers: await headers(),
+      source: search.source ?? "EMBED",
+    },
+  });
 
   const submitAction = submitEmbeddedForm.bind(null, form.id);
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";

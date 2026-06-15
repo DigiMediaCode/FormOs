@@ -5,6 +5,7 @@ import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload
 import { PublicFormQrCard } from "@/components/forms/public-form-qr-card";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getAppUrl } from "@/lib/app-url";
+import { getFormAnalyticsSummary } from "@/lib/forms/analytics";
 import {
   archiveForm,
   getUserFormById,
@@ -65,9 +66,10 @@ export default async function FormDetailPage({
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
-  const [uploadProvider, limits] = await Promise.all([
+  const [uploadProvider, limits, analyticsSummary] = await Promise.all([
     getResolvedUploadProvider(form.ownerId),
     getUserEffectiveLimits(form.ownerId),
+    getFormAnalyticsSummary(form.id, form.ownerId),
   ]);
 
   return (
@@ -128,6 +130,72 @@ export default async function FormDetailPage({
           isPublished={isPublished}
           jsCode={jsEmbedCode}
         />
+
+        {limits.allowBasicAnalytics ? (
+          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                  Analytics
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">
+                  Last 30 days
+                </h2>
+              </div>
+              <p className="text-sm text-slate-500">
+                Tracks public and embedded form activity.
+              </p>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Views</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.views}
+                </p>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Submissions</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.submissions}
+                </p>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Completion rate</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.completionRate}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-950">Source breakdown</p>
+              {analyticsSummary.sourceBreakdown.length > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {analyticsSummary.sourceBreakdown.map((source) => (
+                    <div
+                      className="rounded-md border border-slate-200 bg-white px-3 py-2"
+                      key={source.source}
+                    >
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        {source.source.toLowerCase().replaceAll("_", " ")}
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-slate-950">
+                        {source.count}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">
+                  No analytics events recorded yet.
+                </p>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+            Basic analytics are not included in the owner's current plan.
+          </section>
+        )}
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>

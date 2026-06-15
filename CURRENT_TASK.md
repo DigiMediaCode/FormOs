@@ -1,379 +1,297 @@
-# CURRENT TASK — FormOS Milestone 39: Pricing + Homepage Positioning Alignment
+# CURRENT TASK — FormOS Milestone 40: Basic Form Analytics
 
 ## Strategic Direction
 
-FormOS is now positioned as:
+FormOS is positioned as:
 
 **The form builder that finishes the job.**
 
-FormOS should not be marketed as a generic form builder competing directly with JotForm, Tally, Typeform, or Fillout.
-
-The launch market is businesses that need:
-
-* customer intake
-* signed agreements
-* file uploads
-* internal office processing
-* finalization
-* completed PDFs
-* organized storage
-* staff review
-* WordPress/Shopify embeds
-
-Completed launch milestones:
+Recent completed milestones:
 
 * Conditional Logic / Branching MVP
 * Vertical Workflow Templates v1
 * Plan-based free trials
 * Template landing pages
-* WordPress plugin
-* Shopify app/theme extension
+* Homepage/pricing positioning alignment
+* Public page AdSense consistency
+
+Now we need basic analytics so users can understand form performance.
 
 ## Goal
 
-Update the public homepage and pricing presentation so FormOS clearly sells workflow value instead of generic form-builder features.
+Add basic analytics for form owners:
 
-This milestone should align:
+* form views
+* submissions
+* completion rate
+* source/embed tracking
+* simple dashboard summaries
 
-* homepage messaging
-* public pricing page
-* landing page CTAs
-* plan names/descriptions
-* trial messaging
-* template workflow positioning
+This should be useful for launch but not overbuilt.
 
-## Pricing Strategy
+## Core Metrics
 
-Use this pricing direction unless existing plan architecture requires minor adjustment.
+Track and display:
 
-### Free — $0/month
+1. Form Views
+   A view is recorded when a public form or embedded form is loaded.
 
-Purpose:
-Lead magnet and trial entry point.
+2. Submissions
+   Use existing FormSubmission records.
 
-Include:
+3. Completion Rate
+   Formula:
 
-* 1 form
-* 25 submissions/month
-* basic fields
-* QR code
-* website/embed sharing
-* FormOS branding/ads
-* no advanced workflow features
+submissions / views * 100
 
-### Starter — AUD $19/month
+If views = 0, show 0% or “No views yet”.
 
-Purpose:
-Small businesses starting with simple workflows.
+4. Source Breakdown
 
-Include:
+Track where views/submissions came from:
 
-* 5 forms
-* 500 submissions/month
-* Google Drive
-* PDF generation
-* templates
-* ad-free forms
-* basic workflow features
-
-### Pro — AUD $45/month
-
-Purpose:
-Main money plan.
-
-Include:
-
-* unlimited forms
-* 2,500 submissions/month
-* Google Drive + Dropbox
-* Office Use Only fields
-* finalization workflow
-* all field types
-* conditional logic
-* API access
-* custom branding
-
-### Business — AUD $89/month
-
-Purpose:
-Teams and higher-volume businesses.
-
-Include:
-
-* high volume submissions
-* 3–5 staff seats
-* all integrations
-* advanced workflow features
-* priority support
-* business branding
-* higher quotas
-
-### Enterprise — From AUD $199/month
-
-Purpose:
-Custom workflows and high-volume clients.
-
-Include:
-
-* custom limits
-* white-label/custom branding
-* dedicated support
-* custom workflow setup
-* custom overrides
-
-## Important Pricing Note
-
-Do not silently change Stripe live prices if that is risky.
-
-If Stripe sync already exists, update FormOS plan records and allow the existing Stripe sync system to create/update prices safely.
-
-If the current system requires Super Admin to manually sync plans to Stripe, do not force Stripe sync automatically.
-
-## Trial Messaging
-
-Use dynamic platform trialDays setting.
-
-Examples:
-
-* “Start your 14-day free trial”
-* “Try any paid plan free for 14 days”
-* “Free plan available forever”
-
-Do not say “free forever” for paid plans.
-
-## Homepage Messaging
-
-Update homepage hero from generic form-builder language to workflow positioning.
-
-Suggested hero:
-
-Title:
-Forms that collect, sign, file, and finish the job.
-
-Subtitle:
-FormOS helps businesses turn intake forms, agreements, uploads, signatures, and internal office checks into completed PDF workflows.
-
-Primary CTA:
-Start free trial
-
-Secondary CTA:
-Explore templates
-
-Hero badges:
-
-* Signatures
-* File uploads
-* Office Use Only fields
-* Completed PDFs
-* Google Drive & Dropbox
-* WordPress & Shopify embeds
-
-## Homepage Sections
-
-Homepage should include:
-
-1. Hero
-
-Clear workflow positioning.
-
-2. Problem Section
-
-Manual forms are messy:
-
-* paper agreements
-* email attachments
-* missing signatures
-* manual filing
-* staff notes scattered everywhere
-* PDFs created by hand
-
-3. Workflow Section
-
-Show:
-
-Customer fills form
-→ uploads files
-→ signs agreement
-→ staff completes office fields
-→ FormOS finalizes PDF
-→ files are stored in Drive/Dropbox
-
-4. Template Section
-
-Feature the 5 vertical templates:
-
-* Vehicle Hire Agreement
-* Equipment Rental Agreement
-* Contractor Job Intake + Waiver
-* Service Booking + Consent
-* Photography/Event Booking Agreement
-
-CTA:
-Explore templates
-
-5. Integrations Section
-
-Mention:
-
-* Google Drive
-* Dropbox
+* public link
+* embed
 * WordPress
 * Shopify
-* Stripe
-* Lark email if useful
+* unknown/referrer
 
-6. Pricing Preview
+Use existing metadata if available. If not, add basic source detection.
 
-Show pricing cards with dynamic trial days.
+5. Recent Activity
 
-7. Final CTA
+Show recent form events:
 
-“Stop rebuilding the same workflow manually.”
+* views
+* submissions
+* finalized submissions if easy from existing event data
 
-Buttons:
+## Data Model
 
-* Start free trial
-* View templates
+Create a lightweight analytics/event model.
 
-## Pricing Page Updates
+Suggested model:
 
-Pricing page should clearly communicate workflow value.
+FormAnalyticsEvent {
+id          String   @id @default(cuid())
+formId      String
+ownerId     String
+type        String   // VIEW, START, SUBMIT if START is implemented later
+source      String?  // PUBLIC, EMBED, WORDPRESS, SHOPIFY, UNKNOWN
+referrer    String?
+userAgent   String?
+ipHash      String?
+sessionId   String?
+createdAt   DateTime @default(now())
 
-Each plan card should show:
+form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-* price
-* dynamic trial CTA
-* ideal customer
-* included features
-* template/workflow capability
-* limits
+@@index([formId, createdAt])
+@@index([ownerId, createdAt])
+@@index([type, createdAt])
+}
 
-Use plan descriptions:
+Use enum if the codebase prefers enums.
 
-Free:
-“For testing one simple workflow.”
+Privacy:
+Do not store raw IP address if avoidable.
+If storing IP-related data, hash it.
+Do not store sensitive submitted values in analytics events.
 
-Starter:
-“For small businesses moving away from paper forms.”
+## View Tracking
 
-Pro:
-“For businesses that need signatures, uploads, office review, and completed PDFs.”
+Track views on:
 
-Business:
-“For teams managing higher-volume form workflows.”
+* /f/[formSlug]
+* /embed/forms/[formId]
 
-Enterprise:
-“For custom workflows and white-label requirements.”
+For public form route:
+source = PUBLIC unless query/referrer indicates otherwise.
 
-## Plan Limits Alignment
+For embed route:
+source = EMBED by default.
 
-Update default plan limits if needed to match the pricing strategy.
+If embed metadata indicates WordPress/Shopify, classify:
 
-Suggested:
+* WORDPRESS
+* SHOPIFY
 
-Free:
+Detection can use:
 
-* maxForms: 1
-* maxMonthlySubmissions: 25
-* allowTemplates: false or limited if current trial covers paid plan access
-* allowPdfGeneration: false
-* allowOfficeUseFields: false
-* allowConditionalLogic: false
-* allowGoogleDrive: false
-* allowDropbox: false
-* allowCustomBranding: false
-* allowTeamMembers: false
-* allowEmbeds: true
-* allowQrCode: true
-* allowAdFreeForms: false
+* query params if existing plugin/app includes source
+* referrer hostname
+* embed source metadata
 
-Starter:
+Keep MVP simple.
 
-* maxForms: 5
-* maxMonthlySubmissions: 500
-* allowTemplates: true
-* allowPdfGeneration: true
-* allowGoogleDrive: true
-* allowDropbox: false
-* allowOfficeUseFields: false or limited false
-* allowConditionalLogic: false or limited based on current product decision
-* allowEmbeds: true
-* allowQrCode: true
-* allowAdFreeForms: true
+## Duplicate View Control
 
-Pro:
+Avoid creating too many duplicate views from refreshes if simple.
 
-* maxForms: null/unlimited
-* maxMonthlySubmissions: 2500
-* allowTemplates: true
-* allowPdfGeneration: true
-* allowGoogleDrive: true
-* allowDropbox: true
-* allowOfficeUseFields: true
-* allowConditionalLogic: true
-* maxConditionalRules: null
-* allowApiAccess: true
-* allowCustomBranding: true
-* allowedFieldTypes: all
+Options:
 
-Business:
+* use session cookie/localStorage client-side event
+* or server-side simple sessionId
+* or accept raw page views for MVP
 
-* maxForms: null
-* maxMonthlySubmissions: 10000 or higher
-* allowTeamMembers: true
-* maxTeamMembers: 5
-* all major workflow/integration features enabled
+MVP acceptable:
+Track page views, not unique visitors.
 
-Enterprise:
+If using cookies/localStorage, do not break SSR.
 
-* custom/manual
+## Submission Tracking
 
-Do not break existing active users. If changing defaults, make sure existing plan records are handled safely.
+When a submission is created, record analytics event:
 
-## Template Links
+type = SUBMIT
 
-Homepage and pricing should link to:
+Make sure this does not duplicate existing submission count in dashboard. The source of truth for submissions remains FormSubmission records.
 
-* /templates
-* /templates/vehicle-hire-agreement
-* /templates/equipment-rental-agreement
-* /templates/contractor-job-intake-waiver
-* /templates/service-booking-consent-form
-* /templates/photography-event-booking-agreement
+## Dashboard UI
 
-## SEO
+Add analytics display to:
 
-Homepage metadata should reflect new positioning.
+1. Dashboard Home
 
-Suggested title:
-FormOS — Forms, Signatures, Uploads & PDF Workflows
+Show overview cards:
 
-Suggested description:
-Create online forms that collect signatures, file uploads, office-only details, and completed PDFs. Built for rental, service, contractor, and booking workflows.
+* Total form views
+* Total submissions
+* Average completion rate
+* Top performing form
+
+2. Form Detail Page
+
+Show analytics cards for that form:
+
+* Views
+* Submissions
+* Completion rate
+* Source breakdown
+
+3. Optional Analytics Page
+
+If simple, add:
+
+/dashboard/analytics
+
+This page can show:
+
+* top forms
+* views/submissions table
+* source breakdown
+* date range filters
+
+If this is too much, keep analytics on dashboard home and form detail only for MVP.
+
+## Date Range
+
+MVP date filters:
+
+* Last 7 days
+* Last 30 days
+* All time
+
+Default:
+Last 30 days
+
+If adding date filters is too much, show Last 30 days only plus all-time counts.
+
+## Plan Permission
+
+Add plan controls:
+
+allowBasicAnalytics: boolean
+
+Recommended default:
+
+Free: true but limited summary
+Starter: true
+Pro: true
+Business: true
+Enterprise: true
+
+Optional later:
+allowAdvancedAnalytics
+
+For MVP:
+
+* Free users can see basic counts.
+* Advanced filtering/source details can be paid if desired, but do not overcomplicate now.
+
+Super Admin plan editor should support allowBasicAnalytics.
+
+Server-side:
+Analytics pages/actions should check allowBasicAnalytics if added.
+
+## Super Admin
+
+Optional but useful:
+
+Super Admin dashboard can show platform-level totals:
+
+* total form views
+* total submissions
+* views last 30 days
+* submissions last 30 days
+
+Do not overbuild.
+
+## Privacy / Security
+
+* Do not store submitted answer data in analytics events.
+* Do not expose analytics across users.
+* Owner/staff should only see analytics for forms they can access.
+* Public users should not see analytics.
+* Super Admin can see platform aggregate, not private submission answers.
+* If storing IP, hash it.
+* Respect existing workspace permissions.
+
+## Performance
+
+Avoid heavy queries.
+
+Use grouped counts where possible.
+
+Do not load all analytics events into memory.
+
+Indexes should support:
+
+* formId + createdAt
+* ownerId + createdAt
+* type + createdAt
 
 ## Out of Scope
 
-Do not build analytics yet.
-Do not build new templates.
-Do not build public template marketplace.
-Do not build conditional logic v2.
-Do not rebuild the full design system.
-Do not change plugin functionality.
-Do not change Shopify app functionality.
-Do not break CMS/blog/help pages.
+Do not build advanced analytics.
+Do not build field-level drop-off.
+Do not build funnel tracking.
+Do not build UTM campaign reporting beyond storing basic referrer/source if available.
+Do not build charts if heavy.
+Do not build export.
+Do not build notifications based on analytics.
+Do not add analytics to legal pages unless already part of public page views.
+Do not track dashboard page views.
 
 ## Acceptance Criteria
 
 Complete when:
 
-* Homepage clearly uses workflow positioning.
-* Homepage links to templates.
-* Pricing page uses updated plan framing.
-* Pricing cards show dynamic trial days.
-* Public copy no longer feels like a generic form builder.
-* Default plan limits are aligned if safe.
-* Existing Stripe sync flow is respected.
-* Template landing pages still work.
-* Signup/pricing CTA paths still work.
-* WordPress/Shopify embeds are not affected.
+* FormAnalyticsEvent or equivalent model exists.
+* Migration exists.
+* Public form views are tracked.
+* Embed form views are tracked.
+* Submissions create analytics submit events or submissions are counted reliably.
+* Dashboard home shows basic analytics summary.
+* Form detail shows views/submissions/completion rate.
+* Source breakdown exists at least for public vs embed.
+* Users cannot see other users’ analytics.
+* Public users cannot access analytics.
+* Analytics does not store submitted answers.
+* IP is not stored raw.
+* Plan key allowBasicAnalytics exists if implemented.
+* Existing forms/submissions still work.
+* Public forms still work.
+* Embed/WordPress/Shopify still work.
 * npm run build passes.

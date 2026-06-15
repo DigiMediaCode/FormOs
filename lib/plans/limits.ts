@@ -27,6 +27,7 @@ export type PlanLimits = {
   allowEmbeds: boolean;
   allowApiAccess: boolean;
   allowConditionalLogic: boolean;
+  allowBasicAnalytics: boolean;
   maxTeamMembers: NumericLimit;
   maxConditionalRules: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
@@ -74,6 +75,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowEmbeds",
   "allowApiAccess",
   "allowConditionalLogic",
+  "allowBasicAnalytics",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -91,6 +93,7 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowEmbeds: true,
   allowApiAccess: true,
   allowConditionalLogic: true,
+  allowBasicAnalytics: true,
   maxTeamMembers: null,
   maxConditionalRules: null,
   allowedFieldTypes: null,
@@ -142,6 +145,7 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowEmbeds: true,
     allowApiAccess: false,
     allowConditionalLogic: false,
+    allowBasicAnalytics: true,
     maxTeamMembers: 0,
     maxConditionalRules: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
@@ -186,6 +190,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowEmbeds: true,
       allowApiAccess: false,
       allowConditionalLogic: false,
+      allowBasicAnalytics: true,
       maxTeamMembers: 0,
       maxConditionalRules: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
@@ -217,6 +222,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowEmbeds: true,
       allowApiAccess: true,
       allowConditionalLogic: true,
+      allowBasicAnalytics: true,
       maxTeamMembers: 0,
       maxConditionalRules: null,
       allowedFieldTypes: null,
@@ -247,6 +253,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowEmbeds: true,
       allowApiAccess: true,
       allowConditionalLogic: true,
+      allowBasicAnalytics: true,
       maxTeamMembers: 5,
       maxConditionalRules: null,
       allowedFieldTypes: null,
@@ -404,6 +411,7 @@ export async function seedDefaultPlansIfMissing() {
           "allowEmbeds" in plan.limits &&
           "allowApiAccess" in plan.limits &&
           "allowConditionalLogic" in plan.limits &&
+          "allowBasicAnalytics" in plan.limits &&
           "maxConditionalRules" in plan.limits
         ) {
           return Promise.resolve();
@@ -429,6 +437,7 @@ export async function seedDefaultPlansIfMissing() {
               allowEmbeds: defaults.limits.allowEmbeds,
               allowApiAccess: defaults.limits.allowApiAccess,
               allowConditionalLogic: defaults.limits.allowConditionalLogic,
+              allowBasicAnalytics: defaults.limits.allowBasicAnalytics,
               maxConditionalRules: defaults.limits.maxConditionalRules,
             } as unknown as Prisma.InputJsonValue,
           },
@@ -683,6 +692,7 @@ export function featureLabels(limits: PlanLimits) {
     { label: "Form embeds", allowed: limits.allowEmbeds },
     { label: "API access", allowed: limits.allowApiAccess },
     { label: "Conditional logic", allowed: limits.allowConditionalLogic },
+    { label: "Basic analytics", allowed: limits.allowBasicAnalytics },
   ];
 }
 

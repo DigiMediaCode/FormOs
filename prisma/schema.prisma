@@ -65,6 +65,7 @@ model User {
     suspendedReason String?
     role           UserRole           @default(USER)
   forms          Form[]
+  analyticsEvents FormAnalyticsEvent[]
   integrations   UserIntegration[]
   uploadSettings UserUploadSettings?
   businessProfile BusinessProfile?
@@ -249,8 +250,29 @@ model Form {
   updatedAt   DateTime         @updatedAt
   owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   submissions FormSubmission[]
+  analyticsEvents FormAnalyticsEvent[]
 
   @@unique([ownerId, slug])
+}
+
+model FormAnalyticsEvent {
+  id        String   @id @default(cuid())
+  formId    String
+  ownerId   String
+  type      String
+  source    String?
+  referrer  String?
+  userAgent String?
+  ipHash    String?
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  form  Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([formId, createdAt])
+  @@index([ownerId, createdAt])
+  @@index([type, createdAt])
 }
 
 model FormSubmission {

@@ -1,5 +1,6 @@
 import { StorageProvider } from "@prisma/client";
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import { GoogleAdSenseScript } from "@/components/ads/google-adsense-script";
 import { PublicFormAdUnit } from "@/components/ads/public-form-ad-unit";
 import {
@@ -9,6 +10,7 @@ import {
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignatureCanvasBootstrapScript } from "@/components/forms/signature-canvas-bootstrap";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
+import { recordFormView } from "@/lib/forms/analytics";
 import { isPublicField, type FormBuilderField } from "@/lib/forms/fields";
 import { getPublishedFormForPublicView, submitPublicForm } from "@/lib/forms/public-actions";
 import { sanitizeFormHtml } from "@/lib/forms/sanitize-html";
@@ -402,6 +404,15 @@ export default async function PublicFormPage({
       </main>
     );
   }
+
+  await recordFormView({
+    formId: form.id,
+    ownerId: form.ownerId,
+    context: {
+      headers: await headers(),
+      source: "PUBLIC",
+    },
+  });
 
   const submitAction = submitPublicForm.bind(null, form.id);
   const submitButtonText = form.settings?.submitButtonText?.trim() || "Submit";

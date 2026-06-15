@@ -51,6 +51,7 @@ const booleanLimitFields = [
   ["allowEmbeds", "Form embeds"],
   ["allowApiAccess", "API access"],
   ["allowConditionalLogic", "Conditional logic"],
+  ["allowBasicAnalytics", "Basic analytics"],
 ] as const;
 
 function moneyValue(value: unknown) {

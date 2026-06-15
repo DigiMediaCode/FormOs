@@ -34,6 +34,7 @@ import {
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
+import { recordFormSubmit } from "@/lib/forms/analytics";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import {
@@ -75,6 +76,7 @@ type PublicSubmissionSource = "public_form" | "embed";
 
 type PublicFormSnapshot = {
   id: string;
+  ownerId: string;
   title: string;
   description: string | null;
   mode: string;
@@ -121,6 +123,7 @@ function normalizeSettings(settings: unknown): PublicFormSettings | null {
 
 function buildSnapshot(form: {
   id: string;
+  ownerId: string;
   title: string;
   description: string | null;
   mode: string;
@@ -130,6 +133,7 @@ function buildSnapshot(form: {
 }): PublicFormSnapshot {
   return {
     id: form.id,
+    ownerId: form.ownerId,
     title: form.title,
     description: form.description,
     mode: form.mode,
@@ -807,6 +811,15 @@ async function submitFormInternal(
     submissionId: submission.id,
     formTitle: form.title,
     submittedAt: submission.createdAt,
+  });
+
+  await recordFormSubmit({
+    formId: form.id,
+    ownerId: form.ownerId,
+    context: {
+      headers: headerStore,
+      source,
+    },
   });
 
   redirect(`${formReturnPath(form.id, source)}?success=${encodeURIComponent(successMessage)}`);
