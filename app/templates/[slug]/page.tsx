@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PublicAdSection } from "@/components/ads/public-ad-section";
 import { PublicFooter } from "@/components/public/public-footer";
 import { PublicHeader } from "@/components/public/public-header";
 import { getSessionUserId } from "@/lib/auth/session";
@@ -240,6 +241,8 @@ export default async function TemplateLandingPage({
           </div>
         </div>
       </section>
+
+      <PublicAdSection className="pb-16" slot="middle" />
 
       <section className="bg-slate-50">
         <div className="mx-auto max-w-5xl px-6 py-16">

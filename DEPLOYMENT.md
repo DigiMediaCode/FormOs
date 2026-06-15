@@ -64,3 +64,10 @@ The wording may vary slightly in Stripe Dashboard. Keep
 ```env
 STRIPE_BILLING_PORTAL_RETURN_URL=https://formos.com.au/dashboard/settings/billing
 ```
+
+## Public Marketing Page Checklist
+
+Any new public marketing/content page should include public ad slot support
+where appropriate. Use the existing FormOS public ads components/settings,
+avoid dashboard/admin pages, avoid public form submit controls, and keep ads
+away from primary conversion CTAs.
