@@ -151,20 +151,30 @@ export default async function FormsPage() {
         ) : null}
 
         {forms.length === 0 ? (
-          <section className="rounded-md border border-dashed border-slate-300 bg-white p-8">
+          <section className="rounded-xl border border-dashed border-blue-200 bg-blue-50 p-8">
             <h2 className="text-xl font-semibold text-slate-950">
-              No forms yet
+              Start with a workflow, not a blank page.
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-              Create your first form foundation. The builder comes later.
+              Templates help you launch a complete process with customer intake,
+              uploads, signatures, Office Use Only fields, and PDF-ready
+              structure already in place.
             </p>
             {canManageForms ? (
-              <Link
-                className="mt-5 inline-flex rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                href="/dashboard/forms/new"
-              >
-                Create Form
-              </Link>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link
+                  className="inline-flex rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                  href="/dashboard/forms/new"
+                >
+                  Browse templates
+                </Link>
+                <Link
+                  className="inline-flex rounded-md border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-blue-50"
+                  href="/dashboard/forms/new#blank-form"
+                >
+                  Create blank form
+                </Link>
+              </div>
             ) : null}
           </section>
         ) : (

@@ -8,6 +8,8 @@ import {
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getOwnerAnalyticsSummary } from "@/lib/forms/analytics";
+import { getTemplateLandingPage } from "@/lib/forms/templates/template-landing-pages";
+import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-templates";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { prisma } from "@/lib/prisma";
 import {
@@ -32,11 +34,27 @@ type DashboardPageProps = {
   searchParams: Promise<{
     error?: string;
     success?: string;
+    template?: string;
   }>;
 };
 
+function formatDate(date: Date | null | undefined) {
+  if (!date) {
+    return "Not set";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
+function safeTemplateParam(value: string | undefined) {
+  return value && /^[a-z0-9-]+$/.test(value) ? value : "";
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const { error, success } = await searchParams;
+  const { error, success, template } = await searchParams;
+  const templateParam = safeTemplateParam(template);
   const workspaceContext = await getWorkspaceContextForCurrentUser();
   const user = workspaceContext?.user ?? null;
   const ownerId = workspaceContext?.ownerId ?? user?.id;
@@ -47,6 +65,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     onboardingState,
     formStats,
     analyticsSummary,
+    subscription,
   ] = ownerId
     ? await Promise.all([
         getUserPlanAccess(ownerId),
@@ -80,8 +99,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           },
         }),
         getOwnerAnalyticsSummary(ownerId),
+        prisma.userSubscription.findUnique({
+          where: { userId: ownerId },
+          select: {
+            status: true,
+            trialEndsAt: true,
+            currentPeriodEnd: true,
+            plan: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        }),
       ])
-    : [null, null, null, null, [], null];
+    : [null, null, null, null, [], null, null];
   const shouldShowVerificationBanner =
     user && !user.emailVerifiedAt && user.role !== UserRole.SUPER_ADMIN;
   const shouldShowBusinessProfilePrompt =
@@ -98,43 +130,52 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const hasFinalizedSubmission = formStats.some(
     (form) => form.submissions.length > 0,
   );
+  const selectedTemplatePage = templateParam
+    ? getTemplateLandingPage(templateParam)
+    : null;
+  const selectedTemplate = selectedTemplatePage
+    ? WORKFLOW_TEMPLATES.find(
+        (workflowTemplate) =>
+          workflowTemplate.slug === selectedTemplatePage.templateSlug,
+      )
+    : WORKFLOW_TEMPLATES.find(
+        (workflowTemplate) => workflowTemplate.slug === templateParam,
+      );
   const canUseStorage =
     Boolean(access?.limits.allowGoogleDrive) || Boolean(access?.limits.allowDropbox);
   const canGeneratePdf = Boolean(access?.limits.allowPdfGeneration);
+  const isTrialing = subscription?.status?.toUpperCase() === "TRIALING";
+  const trialPlanName = subscription?.plan?.name ?? access?.plan.name ?? "paid plan";
+  const trialEndDate = subscription?.trialEndsAt ?? subscription?.currentPeriodEnd;
   const checklistItems: ChecklistItem[] =
     user && access && uploadProvider
       ? [
           {
-            id: "verify-email",
-            title: "Verify your email",
-            description: "Protect your account and receive important notifications.",
-            completed: Boolean(user.emailVerifiedAt),
-            actionLabel: user.emailVerifiedAt ? "Verified" : "Resend Verification",
-            formAction: user.emailVerifiedAt ? undefined : resendVerificationEmailAction,
+            id: "template",
+            title: "Choose a workflow template",
+            description:
+              "Start from a vertical workflow with uploads, signatures, office fields, and PDF-ready structure.",
+            completed: formStats.length > 0,
+            actionLabel: "Browse Templates",
+            href: "/dashboard/forms/new",
           },
           {
-            id: "business-profile",
-            title: "Complete your business profile",
-            description: "Add business details for billing, invoices, and workspace setup.",
-            completed: Boolean(
-              businessProfile?.companyName || businessProfile?.billingName,
-            ),
-            actionLabel: "Complete Profile",
-            href: "/dashboard/settings/profile",
+            id: "first-form",
+            title: "Create your first form",
+            description: selectedTemplate
+              ? `Use ${selectedTemplate.title} or create a blank form.`
+              : "Create a template-based workflow or start from a blank form.",
+            completed: formStats.length > 0,
+            actionLabel: selectedTemplate ? `Start with ${selectedTemplate.title}` : "Create Form",
+            href: selectedTemplate
+              ? `/dashboard/forms/new?template=${selectedTemplate.slug}`
+              : "/dashboard/forms/new",
           },
           {
-            id: "plan",
-            title: "Choose or confirm your plan",
-            description: `Current plan: ${access.plan.name}. Review billing when needed.`,
-            completed: true,
-            actionLabel: "View Billing",
-            href: "/dashboard/settings/billing",
-          },
-          {
-            id: "storage",
+            id: "connect-storage",
             title: "Connect Google Drive or Dropbox",
             description: canUseStorage
-              ? "Choose where uploaded files from public forms should be stored."
+              ? "Choose where uploaded customer files and completed documents should be organized."
               : "Storage uploads are available on paid plans.",
             completed: canUseStorage && Boolean(uploadProvider.activeProvider),
             actionLabel: canUseStorage ? "Connect Storage" : "Upgrade Plan",
@@ -143,15 +184,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               : "/dashboard/settings/billing",
           },
           {
-            id: "first-form",
-            title: "Create your first form",
-            description: "Start with a blank form or use an agreement template.",
-            completed: formStats.length > 0,
-            actionLabel: "Create Form",
-            href: "/dashboard/forms/new",
-          },
-          {
-            id: "publish-form",
+            id: "publish",
             title: "Publish your form",
             description: "Published forms can receive public submissions.",
             completed: Boolean(publishedForm),
@@ -159,30 +192,43 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             href: "/dashboard/forms",
           },
           {
-            id: "public-link",
-            title: "Copy your public link or QR code",
-            description: "Share your published form link or downloadable QR code.",
-            completed: Boolean(publishedForm),
-            actionLabel: "Open Form Details",
-            href: publishedForm ? `/dashboard/forms/${publishedForm.id}` : "/dashboard/forms",
-          },
-          {
             id: "test-response",
             title: "Submit a test response",
             description: "Test the public form flow before sending it to customers.",
             completed: submissionCount > 0,
-            actionLabel: "View Forms",
-            href: "/dashboard/forms",
+            actionLabel: publishedForm ? "Open Public Form" : "View Forms",
+            href: publishedForm ? `/f/${publishedForm.id}` : "/dashboard/forms",
+          },
+          {
+            id: "review-submission",
+            title: "Review your first submission",
+            description: "Open the submission inbox and check what the customer sent.",
+            completed: submissionCount > 0,
+            actionLabel: "Review Submissions",
+            href: publishedForm
+              ? `/dashboard/forms/${publishedForm.id}/submissions`
+              : "/dashboard/forms",
           },
           {
             id: "finalize-submission",
-            title: "Finalize a submission and send PDF",
+            title: "Generate/finalize PDF",
             description: canGeneratePdf
-              ? "Complete office fields and send the completed PDF."
+              ? "Complete office fields, finalize the submission, and create the finished PDF."
               : "Completed PDF generation is available on plans with PDF support.",
             completed: canGeneratePdf && hasFinalizedSubmission,
             actionLabel: canGeneratePdf ? "View Submissions" : "Upgrade Plan",
             href: canGeneratePdf ? "/dashboard/forms" : "/dashboard/settings/billing",
+          },
+          {
+            id: "share",
+            title: "Share your form by link, QR, or embed",
+            description:
+              analyticsSummary?.views && analyticsSummary.views > 0
+                ? "Your form has started receiving views."
+                : "Copy a public link, download a QR code, or embed the form on your website.",
+            completed: Boolean(analyticsSummary?.views && analyticsSummary.views > 0),
+            actionLabel: "Open Sharing Options",
+            href: publishedForm ? `/dashboard/forms/${publishedForm.id}` : "/dashboard/forms",
           },
         ]
       : [];
@@ -227,6 +273,53 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </p>
+        ) : null}
+
+        {isTrialing ? (
+          <section className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold">
+                  You are on a {trialPlanName} trial.
+                </h2>
+                <p className="mt-1 text-sm leading-6">
+                  Trial ends on {formatDate(trialEndDate)}. Use this time to
+                  publish a workflow, test a submission, and finalize a PDF.
+                </p>
+              </div>
+              <Link
+                className="w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                href="/dashboard/settings/billing"
+              >
+                Manage billing
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {workspaceContext?.isOwner && selectedTemplate ? (
+          <section className="rounded-xl border border-teal-200 bg-teal-50 p-5 text-teal-950">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+                  Template selected
+                </p>
+                <h2 className="mt-1 text-base font-semibold">
+                  Start with {selectedTemplate.title}
+                </h2>
+                <p className="mt-1 text-sm leading-6">
+                  Create this workflow, edit it in the builder, then publish and
+                  test the public form.
+                </p>
+              </div>
+              <Link
+                className="w-fit rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-800"
+                href={`/dashboard/forms/new?template=${selectedTemplate.slug}`}
+              >
+                Use this template
+              </Link>
+            </div>
+          </section>
         ) : null}
 
         {shouldShowVerificationBanner ? (
@@ -490,6 +583,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <p className="mt-2 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.views}
                 </p>
+                {analyticsSummary.views === 0 ? (
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    No views yet. Share your form link or add it to your website
+                    to start collecting responses.
+                  </p>
+                ) : null}
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-slate-500">Submissions</p>

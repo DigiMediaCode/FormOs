@@ -12,12 +12,18 @@ import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 type NewFormPageProps = {
   searchParams: Promise<{
     error?: string;
+    template?: string;
   }>;
 };
 
+function safeTemplateParam(value: string | undefined) {
+  return value && /^[a-z0-9-]+$/.test(value) ? value : "";
+}
+
 export default async function NewFormPage({ searchParams }: NewFormPageProps) {
   const context = await requireWorkspaceAdminOrOwner();
-  const { error } = await searchParams;
+  const { error, template } = await searchParams;
+  const selectedTemplateSlug = safeTemplateParam(template);
   const [access, activePlans] = await Promise.all([
     getUserPlanAccess(context.ownerId),
     prisma.subscriptionPlan.findMany({
@@ -34,7 +40,9 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
       activePlans,
       template,
     }),
-  }));
+    selected: template.slug === selectedTemplateSlug,
+  })).sort((a, b) => Number(b.selected) - Number(a.selected));
+  const selectedTemplate = templateCards.find((card) => card.selected);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -57,7 +65,26 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           </p>
         ) : null}
 
-        <form action={createForm} className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6">
+        {selectedTemplate ? (
+          <section className="rounded-md border border-teal-200 bg-teal-50 p-5 text-teal-950">
+            <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+              Recommended starting point
+            </p>
+            <h2 className="mt-1 text-lg font-semibold">
+              Start with {selectedTemplate.template.title}
+            </h2>
+            <p className="mt-2 text-sm leading-6">
+              This workflow came from the template page. You can create it now,
+              then adjust labels, fields, and office steps in the builder.
+            </p>
+          </section>
+        ) : null}
+
+        <form
+          action={createForm}
+          className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6"
+          id="blank-form"
+        >
           <div>
             <h2 className="text-lg font-semibold text-slate-950">
               Create blank form
@@ -129,9 +156,13 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           </div>
 
           <div className="mt-5 grid gap-3">
-            {templateCards.map(({ access: templateAccess, template }) => (
+            {templateCards.map(({ access: templateAccess, selected, template }) => (
               <article
-                className="grid gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                className={`grid gap-4 rounded-md border p-4 sm:grid-cols-[1fr_auto] sm:items-center ${
+                  selected
+                    ? "border-teal-300 bg-teal-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
                 key={template.slug}
               >
                 <div>
@@ -142,6 +173,11 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
                     <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800">
                       {template.category}
                     </span>
+                    {selected ? (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-teal-800">
+                        Selected
+                      </span>
+                    ) : null}
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         templateAccess.hasPlanAccess

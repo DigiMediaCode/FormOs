@@ -11,11 +11,17 @@ type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
     success?: string;
+    template?: string;
   }>;
 };
 
+function safeTemplateParam(value: string | undefined) {
+  return value && /^[a-z0-9-]+$/.test(value) ? value : "";
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error, success } = await searchParams;
+  const { error, success, template } = await searchParams;
+  const templateParam = safeTemplateParam(template);
   const settings = await getPlatformSettings();
 
   return (
@@ -89,6 +95,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <form action={loginAction} className="grid gap-4">
+            {templateParam ? (
+              <input name="template" type="hidden" value={templateParam} />
+            ) : null}
             <label className="grid gap-2 text-sm font-medium text-zinc-950">
               Email
               <input
@@ -133,7 +142,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <p className="mt-6 text-center text-sm leading-6 text-zinc-500">
             Don&apos;t have an account?{" "}
-            <Link className="font-semibold text-blue-600 hover:text-blue-700" href="/signup">
+            <Link
+              className="font-semibold text-blue-600 hover:text-blue-700"
+              href={templateParam ? `/signup?template=${templateParam}` : "/signup"}
+            >
               Sign up
             </Link>
           </p>

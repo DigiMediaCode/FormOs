@@ -21,6 +21,12 @@ function errorRedirect(path: "/login" | "/signup", message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+function safeTemplateParam(value: FormDataEntryValue | null) {
+  const template = String(value ?? "").trim();
+
+  return /^[a-z0-9-]+$/.test(template) ? template : "";
+}
+
 function isUniqueConstraintError(error: unknown) {
   return (
     typeof error === "object" &&
@@ -36,6 +42,7 @@ export async function signupAction(formData: FormData) {
   const name = [firstName, lastName].filter(Boolean).join(" ").trim();
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
+  const template = safeTemplateParam(formData.get("template"));
 
   if (!email || !password) {
     errorRedirect("/signup", "Email and password are required.");
@@ -80,12 +87,21 @@ export async function signupAction(formData: FormData) {
     errorRedirect("/signup", "Unable to create your account right now.");
   }
 
-  redirect("/login?success=Account created. Please check your email to verify your account.");
+  const loginParams = new URLSearchParams({
+    success: "Account created. Please check your email to verify your account.",
+  });
+
+  if (template) {
+    loginParams.set("template", template);
+  }
+
+  redirect(`/login?${loginParams.toString()}`);
 }
 
 export async function loginAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
+  const template = safeTemplateParam(formData.get("template"));
 
   if (!email || !password) {
     errorRedirect("/login", "Email and password are required.");
@@ -125,7 +141,7 @@ export async function loginAction(formData: FormData) {
 
   await createSession(user.id);
   await sendLoginNotification({ email: user.email });
-  redirect("/dashboard");
+  redirect(template ? `/dashboard?template=${template}` : "/dashboard");
 }
 
 export async function logoutAction() {

@@ -1,297 +1,207 @@
-# CURRENT TASK — FormOS Milestone 40: Basic Form Analytics
+# CURRENT TASK — FormOS Milestone 41: Launch Onboarding Flow
 
-## Strategic Direction
+## Current Status
 
-FormOS is positioned as:
+* Conditional Logic / Branching MVP is complete.
+* Vertical Workflow Templates v1 is complete.
+* Plan-based trials are complete.
+* Template landing pages are complete.
+* Homepage/pricing positioning alignment is complete.
+* Basic analytics is complete.
+* Public pages have AdSense support where appropriate.
 
-**The form builder that finishes the job.**
+## Strategic Positioning
 
-Recent completed milestones:
-
-* Conditional Logic / Branching MVP
-* Vertical Workflow Templates v1
-* Plan-based free trials
-* Template landing pages
-* Homepage/pricing positioning alignment
-* Public page AdSense consistency
-
-Now we need basic analytics so users can understand form performance.
+FormOS is **the form builder that finishes the job.**
 
 ## Goal
 
-Add basic analytics for form owners:
+Improve onboarding so new users quickly reach their first successful workflow:
 
-* form views
-* submissions
-* completion rate
-* source/embed tracking
-* simple dashboard summaries
+choose template → create form → connect storage → publish → submit test response → review submission → finalize/PDF → share/embed.
 
-This should be useful for launch but not overbuilt.
+## Requirements
 
-## Core Metrics
+### 1. Dashboard Welcome Checklist
 
-Track and display:
+On `/dashboard`, show onboarding checklist cards for new/early users.
 
-1. Form Views
-   A view is recorded when a public form or embedded form is loaded.
+Items:
 
-2. Submissions
-   Use existing FormSubmission records.
+* Choose a workflow template
+* Create your first form
+* Connect storage
+* Publish your form
+* Submit a test response
+* Review your first submission
+* Generate/finalize PDF where available
+* Share your form by link/QR/embed
 
-3. Completion Rate
-   Formula:
+Each item should show:
 
-submissions / views * 100
+* completion status
+* short explanation
+* CTA button
 
-If views = 0, show 0% or “No views yet”.
+Use real user data where possible:
 
-4. Source Breakdown
+* forms count
+* published forms count
+* submissions count
+* storage connection status
+* trial/plan status
+* analytics counts
 
-Track where views/submissions came from:
+### 2. Template Context From Signup
 
-* public link
-* embed
-* WordPress
-* Shopify
-* unknown/referrer
+Template landing pages already send logged-out users to signup with template context.
 
-Use existing metadata if available. If not, add basic source detection.
+Support query params such as:
 
-5. Recent Activity
+`?template=vehicle-hire-agreement`
 
-Show recent form events:
+After signup/login, preserve or use template context where practical.
 
-* views
-* submissions
-* finalized submissions if easy from existing event data
+Preferred:
 
-## Data Model
+* show dashboard prompt: `Start with Vehicle Hire Agreement`
+* CTA to `/dashboard/forms/new?template=vehicle-hire-agreement`
+  or directly start template creation if existing flow supports it safely.
 
-Create a lightweight analytics/event model.
+Do not overbuild if auth redirect makes this risky.
 
-Suggested model:
+### 3. Empty Forms State
 
-FormAnalyticsEvent {
-id          String   @id @default(cuid())
-formId      String
-ownerId     String
-type        String   // VIEW, START, SUBMIT if START is implemented later
-source      String?  // PUBLIC, EMBED, WORDPRESS, SHOPIFY, UNKNOWN
-referrer    String?
-userAgent   String?
-ipHash      String?
-sessionId   String?
-createdAt   DateTime @default(now())
+On `/dashboard/forms`, if user has no forms:
 
-form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
-owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+* show title: `Start with a workflow, not a blank page.`
+* show copy explaining templates
+* show CTAs:
+  * Browse templates
+  * Create blank form
+* show template cards for the 5 vertical templates
 
-@@index([formId, createdAt])
-@@index([ownerId, createdAt])
-@@index([type, createdAt])
-}
+### 4. Form Detail Next Steps
 
-Use enum if the codebase prefers enums.
+On `/dashboard/forms/[formId]`, show next-step cards based on form state.
 
-Privacy:
-Do not store raw IP address if avoidable.
-If storing IP-related data, hash it.
-Do not store sensitive submitted values in analytics events.
+If draft:
 
-## View Tracking
+* Finish builder
+* Publish form
 
-Track views on:
+If published with no submissions:
 
-* /f/[formSlug]
-* /embed/forms/[formId]
+* Open public form
+* Submit a test response
+* Copy link
+* Download/share QR
+* Embed on website
 
-For public form route:
-source = PUBLIC unless query/referrer indicates otherwise.
+If published with submissions:
 
-For embed route:
-source = EMBED by default.
+* Review submissions
+* Complete office fields
+* Generate/finalize PDF if available
+* View analytics
 
-If embed metadata indicates WordPress/Shopify, classify:
+### 5. Storage Setup Prompt
 
-* WORDPRESS
-* SHOPIFY
+If a form contains file upload fields and owner has no active Google Drive/Dropbox storage:
 
-Detection can use:
+show warning:
 
-* query params if existing plugin/app includes source
-* referrer hostname
-* embed source metadata
+`This form collects files. Connect Google Drive or Dropbox before sharing it.`
 
-Keep MVP simple.
+CTA:
 
-## Duplicate View Control
+`Connect storage`
 
-Avoid creating too many duplicate views from refreshes if simple.
+Show this on form detail and/or builder where appropriate.
 
-Options:
+### 6. Trial/Plan Awareness
 
-* use session cookie/localStorage client-side event
-* or server-side simple sessionId
-* or accept raw page views for MVP
+If user is trialing:
 
-MVP acceptable:
-Track page views, not unique visitors.
+show banner:
 
-If using cookies/localStorage, do not break SSR.
+`You are on a {PlanName} trial. Trial ends on {date}.`
 
-## Submission Tracking
+CTA:
 
-When a submission is created, record analytics event:
+`Manage billing`
 
-type = SUBMIT
+If user is Free and a feature is locked:
 
-Make sure this does not duplicate existing submission count in dashboard. The source of truth for submissions remains FormSubmission records.
+show subtle upgrade message, not aggressive spam.
 
-## Dashboard UI
+### 7. Analytics Empty State
 
-Add analytics display to:
+Where analytics summary shows zero views:
 
-1. Dashboard Home
+show helpful copy:
 
-Show overview cards:
+`No views yet. Share your form link or add it to your website to start collecting responses.`
 
-* Total form views
-* Total submissions
-* Average completion rate
-* Top performing form
+### 8. AdSense Rule
 
-2. Form Detail Page
+Do not add AdSense to dashboard/authenticated onboarding pages.
 
-Show analytics cards for that form:
+Ads only belong on public marketing/content pages.
 
-* Views
-* Submissions
-* Completion rate
-* Source breakdown
+### 9. Permissions
 
-3. Optional Analytics Page
+Onboarding must respect existing effective limits:
 
-If simple, add:
+* allowTemplates
+* allowGoogleDrive
+* allowDropbox
+* allowPdfGeneration
+* allowQrCode
+* allowEmbeds
+* allowApiAccess
+* allowTeamMembers
+* etc.
 
-/dashboard/analytics
+Do not bypass server-side enforcement.
+The UI should guide users but final actions remain protected server-side.
 
-This page can show:
+### 10. Design
 
-* top forms
-* views/submissions table
-* source breakdown
-* date range filters
+Use clean modern SaaS dashboard cards.
+Keep mobile responsive.
+Do not break existing nav.
+Do not create huge text walls.
 
-If this is too much, keep analytics on dashboard home and form detail only for MVP.
+### 11. Existing Flows Must Still Work
 
-## Date Range
+* form builder
+* template creation
+* public forms
+* embed route
+* WordPress plugin
+* Shopify app
+* analytics
+* billing/trials
+* storage integrations
+* PDF/finalization
 
-MVP date filters:
+### 12. Commands
 
-* Last 7 days
-* Last 30 days
-* All time
+Run:
 
-Default:
-Last 30 days
+* `npx prisma validate`
+* `npx prisma generate`
+* `npm run build`
 
-If adding date filters is too much, show Last 30 days only plus all-time counts.
+## Return
 
-## Plan Permission
-
-Add plan controls:
-
-allowBasicAnalytics: boolean
-
-Recommended default:
-
-Free: true but limited summary
-Starter: true
-Pro: true
-Business: true
-Enterprise: true
-
-Optional later:
-allowAdvancedAnalytics
-
-For MVP:
-
-* Free users can see basic counts.
-* Advanced filtering/source details can be paid if desired, but do not overcomplicate now.
-
-Super Admin plan editor should support allowBasicAnalytics.
-
-Server-side:
-Analytics pages/actions should check allowBasicAnalytics if added.
-
-## Super Admin
-
-Optional but useful:
-
-Super Admin dashboard can show platform-level totals:
-
-* total form views
-* total submissions
-* views last 30 days
-* submissions last 30 days
-
-Do not overbuild.
-
-## Privacy / Security
-
-* Do not store submitted answer data in analytics events.
-* Do not expose analytics across users.
-* Owner/staff should only see analytics for forms they can access.
-* Public users should not see analytics.
-* Super Admin can see platform aggregate, not private submission answers.
-* If storing IP, hash it.
-* Respect existing workspace permissions.
-
-## Performance
-
-Avoid heavy queries.
-
-Use grouped counts where possible.
-
-Do not load all analytics events into memory.
-
-Indexes should support:
-
-* formId + createdAt
-* ownerId + createdAt
-* type + createdAt
-
-## Out of Scope
-
-Do not build advanced analytics.
-Do not build field-level drop-off.
-Do not build funnel tracking.
-Do not build UTM campaign reporting beyond storing basic referrer/source if available.
-Do not build charts if heavy.
-Do not build export.
-Do not build notifications based on analytics.
-Do not add analytics to legal pages unless already part of public page views.
-Do not track dashboard page views.
-
-## Acceptance Criteria
-
-Complete when:
-
-* FormAnalyticsEvent or equivalent model exists.
-* Migration exists.
-* Public form views are tracked.
-* Embed form views are tracked.
-* Submissions create analytics submit events or submissions are counted reliably.
-* Dashboard home shows basic analytics summary.
-* Form detail shows views/submissions/completion rate.
-* Source breakdown exists at least for public vs embed.
-* Users cannot see other users’ analytics.
-* Public users cannot access analytics.
-* Analytics does not store submitted answers.
-* IP is not stored raw.
-* Plan key allowBasicAnalytics exists if implemented.
-* Existing forms/submissions still work.
-* Public forms still work.
-* Embed/WordPress/Shopify still work.
-* npm run build passes.
+* files changed
+* onboarding checklist logic
+* template context support implemented
+* empty state updates
+* form detail next-step updates
+* storage warning logic
+* trial banner logic
+* confirmation no dashboard AdSense added
+* confirmation build passes

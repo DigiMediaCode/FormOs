@@ -16,6 +16,7 @@ import {
 import { normalizeFormFields } from "@/lib/forms/fields";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { getUserEffectiveLimits } from "@/lib/plans/limits";
+import { prisma } from "@/lib/prisma";
 import {
   canManageWorkspaceForms,
   requireWorkspaceMember,
@@ -37,6 +38,31 @@ function formatDate(date: Date) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function NextStepCard({
+  description,
+  href,
+  label,
+  title,
+}: {
+  description: string;
+  href: string;
+  label: string;
+  title: string;
+}) {
+  return (
+    <Link
+      className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-200 hover:bg-blue-50"
+      href={href}
+    >
+      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+      <p className="mt-2 text-xs leading-5 text-slate-600">{description}</p>
+      <span className="mt-3 inline-flex text-xs font-semibold text-blue-700">
+        {label}
+      </span>
+    </Link>
+  );
 }
 
 export default async function FormDetailPage({
@@ -66,11 +92,25 @@ export default async function FormDetailPage({
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
-  const [uploadProvider, limits, analyticsSummary] = await Promise.all([
+  const [uploadProvider, limits, analyticsSummary, submissionStats] = await Promise.all([
     getResolvedUploadProvider(form.ownerId),
     getUserEffectiveLimits(form.ownerId),
     getFormAnalyticsSummary(form.id, form.ownerId),
+    prisma.formSubmission.findMany({
+      where: { formId: form.id, ownerId: form.ownerId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        officeCompletedAt: true,
+      },
+      take: 5,
+    }),
   ]);
+  const hasSubmissions = submissionStats.length > 0;
+  const hasFinalizedSubmission = submissionStats.some(
+    (submission) => Boolean(submission.officeCompletedAt),
+  );
+  const latestSubmissionId = submissionStats[0]?.id ?? null;
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -131,6 +171,112 @@ export default async function FormDetailPage({
           jsCode={jsEmbedCode}
         />
 
+        <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                Next steps
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-950">
+                Keep this workflow moving
+              </h2>
+            </div>
+            <p className="text-sm text-slate-500">
+              Suggestions change as this form moves from draft to active workflow.
+            </p>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {!isPublished ? (
+              <>
+                <NextStepCard
+                  description="Add or reorder fields, set required inputs, and review the public preview."
+                  href={`/dashboard/forms/${form.id}/builder`}
+                  label="Open builder"
+                  title="Finish builder"
+                />
+                <NextStepCard
+                  description="Publish when the workflow is ready to collect responses."
+                  href={`/dashboard/forms/${form.id}`}
+                  label="Use status controls"
+                  title="Publish form"
+                />
+              </>
+            ) : !hasSubmissions ? (
+              <>
+                <NextStepCard
+                  description="Open the customer-facing form and walk through it yourself."
+                  href={publicPath}
+                  label="Open form"
+                  title="Submit a test response"
+                />
+                <NextStepCard
+                  description="Copy the link, use the QR card, or send it to a customer."
+                  href={publicPath}
+                  label="Open public link"
+                  title="Copy link"
+                />
+                {limits.allowQrCode ? (
+                  <NextStepCard
+                    description="Use the QR card on this page for in-person sharing."
+                    href={`/dashboard/forms/${form.id}`}
+                    label="View QR card"
+                    title="Download/share QR"
+                  />
+                ) : null}
+                {limits.allowEmbeds ? (
+                  <NextStepCard
+                    description="Use the embed card above to place this form on your website."
+                    href={`/dashboard/forms/${form.id}`}
+                    label="View embed code"
+                    title="Embed on website"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <>
+                <NextStepCard
+                  description="Open the submission inbox and inspect the latest customer responses."
+                  href={`/dashboard/forms/${form.id}/submissions`}
+                  label="Review submissions"
+                  title="Review submissions"
+                />
+                <NextStepCard
+                  description="Complete internal Office Use Only fields where this workflow requires staff review."
+                  href={
+                    latestSubmissionId
+                      ? `/dashboard/forms/${form.id}/submissions/${latestSubmissionId}`
+                      : `/dashboard/forms/${form.id}/submissions`
+                  }
+                  label="Open latest"
+                  title="Complete office fields"
+                />
+                {limits.allowPdfGeneration ? (
+                  <NextStepCard
+                    description={
+                      hasFinalizedSubmission
+                        ? "Download completed PDFs from finalized submission records."
+                        : "Finalize a submission to generate the completed PDF."
+                    }
+                    href={
+                      latestSubmissionId
+                        ? `/dashboard/forms/${form.id}/submissions/${latestSubmissionId}`
+                        : `/dashboard/forms/${form.id}/submissions`
+                    }
+                    label={hasFinalizedSubmission ? "Open PDFs" : "Finalize"}
+                    title="Generate/finalize PDF"
+                  />
+                ) : null}
+                <NextStepCard
+                  description="Use views, submissions, completion rate, and source breakdown to improve sharing."
+                  href={`/dashboard/forms/${form.id}`}
+                  label="View analytics"
+                  title="View analytics"
+                />
+              </>
+            )}
+          </div>
+        </section>
+
         {limits.allowBasicAnalytics ? (
           <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -152,6 +298,12 @@ export default async function FormDetailPage({
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.views}
                 </p>
+                {analyticsSummary.views === 0 ? (
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    No views yet. Share your form link or add it to your website
+                    to start collecting responses.
+                  </p>
+                ) : null}
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm text-slate-500">Submissions</p>
