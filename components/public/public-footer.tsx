@@ -33,6 +33,7 @@ export async function PublicFooter() {
           <div className="mt-3 grid gap-2 text-sm text-slate-600">
             <Link className="hover:text-blue-600" href="/#features">Features</Link>
             <Link className="hover:text-blue-600" href="/#use-cases">Use Cases</Link>
+            <Link className="hover:text-blue-600" href="/templates">Templates</Link>
             <Link className="hover:text-blue-600" href="/blog">Blog</Link>
             <Link className="hover:text-blue-600" href="/help">Help Center</Link>
             <Link className="hover:text-blue-600" href="/pricing">Pricing</Link>
