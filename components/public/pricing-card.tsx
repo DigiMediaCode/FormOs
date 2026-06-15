@@ -7,6 +7,7 @@ type PricingCardProps = {
   features: string[];
   highlighted?: boolean;
   href?: string;
+  trialLabel?: string;
 };
 
 export function PricingCard({
@@ -16,6 +17,7 @@ export function PricingCard({
   features,
   highlighted = false,
   href = "/signup",
+  trialLabel,
 }: PricingCardProps) {
   return (
     <article
@@ -33,6 +35,9 @@ export function PricingCard({
       <p className="mt-6 text-4xl font-semibold tracking-tight text-[#071124]">
         {price}
       </p>
+      {trialLabel ? (
+        <p className="mt-2 text-sm font-medium text-blue-700">{trialLabel}</p>
+      ) : null}
       <Link
         className={`mt-6 inline-flex w-full justify-center rounded-md px-4 py-2.5 text-sm font-semibold transition ${
           highlighted

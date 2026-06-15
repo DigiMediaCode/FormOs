@@ -10,6 +10,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Sparkles,
   ToggleLeft,
 } from "lucide-react";
 import { savePlatformSettingsAction } from "./actions";
@@ -257,6 +258,31 @@ export default async function AdminSettingsPage({
               <Toggle checked={settings.showLandingPageAds} label="Show Landing Page Ads" name="showLandingPageAds" />
               <Toggle checked={settings.showPublicFormAds} label="Show Public Form Ads" name="showPublicFormAds" />
               <Toggle checked={settings.enablePoweredByBranding} label="Enable Powered by FormOS branding" name="enablePoweredByBranding" />
+            </div>
+          </Section>
+
+          <Section icon={Sparkles} title="Paid Plan Trial">
+            <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+              Controls the Stripe subscription trial for paid plans. Trialing
+              users receive the selected plan limits until the trial ends,
+              cancels, or payment fails.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Toggle checked={settings.trialEnabled} label="Enable paid plan trials" name="trialEnabled" />
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Trial Days
+                <input
+                  className={inputClass()}
+                  defaultValue={settings.trialDays}
+                  max={365}
+                  min={1}
+                  name="trialDays"
+                  type="number"
+                />
+                <span className="text-[11px] font-normal leading-4 text-slate-500">
+                  Default paid-plan trial length for eligible users.
+                </span>
+              </label>
             </div>
           </Section>
           </div>

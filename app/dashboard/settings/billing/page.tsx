@@ -4,6 +4,7 @@ import {
   limitLabel,
   UNLIMITED_EVERYTHING_LIMITS,
 } from "@/lib/plans/limits";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceOwner } from "@/lib/workspaces/access";
 
@@ -61,6 +62,10 @@ function isPaidPrice(value: unknown) {
   return Number.isFinite(amount) && amount > 0;
 }
 
+function isPaidStripeStatus(status: string | null | undefined) {
+  return ["ACTIVE", "TRIALING", "PAST_DUE", "INCOMPLETE"].includes(status ?? "");
+}
+
 function isUnlimitedOverride(limits: unknown) {
   return (
     JSON.stringify(limits) === JSON.stringify(UNLIMITED_EVERYTHING_LIMITS)
@@ -72,7 +77,7 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
   const user = context.user;
 
   const { checkout, error, success } = await searchParams;
-  const [access, subscription, plans, override] = await Promise.all([
+  const [access, subscription, plans, override, platformSettings] = await Promise.all([
     getUserPlanAccess(user.id),
     prisma.userSubscription.findUnique({
       where: { userId: user.id },
@@ -81,6 +86,9 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         planId: true,
         billingProvider: true,
         currentPeriodEnd: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
+        trialUsedAt: true,
         cancelAtPeriodEnd: true,
         stripeCustomerId: true,
         stripeSubscriptionId: true,
@@ -110,8 +118,13 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
         limits: true,
       },
     }),
+    getPlatformSettings(),
   ]);
   const subscriptionStatus = subscription?.status ?? access.plan.status ?? "FREE";
+  const trialEligible =
+    platformSettings.trialEnabled &&
+    !subscription?.trialUsedAt &&
+    !isPaidStripeStatus(subscriptionStatus);
   const canManageBilling = Boolean(subscription?.stripeCustomerId);
   const canManageStripeSubscription = Boolean(
     subscription?.stripeSubscriptionId &&
@@ -165,6 +178,16 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
             </p>
           </section>
         ) : null}
+        {subscriptionStatus === "TRIALING" ? (
+          <section className="rounded-md border border-blue-200 bg-blue-50 p-5 text-blue-900">
+            <h2 className="font-semibold">
+              You are on a {access.plan.name} trial.
+            </h2>
+            <p className="mt-1 text-sm">
+              Trial ends on {formatDate(subscription?.trialEndsAt ?? subscription?.currentPeriodEnd)}.
+            </p>
+          </section>
+        ) : null}
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -184,6 +207,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
               <p className="mt-1 text-sm text-slate-600">
                 Current period end: {formatDate(subscription?.currentPeriodEnd)}
               </p>
+              {subscriptionStatus === "TRIALING" ? (
+                <p className="mt-1 text-sm font-medium text-blue-700">
+                  Trial ends: {formatDate(subscription?.trialEndsAt)}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               {override ? (
@@ -295,12 +323,16 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                 ? "Currently Subscribed"
                 : isCurrentManualPlan
                   ? "Manually Assigned"
-                  : "Choose Monthly";
+                  : trialEligible
+                    ? `Start ${platformSettings.trialDays}-day free trial`
+                    : "Choose Monthly";
               const yearlyButtonText = isCurrentActiveSubscribedPlan
                 ? "Currently Subscribed"
                 : isCurrentManualPlan
                   ? "Manually Assigned"
-                  : "Choose Yearly";
+                  : trialEligible
+                    ? `Start ${platformSettings.trialDays}-day free trial`
+                    : "Choose Yearly";
 
               return (
                 <article
@@ -329,6 +361,11 @@ export default async function BillingPage({ searchParams }: BillingPageProps) {
                     {isCurrentManualPlan ? (
                       <p className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
                         This plan was assigned by an administrator.
+                      </p>
+                    ) : null}
+                    {trialEligible ? (
+                      <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-900">
+                        Includes a {platformSettings.trialDays}-day free trial.
                       </p>
                     ) : null}
                   </div>

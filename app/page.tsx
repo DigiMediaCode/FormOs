@@ -243,6 +243,9 @@ export default async function HomePage() {
   ]);
   const isLoggedIn = Boolean(userId);
   const packageHref = isLoggedIn ? "/dashboard/settings/billing" : "/signup";
+  const paidTrialLabel = settings.trialEnabled
+    ? `${settings.trialDays}-day free trial`
+    : null;
   const appUrl = safeAppUrl();
   const structuredData = {
     "@context": "https://schema.org",
@@ -573,6 +576,11 @@ export default async function HomePage() {
                     <p className="mt-2 text-sm font-medium text-slate-700">
                       Yearly: {formatMoney(plan.priceYearly, plan.currency)}
                     </p>
+                    {paidTrialLabel && Number(plan.priceMonthly) > 0 ? (
+                      <p className="mt-2 text-sm font-medium text-blue-700">
+                        {paidTrialLabel}
+                      </p>
+                    ) : null}
                   </div>
                   <ul className="mt-6 grid gap-3 text-sm text-slate-700">
                     <li className="flex gap-2">

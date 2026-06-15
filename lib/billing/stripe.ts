@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { getAppUrl } from "@/lib/app-url";
 import { createBillingEvent } from "@/lib/billing/events";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import { prisma } from "@/lib/prisma";
 
 export type BillingInterval = "monthly" | "yearly";
@@ -118,6 +119,9 @@ async function shouldCreateStripePrice({
 }
 
 export function mapStripeSubscriptionStatus(subscription: Stripe.Subscription) {
+  const trialStart = (subscription as unknown as { trial_start?: number | null }).trial_start;
+  const trialEnd = (subscription as unknown as { trial_end?: number | null }).trial_end;
+
   return {
     status: normalizeStatus(subscription.status),
     stripeSubscriptionId: subscription.id,
@@ -132,8 +136,16 @@ export function mapStripeSubscriptionStatus(subscription: Stripe.Subscription) {
     currentPeriodEnd: toDateFromUnix(
       (subscription as unknown as { current_period_end?: number }).current_period_end,
     ),
+    trialStartedAt: toDateFromUnix(trialStart),
+    trialEndsAt: toDateFromUnix(trialEnd),
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
   };
+}
+
+function isPaidStripeStatus(status: string | null | undefined) {
+  return ["ACTIVE", "TRIALING", "PAST_DUE", "INCOMPLETE"].includes(
+    status?.toUpperCase() ?? "",
+  );
 }
 
 export async function findPlanByStripePriceId(priceId: string | null | undefined) {
@@ -483,6 +495,7 @@ export async function createCheckoutSession({
     select: {
       planId: true,
       status: true,
+      trialUsedAt: true,
     },
   });
   const currentStatus = currentSubscription?.status?.toUpperCase();
@@ -497,6 +510,11 @@ export async function createCheckoutSession({
   const customerId = await createOrGetStripeCustomer(userId);
   const appUrl = getAppUrl();
   const stripe = getStripeClient();
+  const platformSettings = await getPlatformSettings();
+  const eligibleForTrial =
+    platformSettings.trialEnabled &&
+    !currentSubscription?.trialUsedAt &&
+    !isPaidStripeStatus(currentStatus);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -516,10 +534,16 @@ export async function createCheckoutSession({
       interval,
     },
     subscription_data: {
+      ...(eligibleForTrial
+        ? {
+            trial_period_days: platformSettings.trialDays,
+          }
+        : {}),
       metadata: {
         formosUserId: userId,
         planId: plan.id,
         interval,
+        trialEligible: eligibleForTrial ? "true" : "false",
       },
     },
   });
@@ -537,6 +561,8 @@ export async function createCheckoutSession({
         userId,
         customerId,
         checkoutSessionId: session.id,
+        trialEligible: eligibleForTrial,
+        trialDays: eligibleForTrial ? platformSettings.trialDays : null,
       },
       processedAt: new Date(),
     });
@@ -715,6 +741,7 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
     },
     select: {
       userId: true,
+      trialUsedAt: true,
     },
   });
   const userId = existing?.userId ?? metadataUserId;
@@ -728,6 +755,9 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
     return null;
   }
 
+  const trialUsedAt =
+    mapped.status === "TRIALING" ? existing?.trialUsedAt ?? new Date() : undefined;
+
   return prisma.userSubscription.upsert({
     where: { userId },
     create: {
@@ -739,6 +769,10 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
       stripePriceId: mapped.stripePriceId,
       currentPeriodStart: mapped.currentPeriodStart,
       currentPeriodEnd: mapped.currentPeriodEnd,
+      trialStartedAt: mapped.trialStartedAt,
+      trialEndsAt: mapped.trialEndsAt,
+      trialPlanId: mapped.status === "TRIALING" ? plan?.id ?? null : null,
+      trialUsedAt: trialUsedAt ?? null,
       cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
       billingProvider: "stripe",
     },
@@ -750,6 +784,10 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
       stripePriceId: mapped.stripePriceId,
       currentPeriodStart: mapped.currentPeriodStart,
       currentPeriodEnd: mapped.currentPeriodEnd,
+      trialStartedAt: mapped.trialStartedAt,
+      trialEndsAt: mapped.trialEndsAt,
+      trialPlanId: mapped.status === "TRIALING" ? plan?.id ?? null : undefined,
+      trialUsedAt,
       cancelAtPeriodEnd: mapped.cancelAtPeriodEnd,
       billingProvider: "stripe",
     },

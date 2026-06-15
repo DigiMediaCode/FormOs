@@ -83,6 +83,8 @@ export async function savePlatformSettingsAction(formData: FormData) {
       publicFormAdSlot: String(formData.get("publicFormAdSlot") ?? ""),
       publicFormAdFrequency: Number(formData.get("publicFormAdFrequency") ?? 4),
       publicFormAdLabel: String(formData.get("publicFormAdLabel") ?? ""),
+      trialEnabled: formData.get("trialEnabled") === "on",
+      trialDays: Number(formData.get("trialDays") ?? 14),
     });
   } catch (error) {
     redirectToSettings(

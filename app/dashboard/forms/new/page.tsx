@@ -2,7 +2,11 @@ import { FormMode } from "@prisma/client";
 import Link from "next/link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createForm } from "@/lib/forms/actions";
-import { createVehicleHireAgreementTemplate } from "@/lib/forms/templates/create-template-form";
+import { createWorkflowTemplate } from "@/lib/forms/templates/create-template-form";
+import { getTemplateAccessStatus } from "@/lib/forms/templates/template-access";
+import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-templates";
+import { getUserPlanAccess } from "@/lib/plans/limits";
+import { prisma } from "@/lib/prisma";
 import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 
 type NewFormPageProps = {
@@ -12,8 +16,25 @@ type NewFormPageProps = {
 };
 
 export default async function NewFormPage({ searchParams }: NewFormPageProps) {
-  await requireWorkspaceAdminOrOwner();
+  const context = await requireWorkspaceAdminOrOwner();
   const { error } = await searchParams;
+  const [access, activePlans] = await Promise.all([
+    getUserPlanAccess(context.ownerId),
+    prisma.subscriptionPlan.findMany({
+      where: { isActive: true, isPublic: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true, sortOrder: true, limits: true },
+    }),
+  ]);
+
+  const templateCards = WORKFLOW_TEMPLATES.map((template) => ({
+    template,
+    access: getTemplateAccessStatus({
+      access,
+      activePlans,
+      template,
+    }),
+  }));
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -94,27 +115,96 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
         </form>
 
         <section className="rounded-md border border-slate-200 bg-white p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-                Create from template
-              </p>
-              <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                Vehicle Hire Agreement
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-                Creates an editable agreement form with driver details, ID uploads,
-                acknowledgements, signatures, and office-use-only handover fields.
-              </p>
-            </div>
-            <form action={createVehicleHireAgreementTemplate}>
-              <SubmitButton
-                className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
-                pendingText="Creating template..."
+          <div>
+            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+              Create from workflow template
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">
+              Vertical workflows
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+              Start with a complete workflow: public intake, uploads, acknowledgments,
+              signatures, office processing, and PDF-ready structure.
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {templateCards.map(({ access: templateAccess, template }) => (
+              <article
+                className="grid gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                key={template.slug}
               >
-                Use Template
-              </SubmitButton>
-            </form>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-950">
+                      {template.title}
+                    </h3>
+                    <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800">
+                      {template.category}
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        templateAccess.hasPlanAccess
+                          ? "bg-emerald-50 text-emerald-700"
+                          : templateAccess.isTrialAvailable
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-amber-50 text-amber-800"
+                      }`}
+                    >
+                      {templateAccess.hasPlanAccess
+                        ? "Included"
+                        : templateAccess.isTrialAvailable
+                          ? "Trial available"
+                          : templateAccess.minimumPlanName
+                            ? `Requires ${templateAccess.minimumPlanName}`
+                            : "Upgrade required"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                    {template.description}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {templateAccess.featureBadges.slice(0, 7).map((badge) => (
+                      <span
+                        className="rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600"
+                        key={badge}
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-slate-600">
+                    {templateAccess.message}
+                  </p>
+                </div>
+                {templateAccess.canCreate ? (
+                  <form action={createWorkflowTemplate}>
+                    <input name="templateSlug" type="hidden" value={template.slug} />
+                    <SubmitButton
+                      className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
+                      pendingText="Creating template..."
+                    >
+                      {templateAccess.ctaLabel}
+                    </SubmitButton>
+                  </form>
+                ) : templateAccess.formLimitReached ? (
+                  <button
+                    className="rounded-md border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500"
+                    disabled
+                    type="button"
+                  >
+                    {templateAccess.ctaLabel}
+                  </button>
+                ) : (
+                  <Link
+                    className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    href="/dashboard/settings/billing"
+                  >
+                    {templateAccess.ctaLabel}
+                  </Link>
+                )}
+              </article>
+            ))}
           </div>
         </section>
       </div>

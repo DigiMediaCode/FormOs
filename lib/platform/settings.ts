@@ -31,6 +31,8 @@ export type PlatformSettings = {
   publicFormAdSlot: string;
   publicFormAdFrequency: number;
   publicFormAdLabel: string;
+  trialEnabled: boolean;
+  trialDays: number;
 };
 
 const PLATFORM_SETTING_KEYS = [
@@ -59,6 +61,8 @@ const PLATFORM_SETTING_KEYS = [
   "publicFormAdSlot",
   "publicFormAdFrequency",
   "publicFormAdLabel",
+  "trialEnabled",
+  "trialDays",
 ] as const;
 
 type PlatformSettingKey = (typeof PLATFORM_SETTING_KEYS)[number];
@@ -114,6 +118,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   publicFormAdSlot: "",
   publicFormAdFrequency: 4,
   publicFormAdLabel: "Sponsored",
+  trialEnabled: true,
+  trialDays: 14,
 };
 
 function isPlatformSettingKey(key: string): key is PlatformSettingKey {
@@ -261,6 +267,8 @@ export async function updatePlatformSettings(input: PlatformSettings) {
     ),
     publicFormAdLabel:
       input.publicFormAdLabel.trim() || DEFAULT_PLATFORM_SETTINGS.publicFormAdLabel,
+    trialEnabled: Boolean(input.trialEnabled),
+    trialDays: Math.min(365, Math.max(1, Number(input.trialDays) || 14)),
   };
 
   if (!isSafePublicUrlOrPath(nextSettings.logoUrl)) {

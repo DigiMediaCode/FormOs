@@ -5,55 +5,86 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { generateUniqueSlug } from "@/lib/forms/actions";
 import {
-  getVehicleHireAgreementFields,
-  VEHICLE_HIRE_AGREEMENT_TEMPLATE,
-} from "@/lib/forms/templates/vehicle-hire-agreement";
-import {
-  assertCanCreateForm,
-  assertCanUseFieldTypes,
-  assertCanUseTemplate,
-} from "@/lib/plans/limits";
+  getWorkflowTemplate,
+} from "@/lib/forms/templates/vertical-workflow-templates";
+import { getTemplateAccessStatus } from "@/lib/forms/templates/template-access";
+import { getUserPlanAccess } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceAdminOrOwner } from "@/lib/workspaces/access";
 
-export async function createVehicleHireAgreementTemplate() {
+export async function createWorkflowTemplate(formData: FormData) {
   const context = await requireWorkspaceAdminOrOwner();
+  const templateSlug = String(formData.get("templateSlug") ?? "").trim();
+  const template = getWorkflowTemplate(templateSlug);
 
-  try {
-    await assertCanUseTemplate(context.ownerId);
-    await assertCanUseFieldTypes(context.ownerId, getVehicleHireAgreementFields());
-    await assertCanCreateForm(context.ownerId);
-  } catch (error) {
+  if (!template) {
     redirect(
-      `/dashboard/forms/new?error=${encodeURIComponent(
-        error instanceof Error &&
-          error.message.startsWith("Your current plan does not allow")
-          ? "Your current plan does not include all field types required for this template."
-          : error instanceof Error
-            ? error.message
-            : "Unable to create template.",
-      )}`,
+      `/dashboard/forms/new?error=${encodeURIComponent("Template not found.")}`,
     );
   }
 
-  const form = await prisma.form.create({
-    data: {
-      ownerId: context.ownerId,
-      title: VEHICLE_HIRE_AGREEMENT_TEMPLATE.title,
-      slug: await generateUniqueSlug(context.ownerId, VEHICLE_HIRE_AGREEMENT_TEMPLATE.title),
-      description: VEHICLE_HIRE_AGREEMENT_TEMPLATE.description,
-      mode: VEHICLE_HIRE_AGREEMENT_TEMPLATE.mode,
-      status: VEHICLE_HIRE_AGREEMENT_TEMPLATE.status,
-      version: 1,
-      fields: getVehicleHireAgreementFields() as unknown as Prisma.InputJsonValue,
-      settings: VEHICLE_HIRE_AGREEMENT_TEMPLATE.settings,
-    },
-    select: {
-      id: true,
-    },
+  const fields = template.getFields();
+  const [access, activePlans] = await Promise.all([
+    getUserPlanAccess(context.ownerId),
+    prisma.subscriptionPlan.findMany({
+      where: {
+        isActive: true,
+        isPublic: true,
+      },
+      orderBy: {
+        sortOrder: "asc",
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        sortOrder: true,
+        limits: true,
+      },
+    }),
+  ]);
+
+  const templateAccess = getTemplateAccessStatus({
+    access,
+    activePlans,
+    template,
+  });
+
+  if (!templateAccess.canCreate) {
+    redirect(
+      `/dashboard/forms/new?error=${encodeURIComponent(templateAccess.message)}`,
+    );
+  }
+
+  const slug = await generateUniqueSlug(context.ownerId, template.title);
+  const form = await prisma.$transaction(async (tx) => {
+    const createdForm = await tx.form.create({
+      data: {
+        ownerId: context.ownerId,
+        title: template.title,
+        slug,
+        description: template.description,
+        mode: template.mode,
+        status: template.status,
+        version: 1,
+        fields: fields as unknown as Prisma.InputJsonValue,
+        settings: template.settings,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return createdForm;
   });
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/forms");
   redirect(`/dashboard/forms/${form.id}/builder`);
+}
+
+export async function createVehicleHireAgreementTemplate() {
+  const formData = new FormData();
+  formData.set("templateSlug", "vehicle-hire-agreement");
+  await createWorkflowTemplate(formData);
 }

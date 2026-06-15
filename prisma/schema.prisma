@@ -76,6 +76,9 @@ model User {
   supportRequests SupportRequest[]
   supportMessages SupportRequestMessage[]
   apiTokens      ApiToken[]
+  templateTrialStartedAt DateTime?
+  premiumTemplateTrialUsedAt DateTime?
+  premiumTemplateIdUsed String?
   ownedWorkspace Workspace?         @relation("WorkspaceOwner")
   workspaceMemberships WorkspaceMember[]
   createdAt      DateTime           @default(now())
@@ -491,6 +494,10 @@ model UserSubscription {
   billingProvider String?
   currentPeriodStart DateTime?
   currentPeriodEnd DateTime?
+  trialStartedAt DateTime?
+  trialEndsAt DateTime?
+  trialPlanId String?
+  trialUsedAt DateTime?
   cancelAtPeriodEnd Boolean @default(false)
   metadata   Json?
   createdAt  DateTime  @default(now())

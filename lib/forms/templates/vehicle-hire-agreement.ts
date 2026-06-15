@@ -1,5 +1,8 @@
 import { FormMode, FormStatus } from "@prisma/client";
-import { defaultConditionalLogic } from "@/lib/forms/conditional-logic";
+import {
+  defaultConditionalLogic,
+  type FieldConditionalLogic,
+} from "@/lib/forms/conditional-logic";
 import type { FormBuilderField, FormFieldType, FormFieldVisibility } from "@/lib/forms/fields";
 
 export const VEHICLE_HIRE_AGREEMENT_TEMPLATE = {
@@ -22,6 +25,7 @@ type TemplateFieldInput = {
   required?: boolean;
   options?: string[];
   content?: string;
+  conditionalLogic?: FieldConditionalLogic;
   visibility?: FormFieldVisibility;
   settings?: Record<string, unknown>;
 };
@@ -36,7 +40,7 @@ function createTemplateFields(items: TemplateFieldInput[]): FormBuilderField[] {
     order: index + 1,
     options: item.type === "select" ? item.options ?? [] : [],
     content: item.content ?? "",
-    conditionalLogic: defaultConditionalLogic(),
+    conditionalLogic: item.conditionalLogic ?? defaultConditionalLogic(),
     settings: item.settings ?? {},
     visibility: item.visibility ?? "PUBLIC",
   }));
@@ -71,6 +75,7 @@ function input(
     required?: boolean;
     options?: string[];
     visibility?: FormFieldVisibility;
+    conditionalLogic?: FieldConditionalLogic;
   } = {},
 ) {
   return {
@@ -80,6 +85,7 @@ function input(
     placeholder: options.placeholder ?? "",
     required: options.required ?? true,
     options: options.options,
+    conditionalLogic: options.conditionalLogic,
     visibility: options.visibility ?? "PUBLIC",
   };
 }
@@ -141,6 +147,52 @@ export function getVehicleHireAgreementFields() {
     input("emergency-contact-name", "text", "Emergency contact name"),
     input("emergency-contact-phone", "phone", "Emergency contact phone"),
     input("emergency-contact-address", "address", "Emergency contact address"),
+
+    section("additional-driver-section", "Additional Driver"),
+    input("has-additional-driver", "select", "Will there be an additional driver?", {
+      options: ["No", "Yes"],
+    }),
+    input("additional-driver-name", "text", "Additional driver full name", {
+      conditionalLogic: {
+        enabled: true,
+        action: "SHOW",
+        sourceFieldId: "has-additional-driver",
+        operator: "EQUALS",
+        value: "Yes",
+      },
+    }),
+    input("additional-driver-licence", "text", "Additional driver licence number", {
+      conditionalLogic: {
+        enabled: true,
+        action: "SHOW",
+        sourceFieldId: "has-additional-driver",
+        operator: "EQUALS",
+        value: "Yes",
+      },
+    }),
+    input("additional-driver-licence-upload", "image_upload", "Additional driver licence upload", {
+      conditionalLogic: {
+        enabled: true,
+        action: "SHOW",
+        sourceFieldId: "has-additional-driver",
+        operator: "EQUALS",
+        value: "Yes",
+      },
+    }),
+
+    section("recent-offence-section", "Recent Driving Offences"),
+    input("has-recent-offence", "select", "Have you had recent driving offences or licence restrictions?", {
+      options: ["No", "Yes"],
+    }),
+    input("recent-offence-details", "textarea", "Recent offence or restriction details", {
+      conditionalLogic: {
+        enabled: true,
+        action: "SHOW",
+        sourceFieldId: "has-recent-offence",
+        operator: "EQUALS",
+        value: "Yes",
+      },
+    }),
 
     section("etag-toll-section", "E-Tag / Toll Notice"),
     html(
