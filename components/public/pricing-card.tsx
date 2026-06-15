@@ -8,6 +8,7 @@ type PricingCardProps = {
   highlighted?: boolean;
   href?: string;
   trialLabel?: string;
+  ctaLabel?: string;
 };
 
 export function PricingCard({
@@ -18,6 +19,7 @@ export function PricingCard({
   highlighted = false,
   href = "/signup",
   trialLabel,
+  ctaLabel,
 }: PricingCardProps) {
   return (
     <article
@@ -46,7 +48,7 @@ export function PricingCard({
         }`}
         href={href}
       >
-        Get Started
+        {ctaLabel ?? (trialLabel ? `Start ${trialLabel}` : "Get Started")}
       </Link>
       <ul className="mt-6 grid gap-3 text-sm text-slate-700">
         {features.map((feature) => (

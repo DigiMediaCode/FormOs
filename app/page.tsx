@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Activity,
@@ -10,7 +11,6 @@ import {
   Handshake,
   LayoutTemplate,
   Lock,
-  PenTool,
   QrCode,
   UserPlus,
   Users,
@@ -32,47 +32,60 @@ import {
 import { getAppUrl } from "@/lib/app-url";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import { prisma } from "@/lib/prisma";
+import { getTemplateLandingPages } from "@/lib/forms/templates/template-landing-pages";
+
+export const metadata: Metadata = {
+  title: "FormOS - Forms, Signatures, Uploads & PDF Workflows",
+  description:
+    "Create online forms that collect signatures, file uploads, office-only details, and completed PDFs. Built for rental, service, contractor, and booking workflows.",
+  openGraph: {
+    title: "FormOS - Forms, Signatures, Uploads & PDF Workflows",
+    description:
+      "Create online forms that collect signatures, file uploads, office-only details, and completed PDFs.",
+    type: "website",
+  },
+};
 
 const features = [
   {
-    icon: LayoutTemplate,
-    title: "Form Builder",
-    description: "Create clean forms for intake, agreements, bookings, and approvals.",
-  },
-  {
-    icon: PenTool,
-    title: "eSignatures and Initials",
-    description: "Collect signatures and initials directly inside public forms.",
+    icon: FileSignature,
+    title: "Signatures",
+    description: "Collect signatures and initials inside the same customer workflow.",
   },
   {
     icon: CloudUpload,
-    title: "File Uploads",
-    description: "Send uploaded files to Google Drive or Dropbox without storing them in FormOS.",
+    title: "File uploads",
+    description: "Receive documents, IDs, images, and references with each submission.",
   },
   {
     icon: Lock,
-    title: "Office Use Only Fields",
-    description: "Let staff complete internal details after the public submission arrives.",
+    title: "Office Use Only fields",
+    description: "Let staff complete internal details after the customer submits.",
   },
   {
     icon: FileOutput,
-    title: "Completed PDF Delivery",
-    description: "Finalize submissions and email completed PDFs to owners and submitters.",
+    title: "Completed PDFs",
+    description: "Finalize submissions into completed PDF records for customers and teams.",
   },
   {
-    icon: QrCode,
-    title: "QR Code Form Sharing",
-    description: "Share public forms with links or downloadable QR codes.",
+    icon: FolderInput,
+    title: "Google Drive & Dropbox",
+    description: "Organize uploads and generated documents in connected storage.",
+  },
+  {
+    icon: LayoutTemplate,
+    title: "WordPress & Shopify embeds",
+    description: "Place FormOS workflows on your existing website or store.",
   },
   {
     icon: Activity,
-    title: "Activity Timeline",
-    description: "Track key submission actions with a simple owner-visible timeline.",
+    title: "Audit timeline",
+    description: "Track important submission, office, and finalization activity.",
   },
   {
-    icon: FileSignature,
-    title: "Templates",
-    description: "Start quickly with ready-to-edit workflow templates.",
+    icon: QrCode,
+    title: "QR sharing",
+    description: "Share forms with public links, QR codes, and embeds.",
   },
 ];
 
@@ -114,10 +127,30 @@ const useCases: Array<{
 ];
 
 const steps = [
-  "Create your form",
-  "Share link or QR code",
-  "Collect signatures and documents",
-  "Complete office fields and send PDF",
+  "Customer fills the form",
+  "Uploads files",
+  "Signs agreement",
+  "Staff completes office fields",
+  "FormOS finalizes PDF",
+  "Files are stored in Drive/Dropbox",
+];
+
+const painPoints = [
+  "Paper agreements are hard to track.",
+  "Email attachments and file uploads get separated from the form.",
+  "Missing signatures slow down handover.",
+  "Staff notes live in spreadsheets, inboxes, or sticky notes.",
+  "Completed PDFs are created manually after the work is done.",
+  "Storage folders are messy unless someone files everything by hand.",
+];
+
+const integrations = [
+  "Google Drive",
+  "Dropbox",
+  "WordPress",
+  "Shopify",
+  "Stripe",
+  "Lark email",
 ];
 
 type LandingPlan = {
@@ -129,6 +162,65 @@ type LandingPlan = {
   currency: string;
   slug: string;
   limits: unknown;
+};
+
+const planPresentation: Record<
+  string,
+  {
+    description: string;
+    priceMonthly: string;
+    priceYearly?: string;
+    highlights: string[];
+  }
+> = {
+  free: {
+    description: "For testing one simple workflow.",
+    priceMonthly: "Free",
+    priceYearly: "Free",
+    highlights: [
+      "1 form",
+      "25 submissions / month",
+      "Basic fields",
+      "QR and embed sharing",
+    ],
+  },
+  starter: {
+    description: "For small businesses moving away from paper forms.",
+    priceMonthly: "AUD $19",
+    priceYearly: "AUD $190",
+    highlights: [
+      "5 forms",
+      "500 submissions / month",
+      "Google Drive",
+      "PDF generation",
+      "Templates",
+    ],
+  },
+  pro: {
+    description:
+      "For businesses that need signatures, uploads, office review, and completed PDFs.",
+    priceMonthly: "AUD $45",
+    priceYearly: "AUD $450",
+    highlights: [
+      "Unlimited forms",
+      "2,500 submissions / month",
+      "Google Drive + Dropbox",
+      "Office fields",
+      "Conditional logic",
+    ],
+  },
+  business: {
+    description: "For teams managing higher-volume form workflows.",
+    priceMonthly: "AUD $89",
+    priceYearly: "AUD $890",
+    highlights: [
+      "High volume",
+      "3-5 staff seats",
+      "All integrations",
+      "Priority support",
+      "Business branding",
+    ],
+  },
 };
 
 function formatMoney(value: unknown, currency: string) {
@@ -246,6 +338,7 @@ export default async function HomePage() {
   const paidTrialLabel = settings.trialEnabled
     ? `${settings.trialDays}-day free trial`
     : null;
+  const templatePages = getTemplateLandingPages();
   const appUrl = safeAppUrl();
   const structuredData = {
     "@context": "https://schema.org",
@@ -299,8 +392,11 @@ export default async function HomePage() {
               Use Cases
             </a>
             <a className="hover:text-blue-600" href="#how-it-works">
-              How It Works
+              Workflow
             </a>
+            <Link className="hover:text-blue-600" href="/templates">
+              Templates
+            </Link>
             <a className="hover:text-blue-600" href="#packages">
               Packages
             </a>
@@ -342,16 +438,33 @@ export default async function HomePage() {
         <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-28">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-              {settings.siteName}
+              The form builder that finishes the job
             </p>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-tight text-[#071124] sm:text-6xl">
-              Build forms, agreements, and signed workflows in minutes.
+              Forms that collect, sign, file, and finish the job.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700">
-              FormOS helps businesses create online forms, collect signatures,
-              receive file uploads, complete office-use fields, and send finished
-              PDFs automatically.
+              FormOS helps businesses turn intake forms, agreements, file
+              uploads, signatures, and internal office checks into completed PDF
+              workflows.
             </p>
+            <div className="mt-6 flex max-w-3xl flex-wrap gap-2">
+              {[
+                "Signatures",
+                "File uploads",
+                "Office Use Only fields",
+                "Completed PDFs",
+                "Google Drive & Dropbox",
+                "WordPress & Shopify embeds",
+              ].map((badge) => (
+                <span
+                  className="rounded-full border border-blue-100 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm"
+                  key={badge}
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LandingActionLink
                 className="inline-flex rounded-md bg-blue-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
@@ -359,19 +472,19 @@ export default async function HomePage() {
                 icon="rocket"
                 pendingText="Opening signup..."
               >
-                Get Started Free
+                Start free trial
               </LandingActionLink>
               <LandingActionLink
                 className="inline-flex rounded-md border border-blue-100 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                href="/login"
-                icon="user"
-                pendingText="Opening login..."
+                href="/templates"
+                icon="rocket"
+                pendingText="Opening templates..."
               >
-                Login
+                Explore templates
               </LandingActionLink>
             </div>
             <p className="mt-5 text-sm font-medium text-slate-600">
-              No code required. Works with Google Drive and Dropbox.
+              Free plan available forever. Paid plans include trial access when enabled.
             </p>
           </div>
 
@@ -417,13 +530,41 @@ export default async function HomePage() {
         </section>
       ) : null}
 
+      <section className="mx-auto max-w-7xl px-6 py-20" id="problem">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+              The Problem
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
+              Manual forms do not stop at submit.
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              Businesses still need signatures, uploads, internal checks,
+              finished PDFs, and clean storage after the form is submitted.
+              FormOS is built for that full workflow.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {painPoints.map((point) => (
+              <div
+                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700"
+                key={point}
+              >
+                {point}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-7xl px-6 py-20" id="features">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-            Features
+            Workflow Features
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
-            Everything needed for signed submission workflows.
+            Everything needed after the customer hits submit.
           </h2>
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -496,13 +637,13 @@ export default async function HomePage() {
       <section className="mx-auto max-w-7xl px-6 py-20" id="how-it-works">
         <div className="max-w-2xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-            How It Works
+            Workflow
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
-            From draft to completed PDF.
+            From customer intake to completed PDF.
           </h2>
         </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-4">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
           {steps.map((step, index) => (
             <article
               className="rounded-xl border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5"
@@ -519,6 +660,75 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="bg-slate-50" id="templates">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+                Templates
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
+                Start with real workflow templates.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Launch faster with templates for rental, contractor, service,
+                and event workflows.
+              </p>
+            </div>
+            <Link
+              className="inline-flex w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              href="/templates"
+            >
+              Explore templates
+            </Link>
+          </div>
+          <div className="mt-8 grid gap-4 lg:grid-cols-5">
+            {templatePages.map((page) => (
+              <Link
+                className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                href={`/templates/${page.routeSlug}`}
+                key={page.routeSlug}
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  {page.template.category}
+                </span>
+                <h3 className="mt-3 text-base font-semibold leading-6 text-slate-950">
+                  {page.template.title}
+                </h3>
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-600">
+                  {page.template.description}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-20" id="integrations">
+        <div className="max-w-2xl">
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
+            Integrations
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
+            Works where your workflow already lives.
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Embed workflows on your website, collect payments through Stripe,
+            and keep uploads organized in connected storage.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          {integrations.map((integration) => (
+            <div
+              className="rounded-xl border border-blue-100 bg-white px-4 py-4 text-center text-sm font-semibold text-slate-800 shadow-sm shadow-blue-950/5"
+              key={integration}
+            >
+              {integration}
+            </div>
+          ))}
+        </div>
+      </section>
+
       {plans.length > 0 ? (
         <section className="mx-auto max-w-7xl px-6 py-20" id="packages">
           <div className="max-w-2xl">
@@ -526,20 +736,27 @@ export default async function HomePage() {
               Packages
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#071124]">
-              Choose the plan that fits your workflow.
+              Choose the plan that matches your workflow volume.
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Packages are managed dynamically from FormOS plans, so your public
-              pricing reflects the active plans configured by Super Admin.
+              Free is for testing one simple workflow. Paid plans unlock
+              templates, storage, PDFs, office review, and higher-volume
+              operations.
             </p>
           </div>
           <PackageCarousel>
             {plans.map((plan) => {
               const limits = normalizePlanLimits(plan.limits);
+              const presentation = planPresentation[plan.slug];
               const includedFeatures = featureLabels(limits)
                 .filter((feature) => feature.allowed)
                 .slice(0, 4);
               const isHighlighted = plan.slug === "pro";
+              const featureList = presentation?.highlights ?? [
+                `${limitLabel(limits.maxForms)} forms`,
+                `${limitLabel(limits.maxMonthlySubmissions)} submissions / month`,
+                ...includedFeatures.map((feature) => feature.label),
+              ];
 
               return (
                 <article
@@ -557,7 +774,7 @@ export default async function HomePage() {
                         {plan.name}
                       </h3>
                       <p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">
-                        {plan.description ?? "Flexible FormOS package."}
+                        {presentation?.description ?? plan.description ?? "Flexible FormOS package."}
                       </p>
                     </div>
                     {isHighlighted ? (
@@ -568,14 +785,20 @@ export default async function HomePage() {
                   </div>
                   <div className="mt-6">
                     <p className="text-4xl font-semibold tracking-tight text-[#071124]">
-                      {formatMoney(plan.priceMonthly, plan.currency)}
+                      {presentation?.priceMonthly ?? formatMoney(plan.priceMonthly, plan.currency)}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
                       Monthly package
                     </p>
-                    <p className="mt-2 text-sm font-medium text-slate-700">
-                      Yearly: {formatMoney(plan.priceYearly, plan.currency)}
-                    </p>
+                    {presentation?.priceYearly ? (
+                      <p className="mt-2 text-sm font-medium text-slate-700">
+                        Yearly: {presentation.priceYearly}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-sm font-medium text-slate-700">
+                        Yearly: {formatMoney(plan.priceYearly, plan.currency)}
+                      </p>
+                    )}
                     {paidTrialLabel && Number(plan.priceMonthly) > 0 ? (
                       <p className="mt-2 text-sm font-medium text-blue-700">
                         {paidTrialLabel}
@@ -583,20 +806,10 @@ export default async function HomePage() {
                     ) : null}
                   </div>
                   <ul className="mt-6 grid gap-3 text-sm text-slate-700">
-                    <li className="flex gap-2">
-                      <PlanCheck />
-                      <span>{limitLabel(limits.maxForms)} forms</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <PlanCheck />
-                      <span>
-                        {limitLabel(limits.maxMonthlySubmissions)} submissions / month
-                      </span>
-                    </li>
-                    {includedFeatures.map((feature) => (
-                      <li className="flex gap-2" key={feature.label}>
+                    {featureList.slice(0, 6).map((feature) => (
+                      <li className="flex gap-2" key={feature}>
                         <PlanCheck />
-                        <span>{feature.label}</span>
+                        <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -644,20 +857,30 @@ export default async function HomePage() {
       <section className="px-6 pb-20">
         <div className="mx-auto max-w-5xl rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-violet-700 px-6 py-14 text-center shadow-xl shadow-blue-950/20">
           <h2 className="text-3xl font-semibold tracking-tight text-white">
-            Ready to create your first form?
+            Stop rebuilding the same workflow manually.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-blue-50">
-            Start with a blank form or use a template, then share a public link
-            or QR code when you are ready.
+            Start from a template, collect the customer details, finish the
+            internal review, and send the completed PDF from one place.
           </p>
-          <LandingActionLink
-            className="mt-8 inline-flex rounded-md bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
-            href="/signup"
-            icon="rocket"
-            pendingText="Opening signup..."
-          >
-            Create Free Account
-          </LandingActionLink>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <LandingActionLink
+              className="inline-flex rounded-md bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+              href="/signup"
+              icon="rocket"
+              pendingText="Opening signup..."
+            >
+              Start free trial
+            </LandingActionLink>
+            <LandingActionLink
+              className="inline-flex rounded-md border border-blue-300 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+              href="/templates"
+              icon="rocket"
+              pendingText="Opening templates..."
+            >
+              View templates
+            </LandingActionLink>
+          </div>
         </div>
       </section>
 
