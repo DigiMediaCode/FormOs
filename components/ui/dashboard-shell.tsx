@@ -7,6 +7,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Plus,
   Settings,
   ShieldCheck,
   UserCircle,
@@ -119,7 +120,7 @@ export function DashboardShell({
 
       <div className="min-w-0">
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-8 lg:py-4">
-          <div className="mb-3 flex items-center justify-between gap-3 lg:hidden">
+          <div className="flex items-center justify-between gap-3 lg:hidden">
             <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
               <img
                 alt="FormOS"
@@ -127,15 +128,25 @@ export function DashboardShell({
                 src="/formos-logo.png"
               />
             </Link>
-            <button
-              aria-expanded={mobileMenuOpen}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
-              onClick={() => setMobileMenuOpen((open) => !open)}
-              type="button"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                aria-label="Create new form"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
+                href="/dashboard/forms/new"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Plus className="h-5 w-5" />
+              </Link>
+              <button
+                aria-expanded={mobileMenuOpen}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                onClick={() => setMobileMenuOpen((open) => !open)}
+                type="button"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
 
           {mobileMenuOpen ? (
@@ -191,7 +202,7 @@ export function DashboardShell({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="hidden flex-col gap-3 lg:flex lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                 FormOS Workspace

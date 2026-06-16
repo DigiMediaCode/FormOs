@@ -449,8 +449,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 Review forms
               </Link>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Form views</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.views}
@@ -462,19 +462,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </p>
                 ) : null}
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Submissions</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.submissions}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Completion rate</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.averageCompletionRate}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Top performing form</p>
                 {analyticsSummary.topForm ? (
                   <Link
@@ -604,9 +604,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">
+              <Link
+                className="text-lg font-semibold text-slate-950 transition hover:text-blue-700"
+                href="/dashboard/forms"
+              >
                 Recent Submissions
-              </h2>
+              </Link>
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 Latest activity across your forms.
               </p>
@@ -643,9 +646,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     className="grid gap-3 bg-white p-4 md:grid-cols-[1fr_150px_120px_90px] md:items-center"
                     key={submission.id}
                   >
-                    <p className="font-semibold text-slate-950">
+                    <Link
+                      className="font-semibold text-slate-950 transition hover:text-blue-700"
+                      href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
+                    >
                       {submission.form.title}
-                    </p>
+                    </Link>
                     <p className="text-sm text-slate-600">
                       {formatDate(submission.createdAt)}
                     </p>
@@ -672,7 +678,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">Recent Forms</h2>
+              <Link
+                className="text-lg font-semibold text-slate-950 transition hover:text-blue-700"
+                href="/dashboard/forms"
+              >
+                Recent Forms
+              </Link>
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 Jump back into the workflows you touched most recently.
               </p>
@@ -723,7 +734,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     key={form.id}
                   >
                     <div>
-                      <p className="font-semibold text-slate-950">{form.title}</p>
+                      <Link
+                        className="font-semibold text-slate-950 transition hover:text-blue-700"
+                        href={`/dashboard/forms/${form.id}`}
+                      >
+                        {form.title}
+                      </Link>
                       <p className="mt-0.5 text-xs text-slate-500">
                         {form._count.submissions} submissions
                       </p>
