@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, X } from "lucide-react";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 export type OnboardingStepperItem = {
@@ -43,7 +43,12 @@ export function OnboardingStepper({
   }
 
   return (
-    <section className="fixed inset-x-4 bottom-4 z-40 rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/15 sm:inset-x-auto sm:right-4 sm:w-[28rem] sm:p-5">
+    <>
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[1px]"
+      />
+      <section className="fixed inset-x-4 bottom-4 z-50 rounded-3xl border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-950/25 sm:inset-x-auto sm:right-4 sm:w-[28rem] sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -58,11 +63,13 @@ export function OnboardingStepper({
         </div>
         <form action={hideAction}>
           <SubmitButton
-            className="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-50"
-            pendingText="Hiding..."
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-950"
+            pendingText="..."
             showStatus={false}
+            title="Close setup checklist"
           >
-            Hide
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close setup checklist</span>
           </SubmitButton>
         </form>
       </div>
@@ -151,6 +158,7 @@ export function OnboardingStepper({
           Next
         </button>
       </div>
-    </section>
+      </section>
+    </>
   );
 }
