@@ -324,26 +324,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-              Dashboard
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Your workflow command center
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Signed in as {user?.name ? `${user.name} (${user.email})` : user?.email}.
-            </p>
-            {workspaceContext && !workspaceContext.isOwner ? (
-              <p className="mt-2 w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-                Workspace: {workspaceContext.workspace.name || "My Workspace"} -{" "}
-                Role: {workspaceContext.role}
-              </p>
-            ) : null}
-          </div>
-        </header>
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        {workspaceContext && !workspaceContext.isOwner ? (
+          <p className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+            Workspace: {workspaceContext.workspace.name || "My Workspace"} - Role:{" "}
+            {workspaceContext.role}
+          </p>
+        ) : null}
 
         {success ? (
           <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -450,13 +437,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {access?.limits.allowBasicAnalytics && analyticsSummary ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                   Analytics
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                <h2 className="mt-1 text-xl font-semibold text-slate-950">
                   Last 30 days
                 </h2>
               </div>
@@ -467,40 +454,40 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 Review forms
               </Link>
             </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Form views</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">Form views</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.views}
                 </p>
                 {analyticsSummary.views === 0 ? (
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
                     No views yet. Share your form link or add it to your website
                     to start collecting responses.
                   </p>
                 ) : null}
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Submissions</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">Submissions</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.submissions}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Completion rate</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">Completion rate</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.averageCompletionRate}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Top performing form</p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-medium text-slate-500">Top performing form</p>
                 {analyticsSummary.topForm ? (
                   <Link
-                    className="mt-2 block text-base font-semibold leading-6 text-slate-950 hover:text-blue-700"
+                    className="mt-1 block text-sm font-semibold leading-5 text-slate-950 hover:text-blue-700"
                     href={`/dashboard/forms/${analyticsSummary.topForm.id}`}
                   >
                     {analyticsSummary.topForm.title}
-                    <span className="mt-1 block text-xs font-medium text-slate-500">
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500">
                       {analyticsSummary.topForm.submissions} submissions
                     </span>
                   </Link>
@@ -518,61 +505,61 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
         ) : null}
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-500">Total Forms</p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                <p className="text-xs font-medium text-slate-500">Total Forms</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                   {formStats.length}
                 </p>
               </div>
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <FileText className="h-5 w-5" />
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <FileText className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-500">Total Submissions</p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                <p className="text-xs font-medium text-slate-500">Total Submissions</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                   {submissionCount}
                 </p>
               </div>
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-                <Send className="h-5 w-5" />
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                <Send className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-500">Published Forms</p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                <p className="text-xs font-medium text-slate-500">Published Forms</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
                   {publishedFormCount}
                 </p>
               </div>
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                <CheckCircle2 className="h-5 w-5" />
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-500">Storage Provider</p>
-                <p className="mt-2 text-xl font-semibold capitalize text-slate-950">
+                <p className="text-xs font-medium text-slate-500">Storage Provider</p>
+                <p className="mt-1 text-lg font-semibold capitalize text-slate-950">
                   {storageLabel.toLowerCase()}
                 </p>
                 {uploadProvider?.activeProvider ? (
-                  <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <span className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
                     Active
                   </span>
                 ) : null}
               </div>
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                <HardDrive className="h-5 w-5" />
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <HardDrive className="h-4 w-4" />
               </span>
             </div>
           </div>
