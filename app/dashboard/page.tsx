@@ -24,10 +24,7 @@ import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-temp
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { prisma } from "@/lib/prisma";
 import {
-  allowedFieldTypeLabels,
-  featureLabels,
   getUserPlanAccess,
-  limitLabel,
 } from "@/lib/plans/limits";
 import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
 
@@ -452,6 +449,75 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
         ) : null}
 
+        {access?.limits.allowBasicAnalytics && analyticsSummary ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                  Analytics
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                  Last 30 days
+                </h2>
+              </div>
+              <Link
+                className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+                href="/dashboard/forms"
+              >
+                Review forms
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Form views</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.views}
+                </p>
+                {analyticsSummary.views === 0 ? (
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    No views yet. Share your form link or add it to your website
+                    to start collecting responses.
+                  </p>
+                ) : null}
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Submissions</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.submissions}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Completion rate</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                  {analyticsSummary.averageCompletionRate}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-500">Top performing form</p>
+                {analyticsSummary.topForm ? (
+                  <Link
+                    className="mt-2 block text-base font-semibold leading-6 text-slate-950 hover:text-blue-700"
+                    href={`/dashboard/forms/${analyticsSummary.topForm.id}`}
+                  >
+                    {analyticsSummary.topForm.title}
+                    <span className="mt-1 block text-xs font-medium text-slate-500">
+                      {analyticsSummary.topForm.submissions} submissions
+                    </span>
+                  </Link>
+                ) : (
+                  <p className="mt-2 text-sm font-medium text-slate-600">
+                    No submissions yet
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : access && !access.limits.allowBasicAnalytics ? (
+          <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900 shadow-sm">
+            Basic analytics are not included in your current plan.
+          </section>
+        ) : null}
+
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -534,13 +600,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </section>
 
         {shouldRenderOnboarding ? (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="fixed bottom-4 right-4 z-40 max-h-[calc(100vh-2rem)] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/15">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                   Setup Progress
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                <h2 className="mt-2 text-lg font-semibold text-slate-950">
                   Set up your FormOS workspace
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -549,11 +615,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </div>
               <form action={hideOnboardingChecklist}>
                 <SubmitButton
-                  className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                  className="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-50"
                   pendingText="Hiding checklist..."
                   showStatus={false}
                 >
-                  Hide setup checklist
+                  Hide
                 </SubmitButton>
               </form>
             </div>
@@ -573,42 +639,46 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             ) : null}
 
-            <div className="mt-6 grid gap-3">
+            <div className="mt-5 grid gap-2">
               {checklistItems.map((item) => (
                 <div
-                  className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[auto_1fr_auto] md:items-center"
+                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"
                   key={item.id}
                 >
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      item.completed
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-white text-slate-400"
-                    }`}
-                  >
-                    {item.completed ? (
-                      <CheckCircle2 className="h-5 w-5" />
-                    ) : (
-                      <Circle className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-slate-950">{item.title}</h3>
+                  <div className="flex gap-3">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                        item.completed
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-white text-slate-400"
+                      }`}
+                    >
                       {item.completed ? (
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                          Complete
-                        </span>
-                      ) : null}
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4" />
+                      )}
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      {item.description}
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold text-slate-950">
+                          {item.title}
+                        </h3>
+                        {item.completed ? (
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                            Complete
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-sm leading-5 text-slate-600">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
                   {item.formAction ? (
                     <form action={item.formAction}>
                       <SubmitButton
-                        className="w-full rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 md:w-fit"
+                        className="w-full rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                         pendingText="Sending..."
                         showStatus={false}
                       >
@@ -617,7 +687,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     </form>
                   ) : item.href ? (
                     <Link
-                      className={`inline-flex w-full justify-center rounded-md px-4 py-2.5 text-sm font-medium transition md:w-fit ${
+                      className={`inline-flex w-full justify-center rounded-2xl px-3 py-2 text-sm font-semibold transition ${
                         item.completed
                           ? "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
                           : "bg-blue-600 text-white hover:bg-blue-700"
@@ -627,7 +697,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       {item.actionLabel}
                     </Link>
                   ) : (
-                    <span className="rounded-md border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-medium text-slate-500">
+                    <span className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-sm font-semibold text-slate-500">
                       {item.actionLabel}
                     </span>
                   )}
@@ -636,162 +706,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </section>
         ) : workspaceContext?.isOwner && onboardingState?.dismissedAt ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-slate-950">
-                  Setup checklist is hidden.
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Show it again if you want to review workspace setup steps.
-                </p>
-              </div>
-              <form action={showOnboardingChecklist}>
-                <SubmitButton
-                  className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                  pendingText="Showing checklist..."
-                  showStatus={false}
-                >
-                  Show setup checklist
-                </SubmitButton>
-              </form>
-            </div>
-          </section>
-        ) : null}
-
-        {access ? (
-          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
-                  Current Plan
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  {access.plan.name}
-                </h2>
-              </div>
-              {access.hasCustomQuota ? (
-                <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                  Custom quota applied
-                </span>
-              ) : null}
-            </div>
-
-            {access.isUnlimitedEverything ? (
-              <p className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                Unlimited access is enabled for your account.
-              </p>
-            ) : null}
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Forms</p>
-                <p className="mt-1 text-lg font-semibold text-slate-950">
-                  {access.usage.formsUsed} / {limitLabel(access.limits.maxForms)}
-                </p>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Submissions this month</p>
-                <p className="mt-1 text-lg font-semibold text-slate-950">
-                  {access.usage.monthlySubmissionsUsed} /{" "}
-                  {limitLabel(access.limits.maxMonthlySubmissions)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-950">
-                Field types available
-              </p>
-              <p className="mt-1 text-sm leading-6 text-slate-700">
-                {allowedFieldTypeLabels(access.limits)}
-              </p>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {featureLabels(access.limits).map((feature) => (
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    feature.allowed
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
-                  key={feature.label}
-                >
-                  {feature.label}: {feature.allowed ? "Allowed" : "Blocked"}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {access?.limits.allowBasicAnalytics && analyticsSummary ? (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
-                  Analytics
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Last 30 days
-                </h2>
-              </div>
-              <Link
-                className="text-sm font-semibold text-blue-700 hover:text-blue-800"
-                href="/dashboard/forms"
-              >
-                Review forms
-              </Link>
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Form views</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {analyticsSummary.views}
-                </p>
-                {analyticsSummary.views === 0 ? (
-                  <p className="mt-2 text-xs leading-5 text-slate-500">
-                    No views yet. Share your form link or add it to your website
-                    to start collecting responses.
-                  </p>
-                ) : null}
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Submissions</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {analyticsSummary.submissions}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Completion rate</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {analyticsSummary.averageCompletionRate}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Top performing form</p>
-                {analyticsSummary.topForm ? (
-                  <Link
-                    className="mt-2 block text-base font-semibold leading-6 text-slate-950 hover:text-blue-700"
-                    href={`/dashboard/forms/${analyticsSummary.topForm.id}`}
-                  >
-                    {analyticsSummary.topForm.title}
-                    <span className="mt-1 block text-xs font-medium text-slate-500">
-                      {analyticsSummary.topForm.submissions} submissions
-                    </span>
-                  </Link>
-                ) : (
-                  <p className="mt-2 text-sm font-medium text-slate-600">
-                    No submissions yet
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
-        ) : access && !access.limits.allowBasicAnalytics ? (
-          <section className="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-            Basic analytics are not included in your current plan.
-          </section>
+          <form action={showOnboardingChecklist} className="fixed right-0 top-1/2 z-40 -translate-y-1/2">
+            <SubmitButton
+              className="rounded-l-2xl border border-r-0 border-blue-200 bg-white px-3 py-4 text-xs font-semibold text-blue-700 shadow-xl shadow-slate-950/10 transition hover:bg-blue-50 [writing-mode:vertical-rl]"
+              pendingText="Opening..."
+              showStatus={false}
+            >
+              Setup checklist
+            </SubmitButton>
+          </form>
         ) : null}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -808,7 +731,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               className="text-sm font-semibold text-blue-700 hover:text-blue-800"
               href="/dashboard/forms"
             >
-              View all →
+              View all -&gt;
             </Link>
           </div>
 
