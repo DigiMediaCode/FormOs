@@ -26,7 +26,15 @@ import {
   type DropboxFileMetadata,
 } from "@/lib/integrations/dropbox/client";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
-import { sendNewSubmissionNotification } from "@/lib/notifications/form-notifications";
+import {
+  sendCompletedSubmissionPdfNotifications,
+  sendNewSubmissionNotification,
+} from "@/lib/notifications/form-notifications";
+import {
+  formHasOfficeFields,
+  normalizePdfDeliveryMode,
+} from "@/lib/forms/pdf-delivery";
+import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import {
   assertCanReceiveSubmission,
   assertCanUseStorageProvider,
@@ -238,6 +246,10 @@ function logUploadError(message: string, details?: Record<string, unknown>) {
   console.error("[formos:upload]", message, details ?? {});
 }
 
+function logAutoPdfWarning(message: string, details?: Record<string, unknown>) {
+  console.warn("[formos:auto-pdf]", message, details ?? {});
+}
+
 function shortSubmissionId(submissionId: string) {
   return submissionId.slice(0, 8);
 }
@@ -253,6 +265,160 @@ function submissionFolderName(
   return submitterName
     ? `${submitterName} - ${shortId}`
     : `submission-${shortId}`;
+}
+
+async function maybeAutoGeneratePdfAfterSubmission(input: {
+  form: {
+    id: string;
+    ownerId: string;
+    title: string;
+    fields: unknown;
+    settings: unknown;
+    owner: {
+      email: string;
+    };
+  };
+  submissionId: string;
+}) {
+  const hasOfficeFields = formHasOfficeFields(input.form.fields);
+  const deliveryMode = normalizePdfDeliveryMode(input.form.settings, hasOfficeFields);
+
+  if (deliveryMode !== "AFTER_SUBMISSION" || hasOfficeFields) {
+    return;
+  }
+
+  const limits = await getUserEffectiveLimits(input.form.ownerId);
+
+  if (!limits.allowPdfGeneration) {
+    return;
+  }
+
+  const submission = await prisma.formSubmission.findUnique({
+    where: {
+      id: input.submissionId,
+    },
+    select: {
+      id: true,
+      formVersion: true,
+      formSnapshot: true,
+      data: true,
+      files: true,
+      signatures: true,
+      officeData: true,
+      createdAt: true,
+      officeCompletedAt: true,
+    },
+  });
+
+  if (!submission || submission.officeCompletedAt) {
+    return;
+  }
+
+  const completedAt = new Date();
+
+  try {
+    const pdf = await generateCompletedSubmissionPdf({
+      formTitle: input.form.title,
+      submissionId: submission.id,
+      formVersion: submission.formVersion,
+      formSnapshot: submission.formSnapshot,
+      data: submission.data,
+      officeData: submission.officeData,
+      signatures: submission.signatures,
+      files: submission.files,
+      submittedAt: submission.createdAt,
+      completedAt,
+      ownerId: input.form.ownerId,
+    });
+
+    await prisma.formSubmission.update({
+      where: {
+        id: submission.id,
+      },
+      data: {
+        officeCompletedAt: completedAt,
+      },
+    });
+
+    await createSubmissionEvent({
+      submissionId: submission.id,
+      formId: input.form.id,
+      ownerId: input.form.ownerId,
+      type: "pdf_auto_generated_after_submission",
+      message: "Completed PDF generated automatically after submission",
+    });
+
+    const emailResult = await sendCompletedSubmissionPdfNotifications({
+      ownerEmail: input.form.owner.email,
+      formTitle: input.form.title,
+      submissionId: submission.id,
+      completedAt,
+      formSnapshot: submission.formSnapshot,
+      data: submission.data,
+      pdf: {
+        fileName: pdf.fileName,
+        mimeType: pdf.mimeType,
+        content: pdf.buffer,
+      },
+    });
+
+    if (emailResult.ownerEmailSent) {
+      await createSubmissionEvent({
+        submissionId: submission.id,
+        formId: input.form.id,
+        ownerId: input.form.ownerId,
+        type: "pdf_auto_email_sent",
+        message: "Automatic completed PDF emailed to owner",
+        metadata: {
+          recipientType: "owner",
+        },
+      });
+    }
+
+    if (emailResult.submitterEmailSent) {
+      await createSubmissionEvent({
+        submissionId: submission.id,
+        formId: input.form.id,
+        ownerId: input.form.ownerId,
+        type: "pdf_auto_email_sent",
+        message: "Automatic completed PDF emailed to submitter",
+        metadata: {
+          recipientType: "submitter",
+        },
+      });
+    }
+
+    if (emailResult.ownerEmailFailed || emailResult.submitterEmailFailed) {
+      await createSubmissionEvent({
+        submissionId: submission.id,
+        formId: input.form.id,
+        ownerId: input.form.ownerId,
+        type: "pdf_auto_email_failed",
+        message: "Automatic completed PDF email failed",
+        metadata: {
+          ownerEmailFailed: emailResult.ownerEmailFailed,
+          submitterEmailFailed: emailResult.submitterEmailFailed,
+        },
+      });
+    }
+  } catch (error) {
+    logAutoPdfWarning("Automatic completed PDF failed safely.", {
+      formId: input.form.id,
+      submissionId: submission.id,
+      errorMessage: error instanceof Error ? error.message : "Unknown PDF error",
+    });
+
+    await createSubmissionEvent({
+      submissionId: submission.id,
+      formId: input.form.id,
+      ownerId: input.form.ownerId,
+      type: "pdf_auto_email_failed",
+      message: "Automatic completed PDF generation or email failed",
+      metadata: {
+        errorLabel: "pdf_generation_or_email",
+      },
+    });
+  }
 }
 
 export async function getPublishedFormForPublicView(formId: string) {
@@ -811,6 +977,11 @@ async function submitFormInternal(
     submissionId: submission.id,
     formTitle: form.title,
     submittedAt: submission.createdAt,
+  });
+
+  await maybeAutoGeneratePdfAfterSubmission({
+    form,
+    submissionId: submission.id,
   });
 
   await recordFormSubmit({

@@ -13,7 +13,12 @@ import {
   unpublishForm,
   updateForm,
 } from "@/lib/forms/actions";
-import { normalizeFormFields } from "@/lib/forms/fields";
+import { isOfficeField, normalizeFormFields } from "@/lib/forms/fields";
+import {
+  PDF_DELIVERY_MODE_LABELS,
+  PDF_DELIVERY_MODES,
+  normalizePdfDeliveryMode,
+} from "@/lib/forms/pdf-delivery";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
 import { getUserEffectiveLimits } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
@@ -92,6 +97,7 @@ export default async function FormDetailPage({
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
   const hasUploadFields = fields.some((field) => field.type === "image_upload");
+  const hasOfficeFields = fields.some(isOfficeField);
   const [uploadProvider, limits, analyticsSummary, submissionStats] = await Promise.all([
     getResolvedUploadProvider(form.ownerId),
     getUserEffectiveLimits(form.ownerId),
@@ -111,6 +117,7 @@ export default async function FormDetailPage({
   const hasFinalizedSubmission = submissionStats.some(
     (submission) => Boolean(submission.officeCompletedAt),
   );
+  const pdfDeliveryMode = normalizePdfDeliveryMode(form.settings, hasOfficeFields);
   const latestSubmissionId = submissionStats[0]?.id ?? null;
   const latestSubmissionAt = submissionStats[0]?.createdAt ?? null;
   const commandActions = [
@@ -557,6 +564,62 @@ export default async function FormDetailPage({
                 <option value={FormMode.BOOKING}>Booking</option>
               </select>
             </label>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-950">
+                    PDF Delivery
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Choose when FormOS should generate and email completed PDFs
+                    for this workflow.
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                  {limits.allowPdfGeneration ? "Available" : "Upgrade required"}
+                </span>
+              </div>
+
+              <label className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-800">
+                Delivery mode
+                <select
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  defaultValue={pdfDeliveryMode}
+                  disabled={!limits.allowPdfGeneration}
+                  name="pdfDeliveryMode"
+                >
+                  {PDF_DELIVERY_MODES.map((mode) => (
+                    <option
+                      disabled={mode === "AFTER_SUBMISSION" && hasOfficeFields}
+                      key={mode}
+                      value={mode}
+                    >
+                      {PDF_DELIVERY_MODE_LABELS[mode]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {!limits.allowPdfGeneration ? (
+                <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                  Completed PDF generation is not included in the owner's current
+                  plan. Upgrade to enable automatic PDF delivery.
+                </p>
+              ) : hasOfficeFields ? (
+                <p className="mt-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
+                  This form includes Office Use Only fields, so after-submission
+                  delivery is locked. Use after-finalization delivery when staff
+                  must review or complete internal fields first.
+                </p>
+              ) : (
+                <p className="mt-3 text-xs leading-5 text-slate-600">
+                  After-submission delivery is best for simple forms without
+                  internal review. PDF/email failures are logged safely and will
+                  not block customer submissions.
+                </p>
+              )}
+            </div>
 
             <SubmitButton
               className="w-fit rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"

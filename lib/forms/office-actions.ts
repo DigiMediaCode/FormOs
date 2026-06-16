@@ -204,6 +204,7 @@ export async function markOfficeCompleted(formId: string, submissionId: string) 
       files: completedSubmission.files,
       submittedAt: completedSubmission.createdAt,
       completedAt: completedSubmission.officeCompletedAt,
+      ownerId: context.ownerId,
     });
 
     await createSubmissionEvent({

@@ -76,6 +76,7 @@ export async function GET(
     files: submission.files,
     submittedAt: submission.createdAt,
     completedAt: submission.officeCompletedAt,
+    ownerId: context.ownerId,
   });
 
   return new NextResponse(pdf.buffer, {

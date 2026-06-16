@@ -5,7 +5,13 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { isOfficeField, validateFormFields } from "@/lib/forms/fields";
 import {
+  formHasOfficeFields,
+  isPdfDeliveryMode,
+  mergePdfDeliveryMode,
+} from "@/lib/forms/pdf-delivery";
+import {
   assertCanCreateForm,
+  assertCanGeneratePdf,
   assertCanUseConditionalLogic,
   assertCanUseFieldTypes,
   assertCanUseOfficeFields,
@@ -186,6 +192,7 @@ export async function updateForm(formId: string, formData: FormData) {
   const title = normalizeTitle(formData.get("title"));
   const description = normalizeDescription(formData.get("description"));
   const mode = parseFormMode(formData.get("mode"));
+  const pdfDeliveryModeValue = formData.get("pdfDeliveryMode");
   const errorPath = `/dashboard/forms/${formId}`;
 
   if (!title) {
@@ -203,11 +210,40 @@ export async function updateForm(formId: string, formData: FormData) {
     },
     select: {
       id: true,
+      fields: true,
+      settings: true,
     },
   });
 
   if (!existingForm) {
     notFound();
+  }
+
+  const pdfDeliveryMode = isPdfDeliveryMode(pdfDeliveryModeValue)
+    ? pdfDeliveryModeValue
+    : null;
+
+  if (pdfDeliveryMode && pdfDeliveryMode !== "MANUAL") {
+    try {
+      await assertCanGeneratePdf(context.ownerId);
+    } catch (error) {
+      errorRedirect(
+        errorPath,
+        error instanceof Error
+          ? error.message
+          : "Completed PDF generation is not included in your current plan.",
+      );
+    }
+  }
+
+  if (
+    pdfDeliveryMode === "AFTER_SUBMISSION" &&
+    formHasOfficeFields(existingForm.fields)
+  ) {
+    errorRedirect(
+      errorPath,
+      "After-submission PDFs are only available for forms without Office Use Only fields. Use after-finalization delivery for office workflows.",
+    );
   }
 
   await prisma.form.update({
@@ -218,6 +254,11 @@ export async function updateForm(formId: string, formData: FormData) {
       title,
       description,
       mode,
+      ...(pdfDeliveryMode
+        ? {
+            settings: mergePdfDeliveryMode(existingForm.settings, pdfDeliveryMode),
+          }
+        : {}),
     },
   });
 

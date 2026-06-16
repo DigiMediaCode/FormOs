@@ -3,12 +3,22 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { getAppUrl } from "@/lib/app-url";
 import {
   isOfficeField,
   normalizeFormFields,
   type FormBuilderField,
 } from "@/lib/forms/fields";
 import { isFieldVisible } from "@/lib/forms/conditional-logic";
+import {
+  getPlatformSettings,
+  getRenderablePlatformLogoUrl,
+  isSafePublicUrlOrPath,
+} from "@/lib/platform/settings";
+import {
+  getPublicWorkspaceBranding,
+  renderableWorkspaceLogoUrl,
+} from "@/lib/workspaces/branding";
 
 type CompletedSubmissionPdfInput = {
   formTitle: string;
@@ -21,6 +31,7 @@ type CompletedSubmissionPdfInput = {
   files: unknown;
   submittedAt: Date;
   completedAt: Date | null;
+  ownerId: string;
 };
 
 type PdfContext = {
@@ -41,7 +52,7 @@ const BOTTOM_MARGIN = 72;
 const TEXT_WIDTH = PAGE_WIDTH - MARGIN_X * 2;
 const MAX_SIGNATURE_DATA_URL_LENGTH = 750_000;
 const FOOTER_TEXT = "Form Created using FormOS";
-const LOGO_PATH = path.join(process.cwd(), "public", "pdf-logo.png");
+const DEFAULT_LOGO_PATHS = ["/formos-logo-v2.png", "/formos-logo.png", "/pdf-logo.png"];
 const COLORS = {
   ink: rgb(0.06, 0.1, 0.16),
   muted: rgb(0.4, 0.45, 0.52),
@@ -126,13 +137,102 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines.length > 0 ? lines : [""];
 }
 
-async function loadLogo(doc: PDFDocument) {
+async function readPublicAsset(assetPath: string) {
   try {
-    const logoBytes = await readFile(LOGO_PATH);
-    return await doc.embedPng(logoBytes);
+    return await readFile(path.join(process.cwd(), "public", assetPath.replace(/^\/+/, "")));
   } catch {
     return null;
   }
+}
+
+async function fetchImageBytes(url: string) {
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return new Uint8Array(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+function absoluteLogoUrl(pathOrUrl: string) {
+  if (!pathOrUrl || !isSafePublicUrlOrPath(pathOrUrl)) {
+    return "";
+  }
+
+  if (pathOrUrl.startsWith("https://")) {
+    return pathOrUrl;
+  }
+
+  if (process.env.NODE_ENV !== "production" && pathOrUrl.startsWith("http://")) {
+    return pathOrUrl;
+  }
+
+  if (pathOrUrl.startsWith("/")) {
+    return new URL(pathOrUrl, `${getAppUrl().replace(/\/+$/, "")}/`).toString();
+  }
+
+  return "";
+}
+
+async function embedLogoImage(doc: PDFDocument, sourceUrl: string) {
+  const bytes = sourceUrl.startsWith("/") && !sourceUrl.startsWith("/media/")
+    ? await readPublicAsset(sourceUrl)
+    : await fetchImageBytes(absoluteLogoUrl(sourceUrl));
+
+  if (!bytes) {
+    return null;
+  }
+
+  try {
+    return await doc.embedPng(bytes);
+  } catch {
+    try {
+      return await doc.embedJpg(bytes);
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function loadLogo(doc: PDFDocument, ownerId: string) {
+  const branding = await getPublicWorkspaceBranding(ownerId);
+  const workspaceLogoUrl = branding ? renderableWorkspaceLogoUrl(branding) : "";
+
+  if (workspaceLogoUrl) {
+    const logo = await embedLogoImage(doc, workspaceLogoUrl);
+
+    if (logo) {
+      return logo;
+    }
+  }
+
+  const platformSettings = await getPlatformSettings();
+  const platformLogoUrl = getRenderablePlatformLogoUrl(platformSettings);
+
+  if (platformLogoUrl) {
+    const logo = await embedLogoImage(doc, platformLogoUrl);
+
+    if (logo) {
+      return logo;
+    }
+  }
+
+  for (const fallbackPath of DEFAULT_LOGO_PATHS) {
+    const logo = await embedLogoImage(doc, fallbackPath);
+
+    if (logo) {
+      return logo;
+    }
+  }
+
+  return null;
 }
 
 function addPage(context: PdfContext) {
@@ -433,7 +533,7 @@ export async function generateCompletedSubmissionPdf(
     bold,
     y: PAGE_HEIGHT - TOP_MARGIN,
     pageStarted: false,
-    logo: await loadLogo(doc),
+    logo: await loadLogo(doc, input.ownerId),
   };
   const fields = snapshotFields(input.formSnapshot);
   const publicData = isRecord(input.data) ? input.data : {};
