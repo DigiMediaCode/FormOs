@@ -102,6 +102,7 @@ export default async function FormDetailPage({
       select: {
         id: true,
         officeCompletedAt: true,
+        createdAt: true,
       },
       take: 5,
     }),
@@ -111,6 +112,66 @@ export default async function FormDetailPage({
     (submission) => Boolean(submission.officeCompletedAt),
   );
   const latestSubmissionId = submissionStats[0]?.id ?? null;
+  const latestSubmissionAt = submissionStats[0]?.createdAt ?? null;
+  const commandActions = [
+    canManageForms
+      ? {
+          title: "Edit in Builder",
+          description: "Change fields, conditional logic, office fields, and required inputs.",
+          href: `/dashboard/forms/${form.id}/builder`,
+          label: "Open builder",
+        }
+      : null,
+    {
+      title: "View Submissions",
+      description: "Open the inbox for customer responses, uploads, and signatures.",
+      href: `/dashboard/forms/${form.id}/submissions`,
+      label: `${submissionStats.length} recent`,
+    },
+    {
+      title: "Open Public Form",
+      description: isPublished
+        ? "Preview the customer-facing form in a new tab."
+        : "Publish this form before sharing it with customers.",
+      href: publicPath,
+      label: isPublished ? "Open form" : "Draft",
+    },
+    {
+      title: "Copy Public Link",
+      description: "Use the QR card below to copy the public link for sharing.",
+      href: "#qr-code",
+      label: "Copy link",
+    },
+    {
+      title: "QR Code",
+      description: "Download or copy a QR-ready link for in-person sharing.",
+      href: "#qr-code",
+      label: limits.allowQrCode ? "View QR" : "Locked",
+    },
+    {
+      title: "Embed Form",
+      description: "Copy iframe or JavaScript embed snippets for your website.",
+      href: "#embed-form",
+      label: limits.allowEmbeds ? "Embed" : "Locked",
+    },
+    {
+      title: "View Analytics",
+      description: "Review views, submissions, completion rate, and source breakdown.",
+      href: "#analytics",
+      label: limits.allowBasicAnalytics ? "View stats" : "Locked",
+    },
+    {
+      title: "Form Settings",
+      description: "Edit title, description, mode, and status controls.",
+      href: "#form-settings",
+      label: "Settings",
+    },
+  ].filter((action): action is {
+    title: string;
+    description: string;
+    href: string;
+    label: string;
+  } => action !== null);
 
   return (
     <main className="min-h-screen px-6 py-10">
@@ -150,26 +211,97 @@ export default async function FormDetailPage({
           <GoogleDriveUploadWarning />
         ) : null}
 
-        {limits.allowQrCode ? (
-          <PublicFormQrCard
-            formId={form.id}
-            formSlug={form.slug}
-            publicFormUrl={publicFormUrl}
-            status={form.status}
-          />
-        ) : (
-          <section className="rounded-md border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-900">
-            QR codes are not included in your current plan.
-          </section>
-        )}
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                Command center
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                Run this workflow from one place
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                Jump straight to builder, submissions, sharing, analytics, and
+                settings without hunting through the dashboard.
+              </p>
+            </div>
+            <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+              {form.status}
+            </span>
+          </div>
 
-        <FormEmbedCard
-          allowEmbeds={limits.allowEmbeds}
-          embedUrl={embedUrl}
-          iframeCode={iframeEmbedCode}
-          isPublished={isPublished}
-          jsCode={jsEmbedCode}
-        />
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Views</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {analyticsSummary.views}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Submissions</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {analyticsSummary.submissions}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Completion rate</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {analyticsSummary.completionRate}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">Last submission</p>
+              <p className="mt-2 text-base font-semibold text-slate-950">
+                {latestSubmissionAt ? formatDate(latestSubmissionAt) : "None yet"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {commandActions.map((action) => (
+              <Link
+                className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:bg-blue-50"
+                href={action.href}
+                key={action.title}
+              >
+                <h3 className="text-sm font-semibold text-slate-950">
+                  {action.title}
+                </h3>
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  {action.description}
+                </p>
+                <span className="mt-3 inline-flex text-xs font-semibold text-blue-700">
+                  {action.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div id="qr-code">
+          {limits.allowQrCode ? (
+            <PublicFormQrCard
+              formId={form.id}
+              formSlug={form.slug}
+              publicFormUrl={publicFormUrl}
+              status={form.status}
+            />
+          ) : (
+            <section className="rounded-md border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-900">
+              QR codes are not included in your current plan.
+            </section>
+          )}
+        </div>
+
+        <div id="embed-form">
+          <FormEmbedCard
+            allowEmbeds={limits.allowEmbeds}
+            embedUrl={embedUrl}
+            iframeCode={iframeEmbedCode}
+            isPublished={isPublished}
+            jsCode={jsEmbedCode}
+          />
+        </div>
 
         <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -278,7 +410,7 @@ export default async function FormDetailPage({
         </section>
 
         {limits.allowBasicAnalytics ? (
-          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm" id="analytics">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
@@ -349,7 +481,7 @@ export default async function FormDetailPage({
           </section>
         )}
 
-        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-2 lg:grid-cols-4" id="form-settings">
           <div>
             <p className="text-sm font-medium text-slate-950">Mode</p>
             <p className="mt-1 text-sm text-slate-700">{form.mode}</p>

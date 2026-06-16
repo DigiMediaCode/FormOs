@@ -7,6 +7,7 @@ import {
   FilePenLine,
   FileText,
   Globe2,
+  Share2,
   Plus,
   QrCode,
 } from "lucide-react";
@@ -277,10 +278,17 @@ export default async function FormsPage() {
                       </Link>
                       <Link
                         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                        href={`/dashboard/forms/${form.id}`}
+                        href={`/dashboard/forms/${form.id}#qr-code`}
                       >
                         <QrCode className="h-4 w-4" />
                         QR
+                      </Link>
+                      <Link
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        href={`/dashboard/forms/${form.id}#embed-form`}
+                      >
+                        <Share2 className="h-4 w-4" />
+                        Embed/Share
                       </Link>
 
                       {canManageForms ? (

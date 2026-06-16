@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FormStatus, UserRole } from "@prisma/client";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Eye } from "lucide-react";
 import {
   hideOnboardingChecklist,
   showOnboardingChecklist,
@@ -66,6 +66,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     formStats,
     analyticsSummary,
     subscription,
+    recentSubmissions,
   ] = ownerId
     ? await Promise.all([
         getUserPlanAccess(ownerId),
@@ -83,6 +84,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           orderBy: { updatedAt: "desc" },
           select: {
             id: true,
+            title: true,
             status: true,
             _count: {
               select: { submissions: true },
@@ -112,8 +114,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             },
           },
         }),
+        prisma.formSubmission.findMany({
+          where: { ownerId },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            formId: true,
+            status: true,
+            createdAt: true,
+            form: {
+              select: {
+                title: true,
+              },
+            },
+          },
+        }),
       ])
-    : [null, null, null, null, [], null, null];
+    : [null, null, null, null, [], null, null, []];
   const shouldShowVerificationBanner =
     user && !user.emailVerifiedAt && user.role !== UserRole.SUPER_ADMIN;
   const shouldShowBusinessProfilePrompt =
@@ -628,6 +646,62 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
         ) : null}
 
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
+                Recent submissions
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                Latest workflow activity
+              </h2>
+            </div>
+            <Link
+              className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+              href="/dashboard/forms"
+            >
+              View all forms
+            </Link>
+          </div>
+
+          {recentSubmissions.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-semibold text-slate-950">
+                No submissions yet.
+              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Publish a form and share its link, QR code, or embed to collect
+                your first response.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200">
+              {recentSubmissions.map((submission) => (
+                <article
+                  className="grid gap-3 bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center"
+                  key={submission.id}
+                >
+                  <div>
+                    <p className="font-semibold text-slate-950">
+                      {submission.form.title}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {formatDate(submission.createdAt)} - {submission.status}
+                    </p>
+                  </div>
+                  <Link
+                    className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Link>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section>
           <Link
             className="block rounded-md border border-slate-200 bg-white p-6 transition hover:border-blue-300 hover:shadow-sm"
@@ -635,7 +709,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           >
             <p className="text-lg font-semibold text-slate-950">Forms</p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-              Placeholder for form creation, publishing, and submission review.
+              Open your workflow forms to manage fields, publish links, review
+              submissions, share QR codes, and configure embeds.
             </p>
           </Link>
         </section>

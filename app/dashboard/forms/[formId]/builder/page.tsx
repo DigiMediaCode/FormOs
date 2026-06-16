@@ -62,12 +62,23 @@ export default async function BuilderPage({
               />
             </Link>
             <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-            <Link
-              className="text-sm font-semibold text-slate-500 transition hover:text-slate-950"
-              href={`/dashboard/forms/${form.id}`}
-            >
-              Back to form
-            </Link>
+            <nav className="flex flex-wrap items-center gap-2 text-sm">
+              <Link
+                className="font-semibold text-slate-500 transition hover:text-slate-950"
+                href="/dashboard/forms"
+              >
+                Forms
+              </Link>
+              <span className="text-slate-300">/</span>
+              <Link
+                className="font-semibold text-slate-500 transition hover:text-slate-950"
+                href={`/dashboard/forms/${form.id}`}
+              >
+                {form.title}
+              </Link>
+              <span className="text-slate-300">/</span>
+              <span className="font-semibold text-slate-950">Builder</span>
+            </nav>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-semibold text-slate-950">
                 {form.title}
@@ -85,13 +96,30 @@ export default async function BuilderPage({
               </div>
             </div>
           </div>
-          <Link
-            className="w-fit rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-            href={`/f/${form.id}`}
-            target="_blank"
-          >
-            Preview Public Form
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              className="w-fit rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              href={`/dashboard/forms/${form.id}`}
+            >
+              Back to Form
+            </Link>
+            <Link
+              className="w-fit rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              href={`/dashboard/forms/${form.id}/submissions`}
+            >
+              View Submissions
+            </Link>
+            <Link
+              className="w-fit rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              href={`/f/${form.id}`}
+              target="_blank"
+            >
+              Open Public Form
+            </Link>
+            <span className="hidden rounded-lg bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 lg:inline-flex">
+              Save Fields below
+            </span>
+          </div>
         </div>
       </header>
 

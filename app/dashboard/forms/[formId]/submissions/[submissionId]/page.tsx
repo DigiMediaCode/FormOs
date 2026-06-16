@@ -151,9 +151,21 @@ export default async function SubmissionDetailPage({
     <main className="min-h-screen px-6 py-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <header className="border-b border-slate-200 pb-6">
-          <Link className="text-sm font-medium text-teal-700 hover:text-teal-800" href={`/dashboard/forms/${form.id}/submissions`}>
-            Back to submissions
-          </Link>
+          <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <Link className="font-medium text-blue-700 hover:text-blue-800" href="/dashboard/forms">
+              Forms
+            </Link>
+            <span>/</span>
+            <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}`}>
+              {form.title}
+            </Link>
+            <span>/</span>
+            <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}/submissions`}>
+              Submissions
+            </Link>
+            <span>/</span>
+            <span>Submission</span>
+          </nav>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-wide text-teal-700">

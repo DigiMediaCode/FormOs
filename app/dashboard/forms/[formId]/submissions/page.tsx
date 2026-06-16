@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft, Eye, FileUp, PenLine } from "lucide-react";
 import { getFormSubmissions } from "@/lib/forms/submissions";
 
 type SubmissionsPageProps = {
@@ -22,12 +23,20 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
     <main className="min-h-screen px-6 py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <header className="border-b border-slate-200 pb-6">
-          <Link className="text-sm font-medium text-teal-700 hover:text-teal-800" href={`/dashboard/forms/${form.id}`}>
-            Back to form
-          </Link>
+          <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <Link className="font-medium text-blue-700 hover:text-blue-800" href="/dashboard/forms">
+              Forms
+            </Link>
+            <span>/</span>
+            <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}`}>
+              {form.title}
+            </Link>
+            <span>/</span>
+            <span>Submissions</span>
+          </nav>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+              <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
                 Submissions
               </p>
               <h1 className="mt-2 text-3xl font-semibold text-slate-950">
@@ -37,36 +46,52 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                 Status: {form.status}
               </p>
             </div>
-            <div className="rounded-md border border-slate-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                href={`/dashboard/forms/${form.id}`}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to form
+              </Link>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-sm text-slate-700">Total submissions</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {submissions.length}
               </p>
+              </div>
             </div>
           </div>
         </header>
 
         {submissions.length === 0 ? (
-          <section className="rounded-md border border-dashed border-slate-300 bg-white p-8">
+          <section className="rounded-3xl border border-dashed border-blue-200 bg-blue-50 p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950">
               No submissions yet
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-              Public submissions for this form will appear here.
+              No submissions yet. Share your form link to collect your first response.
             </p>
+            <Link
+              className="mt-5 inline-flex rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              href={`/f/${form.id}`}
+            >
+              Open public form
+            </Link>
           </section>
         ) : (
-          <section className="overflow-hidden rounded-md border border-slate-200 bg-white">
-            <div className="hidden grid-cols-[180px_120px_120px_1fr_120px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 lg:grid">
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="hidden grid-cols-[180px_1fr_120px_150px_110px_110px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-sm font-medium text-slate-700 lg:grid">
               <span>Submitted</span>
-              <span>Status</span>
-              <span>Version</span>
+              <span>Submitter</span>
               <span>Preview</span>
+              <span>Status</span>
+              <span>Assets</span>
               <span>Details</span>
             </div>
             <div className="divide-y divide-slate-200">
               {submissions.map((submission) => (
-                <article className="grid gap-4 px-5 py-4 lg:grid-cols-[180px_120px_120px_1fr_120px]" key={submission.id}>
+                <article className="grid gap-4 px-5 py-4 lg:grid-cols-[180px_1fr_120px_150px_110px_110px] lg:items-center" key={submission.id}>
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
                       Submitted
@@ -77,15 +102,12 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                   </div>
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
-                      Status
+                      Submitter
                     </p>
-                    <p className="text-sm text-slate-800">{submission.status}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
-                      Version
+                    <p className="text-sm font-semibold text-slate-950">
+                      {submission.submitterIdentity}
                     </p>
-                    <p className="text-sm text-slate-800">
+                    <p className="mt-1 text-xs text-slate-500">
                       v{submission.formVersion}
                     </p>
                   </div>
@@ -98,11 +120,37 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                     </p>
                   </div>
                   <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+                      Status
+                    </p>
+                    <p className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {submission.status}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500 lg:hidden">
+                      Assets
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                        <FileUp className="h-3.5 w-3.5" />
+                        {Number(submission.fileCount)}
+                      </span>
+                      {Boolean(submission.hasSignature) ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                          <PenLine className="h-3.5 w-3.5" />
+                          Signed
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div>
                     <Link
-                      className="text-sm font-medium text-teal-700 hover:text-teal-800"
+                      className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                       href={`/dashboard/forms/${form.id}/submissions/${submission.id}`}
                     >
-                      View details
+                      <Eye className="h-4 w-4" />
+                      View
                     </Link>
                   </div>
                 </article>

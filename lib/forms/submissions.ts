@@ -329,6 +329,58 @@ export function buildSubmissionPreview(fields: FormBuilderField[], data: unknown
   return answers.map((answer) => `${answer.label}: ${answer.value}`).join(" | ");
 }
 
+function countSubmissionFiles(files: unknown) {
+  if (!isRecord(files)) {
+    return 0;
+  }
+
+  return Object.values(files).reduce<number>(
+    (total, value) => total + normalizeFileMetadataList(value).length,
+    0,
+  );
+}
+
+function hasSubmissionSignature(signatures: unknown) {
+  if (!isRecord(signatures)) {
+    return false;
+  }
+
+  return Object.values(signatures).some(isValidImageDataUrl);
+}
+
+function inferSubmitterIdentity(fields: FormBuilderField[], data: unknown) {
+  if (!isRecord(data)) {
+    return "Unknown submitter";
+  }
+
+  const emailField = fields.find(
+    (field) =>
+      isPublicField(field) &&
+      field.type === "email" &&
+      typeof data[field.id] === "string" &&
+      String(data[field.id]).trim().length > 0,
+  );
+
+  if (emailField) {
+    return String(data[emailField.id]).trim();
+  }
+
+  const nameField = fields.find(
+    (field) =>
+      isPublicField(field) &&
+      field.type === "text" &&
+      /name|customer|client/i.test(`${field.label} ${field.placeholder}`) &&
+      typeof data[field.id] === "string" &&
+      String(data[field.id]).trim().length > 0,
+  );
+
+  if (nameField) {
+    return String(data[nameField.id]).trim();
+  }
+
+  return "Unknown submitter";
+}
+
 export async function getFormSubmissions(formId: string) {
   const context = await requireWorkspaceMember();
   const form = await prisma.form.findFirst({
@@ -377,6 +429,9 @@ export async function getFormSubmissions(formId: string) {
       return {
         ...submission,
         snapshot,
+        fileCount: countSubmissionFiles(submission.files),
+        hasSignature: hasSubmissionSignature(submission.signatures),
+        submitterIdentity: inferSubmitterIdentity(snapshot.fields, submission.data),
         preview: buildSubmissionPreview(snapshot.fields, submission.data),
       };
     }),
