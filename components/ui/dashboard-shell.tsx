@@ -140,12 +140,12 @@ export function DashboardShell({
 
           {mobileMenuOpen ? (
             <div
-              className="fixed inset-0 z-50 bg-white lg:hidden"
+              className="fixed inset-0 z-50 bg-slate-50 lg:hidden"
               role="dialog"
               aria-modal="true"
             >
-              <div className="flex h-full min-h-dvh flex-col">
-                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div className="flex h-full min-h-dvh flex-col bg-slate-50">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-sm">
                   <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                     <img
                       alt="FormOS"
@@ -163,8 +163,8 @@ export function DashboardShell({
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 py-5">
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-5">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                         <UserCircle className="h-5 w-5" />
@@ -179,10 +179,12 @@ export function DashboardShell({
                       </span>
                     </div>
                   </div>
-                  <div className="mt-4">{navContent}</div>
+                  <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+                    {navContent}
+                  </div>
                 </div>
 
-                <div className="border-t border-slate-200 bg-slate-50/80 p-5">
+                <div className="border-t border-slate-200 bg-slate-50 p-5">
                   {profileMenu}
                 </div>
               </div>
