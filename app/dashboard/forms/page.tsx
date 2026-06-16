@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: FormStatus }) {
 
 function smallActionClass(kind: "primary" | "secondary" | "muted" = "secondary") {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+    "group relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
 
   if (kind === "primary") {
     return `${base} bg-blue-600 text-white shadow-sm shadow-blue-950/15 hover:bg-blue-700`;
@@ -63,6 +63,17 @@ function smallActionClass(kind: "primary" | "secondary" | "muted" = "secondary")
   }
 
   return `${base} border border-slate-200 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800`;
+}
+
+function TooltipLabel({ label }: { label: string }) {
+  return (
+    <>
+      <span className="sr-only">{label}</span>
+      <span className="pointer-events-none absolute -top-9 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-2.5 py-1 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-visible:opacity-100">
+        {label}
+      </span>
+    </>
+  );
 }
 
 export default async function FormsPage() {
@@ -256,63 +267,76 @@ export default async function FormsPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 lg:min-w-[36rem]">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="flex flex-col gap-2 lg:min-w-[22rem]">
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Link
+                        aria-label="Manage"
                         className={smallActionClass("primary")}
                         href={`/dashboard/forms/${form.id}`}
+                        title="Manage"
                       >
                         <Eye className="h-4 w-4" />
-                        Manage
+                        <TooltipLabel label="Manage" />
                       </Link>
                       <Link
+                        aria-label="Builder"
                         className={smallActionClass()}
                         href={`/dashboard/forms/${form.id}/builder`}
+                        title="Builder"
                       >
                         <FilePenLine className="h-4 w-4" />
-                        Builder
+                        <TooltipLabel label="Builder" />
                       </Link>
                       <Link
+                        aria-label="Submissions"
                         className={smallActionClass()}
                         href={`/dashboard/forms/${form.id}/submissions`}
+                        title="Submissions"
                       >
                         <ClipboardList className="h-4 w-4" />
-                        Submissions
+                        <TooltipLabel label="Submissions" />
                       </Link>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
                       <Link
+                        aria-label="Open public form"
                         className={smallActionClass("muted")}
                         href={publicPath}
+                        title="Open public form"
                       >
                         <Globe2 className="h-4 w-4" />
-                        Public
+                        <TooltipLabel label="Public" />
                       </Link>
                       <Link
+                        aria-label="QR code"
                         className={smallActionClass("muted")}
                         href={`/dashboard/forms/${form.id}#qr-code`}
+                        title="QR code"
                       >
                         <QrCode className="h-4 w-4" />
-                        QR
+                        <TooltipLabel label="QR" />
                       </Link>
                       <Link
+                        aria-label="Embed and share"
                         className={smallActionClass("muted")}
                         href={`/dashboard/forms/${form.id}#embed-form`}
+                        title="Embed and share"
                       >
                         <Share2 className="h-4 w-4" />
-                        Embed
+                        <TooltipLabel label="Embed" />
                       </Link>
 
                       {canManageForms ? (
                       <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
                         <SubmitButton
-                          className={`w-full ${smallActionClass("muted")}`}
+                          className={smallActionClass("muted")}
                           disabled={isArchived}
-                          pendingText={isPublished ? "Unpublishing form..." : "Publishing form..."}
+                          pendingText="..."
                           showStatus={false}
+                          title={isPublished ? "Unpublish" : "Publish"}
                         >
                           <FileText className="h-4 w-4" />
-                          {isPublished ? "Unpublish" : "Publish"}
+                          <TooltipLabel label={isPublished ? "Unpublish" : "Publish"} />
                         </SubmitButton>
                       </form>
                       ) : null}
@@ -320,13 +344,14 @@ export default async function FormsPage() {
                       {canManageForms ? (
                       <form action={archiveForm.bind(null, form.id)}>
                         <SubmitButton
-                          className={`w-full ${smallActionClass("muted")}`}
+                          className={smallActionClass("muted")}
                           disabled={isArchived}
-                          pendingText="Archiving form..."
+                          pendingText="..."
                           showStatus={false}
+                          title="Archive"
                         >
                           <Archive className="h-4 w-4" />
-                          Archive
+                          <TooltipLabel label="Archive" />
                         </SubmitButton>
                       </form>
                       ) : null}
