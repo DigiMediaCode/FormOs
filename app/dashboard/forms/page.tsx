@@ -50,6 +50,21 @@ function StatusBadge({ status }: { status: FormStatus }) {
   );
 }
 
+function smallActionClass(kind: "primary" | "secondary" | "muted" = "secondary") {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+
+  if (kind === "primary") {
+    return `${base} bg-blue-600 text-white shadow-sm shadow-blue-950/15 hover:bg-blue-700`;
+  }
+
+  if (kind === "muted") {
+    return `${base} border border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900`;
+  }
+
+  return `${base} border border-slate-200 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800`;
+}
+
 export default async function FormsPage() {
   const context = await requireWorkspaceMember();
   const canManageForms = canManageWorkspaceForms(context);
@@ -196,12 +211,15 @@ export default async function FormsPage() {
           </section>
         ) : (
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+            <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-slate-950">
                 {forms.length} {forms.length === 1 ? "workflow" : "workflows"}
               </p>
+              <p className="text-xs text-slate-500">
+                Manage forms, submissions, sharing, and publishing from one place.
+              </p>
             </div>
-            <div className="grid gap-0">
+            <div className="grid gap-0 divide-y divide-slate-200">
               {forms.map((form) => {
                 const isPublished = form.status === FormStatus.PUBLISHED;
                 const isArchived = form.status === FormStatus.ARCHIVED;
@@ -209,92 +227,86 @@ export default async function FormsPage() {
 
                 return (
                   <article
-                    className="grid gap-5 border-b border-slate-200 p-5 last:border-b-0 hover:bg-slate-50/60 lg:grid-cols-[1fr_auto]"
+                    className="grid gap-4 p-4 hover:bg-slate-50/60 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
                     key={form.id}
                   >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="text-lg font-semibold text-slate-950">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="min-w-0 text-base font-semibold text-slate-950">
                           {form.title}
                         </h2>
                         <StatusBadge status={form.status} />
                       </div>
-                      <dl className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2 xl:grid-cols-5">
-                        <div>
-                          <dt className="font-medium text-slate-950">Mode</dt>
-                          <dd>{form.mode}</dd>
-                        </div>
-                        <div>
-                          <dt className="font-medium text-slate-950">Submissions</dt>
-                          <dd>{form._count.submissions}</dd>
-                        </div>
-                        <div>
-                          <dt className="font-medium text-slate-950">Created</dt>
-                          <dd>{formatDate(form.createdAt)}</dd>
-                        </div>
-                        <div>
-                          <dt className="font-medium text-slate-950">Updated</dt>
-                          <dd>{formatDate(form.updatedAt)}</dd>
-                        </div>
-                        <div>
-                          <dt className="font-medium text-slate-950">Public link</dt>
-                          <dd>
-                            <Link className="text-blue-700 hover:text-blue-800" href={publicPath}>
-                              {publicPath}
-                            </Link>
-                          </dd>
-                        </div>
-                      </dl>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {form.mode}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          {form._count.submissions} submissions
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                          Updated {formatDate(form.updatedAt)}
+                        </span>
+                        <Link
+                          className="min-w-0 max-w-full truncate rounded-full bg-blue-50 px-2.5 py-1 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+                          href={publicPath}
+                        >
+                          {publicPath}
+                        </Link>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
+                    <div className="flex flex-col gap-2 lg:min-w-[36rem]">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass("primary")}
                         href={`/dashboard/forms/${form.id}`}
                       >
                         <Eye className="h-4 w-4" />
                         Manage
                       </Link>
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass()}
                         href={`/dashboard/forms/${form.id}/builder`}
                       >
                         <FilePenLine className="h-4 w-4" />
                         Builder
                       </Link>
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass()}
                         href={`/dashboard/forms/${form.id}/submissions`}
                       >
                         <ClipboardList className="h-4 w-4" />
                         Submissions
                       </Link>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass("muted")}
                         href={publicPath}
                       >
                         <Globe2 className="h-4 w-4" />
                         Public
                       </Link>
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass("muted")}
                         href={`/dashboard/forms/${form.id}#qr-code`}
                       >
                         <QrCode className="h-4 w-4" />
                         QR
                       </Link>
                       <Link
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className={smallActionClass("muted")}
                         href={`/dashboard/forms/${form.id}#embed-form`}
                       >
                         <Share2 className="h-4 w-4" />
-                        Embed/Share
+                        Embed
                       </Link>
 
                       {canManageForms ? (
                       <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
                         <SubmitButton
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className={`w-full ${smallActionClass("muted")}`}
                           disabled={isArchived}
                           pendingText={isPublished ? "Unpublishing form..." : "Publishing form..."}
                           showStatus={false}
@@ -308,7 +320,7 @@ export default async function FormsPage() {
                       {canManageForms ? (
                       <form action={archiveForm.bind(null, form.id)}>
                         <SubmitButton
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className={`w-full ${smallActionClass("muted")}`}
                           disabled={isArchived}
                           pendingText="Archiving form..."
                           showStatus={false}
@@ -318,6 +330,7 @@ export default async function FormsPage() {
                         </SubmitButton>
                       </form>
                       ) : null}
+                      </div>
                     </div>
                   </article>
                 );
