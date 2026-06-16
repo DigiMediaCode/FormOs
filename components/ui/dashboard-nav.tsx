@@ -75,8 +75,10 @@ function isActivePath(pathname: string, href: string) {
 
 export function DashboardNav({
   canManageOwnerSettings = true,
+  onNavigate,
 }: {
   canManageOwnerSettings?: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const isBuilder = /\/dashboard\/forms\/[^/]+\/builder/.test(pathname);
@@ -103,6 +105,7 @@ export function DashboardNav({
             }`}
             href={item.href}
             key={item.href}
+            onClick={onNavigate}
           >
             <Icon className="h-4 w-4" />
             {item.label}

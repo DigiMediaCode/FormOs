@@ -98,6 +98,11 @@ export async function getUserForms() {
       status: true,
       createdAt: true,
       updatedAt: true,
+      _count: {
+        select: {
+          submissions: true,
+        },
+      },
     },
   });
 }

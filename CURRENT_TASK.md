@@ -1,14 +1,8 @@
-# CURRENT TASK — FormOS Milestone 41: Launch Onboarding Flow
+# CURRENT TASK - FormOS Milestone 43: Backend UI Polish + Mobile Navigation Fix
 
 ## Current Status
 
-* Conditional Logic / Branching MVP is complete.
-* Vertical Workflow Templates v1 is complete.
-* Plan-based trials are complete.
-* Template landing pages are complete.
-* Homepage/pricing positioning alignment is complete.
-* Basic analytics is complete.
-* Public pages have AdSense support where appropriate.
+FormOS is almost ready for beta outreach. Before outreach, fix backend/dashboard UX issues and polish the UI using the FlowStep design direction.
 
 ## Strategic Positioning
 
@@ -16,192 +10,49 @@ FormOS is **the form builder that finishes the job.**
 
 ## Goal
 
-Improve onboarding so new users quickly reach their first successful workflow:
-
-choose template → create form → connect storage → publish → submit test response → review submission → finalize/PDF → share/embed.
+Improve authenticated/backend usability without building major new product features or breaking existing forms, submissions, billing, templates, analytics, public forms, embeds, WordPress, or Shopify.
 
 ## Requirements
 
-### 1. Dashboard Welcome Checklist
+### 1. Mobile Navigation
 
-On `/dashboard`, show onboarding checklist cards for new/early users.
+Dashboard and Super Admin navigation must be collapsed behind a menu button on mobile. Content should be visible immediately, the menu must open/close, and it should close after selecting a link.
 
-Items:
+### 2. Backend UI Polish
 
-* Choose a workflow template
-* Create your first form
-* Connect storage
-* Publish your form
-* Submit a test response
-* Review your first submission
-* Generate/finalize PDF where available
-* Share your form by link/QR/embed
+Polish authenticated areas with modern SaaS styling:
 
-Each item should show:
+* `/dashboard`
+* `/dashboard/forms`
+* `/dashboard/forms/new`
+* `/dashboard/forms/[formId]`
+* `/dashboard/forms/[formId]/builder`
+* `/dashboard/forms/[formId]/submissions`
+* `/dashboard/forms/[formId]/submissions/[submissionId]`
+* `/dashboard/settings/*`
+* `/admin`
+* `/admin/users`
+* `/admin/forms`
+* `/admin/settings`
 
-* completion status
-* short explanation
-* CTA button
+Focus on clean cards, spacing, blue primary actions, badges, compact lists, usable mobile layout, and friendly empty states.
 
-Use real user data where possible:
+### 3. Forms List
 
-* forms count
-* published forms count
-* submissions count
-* storage connection status
-* trial/plan status
-* analytics counts
+Forms list should clearly show title, status, mode/category, submissions count, last updated, and quick actions including direct Submissions access.
 
-### 2. Template Context From Signup
+### 4. Preserve Functionality
 
-Template landing pages already send logged-out users to signup with template context.
+Do not break builder, conditional logic, office fields, submissions, storage, billing, templates, public forms, embeds, WordPress, or Shopify.
 
-Support query params such as:
+### 5. AdSense Rule
 
-`?template=vehicle-hire-agreement`
+Do not add AdSense to dashboard, admin, auth, checkout, or form submission controls.
 
-After signup/login, preserve or use template context where practical.
-
-Preferred:
-
-* show dashboard prompt: `Start with Vehicle Hire Agreement`
-* CTA to `/dashboard/forms/new?template=vehicle-hire-agreement`
-  or directly start template creation if existing flow supports it safely.
-
-Do not overbuild if auth redirect makes this risky.
-
-### 3. Empty Forms State
-
-On `/dashboard/forms`, if user has no forms:
-
-* show title: `Start with a workflow, not a blank page.`
-* show copy explaining templates
-* show CTAs:
-  * Browse templates
-  * Create blank form
-* show template cards for the 5 vertical templates
-
-### 4. Form Detail Next Steps
-
-On `/dashboard/forms/[formId]`, show next-step cards based on form state.
-
-If draft:
-
-* Finish builder
-* Publish form
-
-If published with no submissions:
-
-* Open public form
-* Submit a test response
-* Copy link
-* Download/share QR
-* Embed on website
-
-If published with submissions:
-
-* Review submissions
-* Complete office fields
-* Generate/finalize PDF if available
-* View analytics
-
-### 5. Storage Setup Prompt
-
-If a form contains file upload fields and owner has no active Google Drive/Dropbox storage:
-
-show warning:
-
-`This form collects files. Connect Google Drive or Dropbox before sharing it.`
-
-CTA:
-
-`Connect storage`
-
-Show this on form detail and/or builder where appropriate.
-
-### 6. Trial/Plan Awareness
-
-If user is trialing:
-
-show banner:
-
-`You are on a {PlanName} trial. Trial ends on {date}.`
-
-CTA:
-
-`Manage billing`
-
-If user is Free and a feature is locked:
-
-show subtle upgrade message, not aggressive spam.
-
-### 7. Analytics Empty State
-
-Where analytics summary shows zero views:
-
-show helpful copy:
-
-`No views yet. Share your form link or add it to your website to start collecting responses.`
-
-### 8. AdSense Rule
-
-Do not add AdSense to dashboard/authenticated onboarding pages.
-
-Ads only belong on public marketing/content pages.
-
-### 9. Permissions
-
-Onboarding must respect existing effective limits:
-
-* allowTemplates
-* allowGoogleDrive
-* allowDropbox
-* allowPdfGeneration
-* allowQrCode
-* allowEmbeds
-* allowApiAccess
-* allowTeamMembers
-* etc.
-
-Do not bypass server-side enforcement.
-The UI should guide users but final actions remain protected server-side.
-
-### 10. Design
-
-Use clean modern SaaS dashboard cards.
-Keep mobile responsive.
-Do not break existing nav.
-Do not create huge text walls.
-
-### 11. Existing Flows Must Still Work
-
-* form builder
-* template creation
-* public forms
-* embed route
-* WordPress plugin
-* Shopify app
-* analytics
-* billing/trials
-* storage integrations
-* PDF/finalization
-
-### 12. Commands
+### 6. Commands
 
 Run:
 
 * `npx prisma validate`
 * `npx prisma generate`
 * `npm run build`
-
-## Return
-
-* files changed
-* onboarding checklist logic
-* template context support implemented
-* empty state updates
-* form detail next-step updates
-* storage warning logic
-* trial banner logic
-* confirmation no dashboard AdSense added
-* confirmation build passes
