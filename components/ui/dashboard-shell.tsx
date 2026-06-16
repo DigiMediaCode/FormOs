@@ -80,8 +80,8 @@ export function DashboardShell({
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside className="hidden border-r border-slate-200 bg-white px-5 py-6 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
+    <div className="min-h-screen bg-[#f6f8fb] lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <aside className="hidden border-r border-slate-200/80 bg-white/95 px-5 py-6 shadow-sm lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div>
           <Link href="/dashboard">
             <img
@@ -92,10 +92,10 @@ export function DashboardShell({
           </Link>
         </div>
 
-        <div className="mt-6">{navContent}</div>
+        <div className="mt-7">{navContent}</div>
 
         <div className="group relative mt-4 hidden lg:mt-auto lg:block">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition group-hover:border-blue-200 group-hover:shadow-md">
+          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-3 shadow-sm transition group-hover:border-blue-200 group-hover:shadow-md">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                 <UserCircle className="h-5 w-5" />
@@ -118,7 +118,7 @@ export function DashboardShell({
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:px-8 lg:py-4">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl lg:px-8 lg:py-4">
           <div className="mb-3 flex items-center justify-between gap-3 lg:hidden">
             <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
               <img
@@ -139,30 +139,61 @@ export function DashboardShell({
           </div>
 
           {mobileMenuOpen ? (
-            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-950/10 lg:hidden">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                    <UserCircle className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-950">
-                      {userName || "FormOS User"}
-                    </span>
-                    <span className="block truncate text-xs text-slate-500">
-                      {userEmail}
-                    </span>
-                  </span>
+            <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+              <button
+                aria-label="Close menu"
+                className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
+                onClick={() => setMobileMenuOpen(false)}
+                type="button"
+              />
+              <div className="relative flex h-full w-[min(21rem,calc(100vw-2rem))] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                    <img
+                      alt="FormOS"
+                      className="h-auto max-w-[112px] object-contain"
+                      src="/formos-logo.png"
+                    />
+                  </Link>
+                  <button
+                    aria-label="Close menu"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    onClick={() => setMobileMenuOpen(false)}
+                    type="button"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-4 py-4">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <UserCircle className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-950">
+                          {userName || "FormOS User"}
+                        </span>
+                        <span className="block truncate text-xs text-slate-500">
+                          {userEmail}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4">{navContent}</div>
+                </div>
+
+                <div className="border-t border-slate-200 p-4">
+                  {profileMenu}
                 </div>
               </div>
-              <div className="mt-3">{navContent}</div>
-              <div className="mt-3">{profileMenu}</div>
             </div>
           ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                 FormOS Workspace
               </p>
               <p className="mt-1 text-sm text-slate-600">
@@ -172,7 +203,7 @@ export function DashboardShell({
             <div className="flex gap-2">
               {canManageOwnerSettings ? (
                 <Link
-                  className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
+                className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 sm:inline-flex"
                   href="/dashboard/settings/api-tokens"
                 >
                   <KeyRound className="h-4 w-4" />
@@ -180,13 +211,13 @@ export function DashboardShell({
                 </Link>
               ) : null}
               <Link
-                className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
+                className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 sm:inline-flex"
                 href="/dashboard/forms"
               >
                 Forms
               </Link>
               <Link
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                className="rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
                 href="/dashboard/forms/new"
               >
                 New Form

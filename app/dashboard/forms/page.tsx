@@ -73,8 +73,8 @@ export default async function FormsPage() {
   }));
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
+    <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -90,7 +90,7 @@ export default async function FormsPage() {
 
           {canManageForms ? (
             <Link
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:mt-0"
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700 sm:mt-0"
               href="/dashboard/forms/new"
             >
               <Plus className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default async function FormsPage() {
               </p>
             </div>
             <Link
-              className="rounded-xl border border-blue-100 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
+              className="rounded-2xl border border-blue-100 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50"
               href="/dashboard/forms/new"
             >
               View all templates
@@ -168,7 +168,7 @@ export default async function FormsPage() {
         ) : null}
 
         {forms.length === 0 ? (
-          <section className="rounded-3xl border border-dashed border-blue-200 bg-blue-50 p-8 shadow-sm">
+          <section className="rounded-3xl border border-dashed border-blue-200 bg-gradient-to-br from-blue-50 to-white p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-slate-950">
               Start with a workflow, not a blank page.
             </h2>
@@ -180,13 +180,13 @@ export default async function FormsPage() {
             {canManageForms ? (
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link
-                  className="inline-flex rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+                  className="inline-flex rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                   href="/dashboard/forms/new"
                 >
                   Browse templates
                 </Link>
                 <Link
-                  className="inline-flex rounded-md border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-blue-50"
+                  className="inline-flex rounded-2xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-blue-50"
                   href="/dashboard/forms/new#blank-form"
                 >
                   Create blank form
@@ -209,7 +209,7 @@ export default async function FormsPage() {
 
                 return (
                   <article
-                    className="grid gap-5 border-b border-slate-200 p-5 last:border-b-0 lg:grid-cols-[1fr_auto]"
+                    className="grid gap-5 border-b border-slate-200 p-5 last:border-b-0 hover:bg-slate-50/60 lg:grid-cols-[1fr_auto]"
                     key={form.id}
                   >
                     <div>
@@ -219,7 +219,7 @@ export default async function FormsPage() {
                         </h2>
                         <StatusBadge status={form.status} />
                       </div>
-                      <dl className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-5">
+                      <dl className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2 xl:grid-cols-5">
                         <div>
                           <dt className="font-medium text-slate-950">Mode</dt>
                           <dd>{form.mode}</dd>
@@ -247,44 +247,44 @@ export default async function FormsPage() {
                       </dl>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:justify-end">
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}`}
                       >
                         <Eye className="h-4 w-4" />
                         Manage
                       </Link>
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}/builder`}
                       >
                         <FilePenLine className="h-4 w-4" />
                         Builder
                       </Link>
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}/submissions`}
                       >
                         <ClipboardList className="h-4 w-4" />
                         Submissions
                       </Link>
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={publicPath}
                       >
                         <Globe2 className="h-4 w-4" />
                         Public
                       </Link>
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}#qr-code`}
                       >
                         <QrCode className="h-4 w-4" />
                         QR
                       </Link>
                       <Link
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}#embed-form`}
                       >
                         <Share2 className="h-4 w-4" />
@@ -294,7 +294,7 @@ export default async function FormsPage() {
                       {canManageForms ? (
                       <form action={isPublished ? unpublishForm.bind(null, form.id) : publishForm.bind(null, form.id)}>
                         <SubmitButton
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isArchived}
                           pendingText={isPublished ? "Unpublishing form..." : "Publishing form..."}
                           showStatus={false}
@@ -308,7 +308,7 @@ export default async function FormsPage() {
                       {canManageForms ? (
                       <form action={archiveForm.bind(null, form.id)}>
                         <SubmitButton
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
                           disabled={isArchived}
                           pendingText="Archiving form..."
                           showStatus={false}

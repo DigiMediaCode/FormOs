@@ -34,16 +34,19 @@ export default async function AdminFormsPage({ searchParams }: AdminFormsPagePro
   const forms = await getAdminForms();
 
   return (
-    <main className="px-4 py-6 lg:px-6">
+    <main className="px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto max-w-[92rem]">
-        <div className="flex items-end justify-between gap-4">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">
               Super Admin
             </p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">Forms</h2>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Forms</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Inspect form structure and safely archive or remove forms.
+            </p>
           </div>
-          <p className="text-sm text-slate-500">{forms.length} forms</p>
+          <p className="mt-3 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700 sm:mt-0">{forms.length} forms</p>
         </div>
         {success ? (
           <p className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -55,7 +58,7 @@ export default async function AdminFormsPage({ searchParams }: AdminFormsPagePro
             {error}
           </p>
         ) : null}
-        <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="mt-5 overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
           <table className="min-w-[860px] divide-y divide-slate-200 text-xs">
             <thead className="bg-slate-50 text-left text-[11px] uppercase tracking-wide text-slate-500">
               <tr>

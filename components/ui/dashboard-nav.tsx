@@ -88,7 +88,7 @@ export function DashboardNav({
   }
 
   return (
-    <nav className="grid gap-1" aria-label="Dashboard navigation">
+    <nav className="grid gap-1.5" aria-label="Dashboard navigation">
       {NAV_ITEMS.filter(
         (item) => canManageOwnerSettings || !item.ownerOnly,
       ).map((item) => {
@@ -98,16 +98,16 @@ export function DashboardNav({
         return (
           <Link
             aria-current={isActive ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
               isActive
                 ? "bg-blue-600 text-white shadow-sm shadow-blue-950/20"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                : "text-slate-600 hover:bg-blue-50 hover:text-blue-800"
             }`}
             href={item.href}
             key={item.href}
             onClick={onNavigate}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4 shrink-0" />
             {item.label}
           </Link>
         );

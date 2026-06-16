@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { FormStatus, UserRole } from "@prisma/client";
-import { CheckCircle2, Circle, Eye } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  ClipboardList,
+  FileText,
+  HardDrive,
+  LayoutTemplate,
+  Plug,
+  Plus,
+  Send,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   hideOnboardingChecklist,
   showOnboardingChecklist,
@@ -46,6 +57,20 @@ function formatDate(date: Date | null | undefined) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
   }).format(date);
+}
+
+function submissionStatusClass(status: string) {
+  const normalized = status.toUpperCase();
+
+  if (normalized.includes("FINAL") || normalized.includes("COMPLETE")) {
+    return "bg-emerald-50 text-emerald-700";
+  }
+
+  if (normalized.includes("REVIEW")) {
+    return "bg-amber-50 text-amber-800";
+  }
+
+  return "bg-blue-50 text-blue-700";
 }
 
 function safeTemplateParam(value: string | undefined) {
@@ -145,6 +170,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     (total, form) => total + form._count.submissions,
     0,
   );
+  const publishedFormCount = formStats.filter(
+    (form) => form.status === FormStatus.PUBLISHED,
+  ).length;
   const hasFinalizedSubmission = formStats.some(
     (form) => form.submissions.length > 0,
   );
@@ -257,23 +285,62 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const shouldRenderOnboarding =
     Boolean(workspaceContext?.isOwner && access && user) &&
     !onboardingState?.dismissedAt;
+  const canManageForms =
+    Boolean(workspaceContext?.isOwner) || workspaceContext?.role === "ADMIN";
+  const storageLabel = uploadProvider?.activeProvider
+    ? uploadProvider.activeProvider.replaceAll("_", " ")
+    : "Not connected";
+  const quickActions = [
+    canManageForms
+      ? {
+          href: "/dashboard/forms/new",
+          label: "Create Form",
+          icon: Plus,
+          primary: true,
+        }
+      : null,
+    canManageForms
+      ? {
+          href: "/dashboard/forms/new",
+          label: "Create from Template",
+          icon: LayoutTemplate,
+        }
+      : null,
+    {
+      href: publishedForm ? `/dashboard/forms/${publishedForm.id}/submissions` : "/dashboard/forms",
+      label: "View Submissions",
+      icon: ClipboardList,
+    },
+    workspaceContext?.isOwner
+      ? {
+          href: "/dashboard/settings/integrations",
+          label: "Settings / Integrations",
+          icon: Plug,
+        }
+      : null,
+  ].filter((action): action is {
+    href: string;
+    label: string;
+    icon: LucideIcon;
+    primary?: boolean;
+  } => action !== null);
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
+    <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
               Dashboard
             </p>
-            <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-              FormOS Dashboard
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+              Your workflow command center
             </h1>
-            <p className="mt-3 text-base text-slate-700">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Signed in as {user?.name ? `${user.name} (${user.email})` : user?.email}.
             </p>
             {workspaceContext && !workspaceContext.isOwner ? (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                 Workspace: {workspaceContext.workspace.name || "My Workspace"} -{" "}
                 Role: {workspaceContext.role}
               </p>
@@ -294,7 +361,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {isTrialing ? (
-          <section className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
+          <section className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5 text-blue-950 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold">
@@ -306,7 +373,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </p>
               </div>
               <Link
-                className="w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                className="w-fit rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
                 href="/dashboard/settings/billing"
               >
                 Manage billing
@@ -316,7 +383,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {workspaceContext?.isOwner && selectedTemplate ? (
-          <section className="rounded-xl border border-teal-200 bg-teal-50 p-5 text-teal-950">
+          <section className="rounded-3xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-5 text-teal-950 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
@@ -331,7 +398,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </p>
               </div>
               <Link
-                className="w-fit rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-teal-800"
+                className="w-fit rounded-2xl bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800"
                 href={`/dashboard/forms/new?template=${selectedTemplate.slug}`}
               >
                 Use this template
@@ -341,7 +408,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {shouldShowVerificationBanner ? (
-          <section className="rounded-md border border-amber-200 bg-amber-50 p-5 text-amber-950">
+          <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold">
@@ -353,7 +420,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </div>
               <form action={resendVerificationEmailAction}>
                 <SubmitButton
-                  className="rounded-md bg-amber-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-amber-950"
+                  className="rounded-2xl bg-amber-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-950"
                   pendingText="Sending verification email..."
                   showStatus={false}
                 >
@@ -365,7 +432,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {shouldShowBusinessProfilePrompt ? (
-          <section className="rounded-md border border-blue-200 bg-blue-50 p-5 text-blue-950">
+          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-5 text-blue-950 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold">
@@ -376,7 +443,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </p>
               </div>
               <Link
-                className="w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+                className="w-fit rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
                 href="/dashboard/settings/profile"
               >
                 Complete Profile
@@ -384,6 +451,87 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </section>
         ) : null}
+
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Total Forms</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                  {formStats.length}
+                </p>
+              </div>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <FileText className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Total Submissions</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                  {submissionCount}
+                </p>
+              </div>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                <Send className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Published Forms</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                  {publishedFormCount}
+                </p>
+              </div>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Storage Provider</p>
+                <p className="mt-2 text-xl font-semibold capitalize text-slate-950">
+                  {storageLabel.toLowerCase()}
+                </p>
+                {uploadProvider?.activeProvider ? (
+                  <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    Active
+                  </span>
+                ) : null}
+              </div>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                <HardDrive className="h-5 w-5" />
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section className="flex flex-wrap gap-2">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+
+            return (
+              <Link
+                className={
+                  action.primary
+                    ? "inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
+                    : "inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                }
+                href={action.href}
+                key={action.label}
+              >
+                <Icon className="h-4 w-4" />
+                {action.label}
+              </Link>
+            );
+          })}
+        </section>
 
         {shouldRenderOnboarding ? (
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -646,21 +794,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
         ) : null}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
-                Recent submissions
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Latest workflow activity
+              <h2 className="text-lg font-semibold text-slate-950">
+                Recent Submissions
               </h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Latest activity across your forms.
+              </p>
             </div>
             <Link
               className="text-sm font-semibold text-blue-700 hover:text-blue-800"
               href="/dashboard/forms"
             >
-              View all forms
+              View all →
             </Link>
           </div>
 
@@ -675,29 +823,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             </div>
           ) : (
-            <div className="mt-5 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200">
-              {recentSubmissions.map((submission) => (
-                <article
-                  className="grid gap-3 bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center"
-                  key={submission.id}
-                >
-                  <div>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+              <div className="hidden grid-cols-[1fr_150px_120px_90px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid">
+                <span>Form Name</span>
+                <span>Submitted</span>
+                <span>Status</span>
+                <span className="text-right">Action</span>
+              </div>
+              <div className="divide-y divide-slate-200">
+                {recentSubmissions.map((submission) => (
+                  <article
+                    className="grid gap-3 bg-white p-4 md:grid-cols-[1fr_150px_120px_90px] md:items-center"
+                    key={submission.id}
+                  >
                     <p className="font-semibold text-slate-950">
                       {submission.form.title}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {formatDate(submission.createdAt)} - {submission.status}
+                    <p className="text-sm text-slate-600">
+                      {formatDate(submission.createdAt)}
                     </p>
-                  </div>
-                  <Link
-                    className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                    href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
-                  >
-                    <Eye className="h-4 w-4" />
-                    View
-                  </Link>
-                </article>
-              ))}
+                    <span
+                      className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${submissionStatusClass(
+                        submission.status,
+                      )}`}
+                    >
+                      {submission.status}
+                    </span>
+                    <Link
+                      className="inline-flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 md:justify-self-end"
+                      href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
+                    >
+                      View
+                    </Link>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
         </section>

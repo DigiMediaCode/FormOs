@@ -45,17 +45,18 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
   const selectedTemplate = templateCards.find((card) => card.selected);
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-3xl flex-col gap-8">
-        <header className="border-b border-slate-200 pb-6">
-          <Link className="text-sm font-medium text-teal-700 hover:text-teal-800" href="/dashboard/forms">
+    <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Link className="text-sm font-semibold text-blue-700 hover:text-blue-800" href="/dashboard/forms">
             Forms
           </Link>
-          <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-            Create form
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+            Create a workflow
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-700">
-            Add the basic shell now. Fields, builder, and submissions come later.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Start from a proven template or create a clean blank form. Builder,
+            publishing, and submissions remain one step away.
           </p>
         </header>
 
@@ -66,7 +67,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
         ) : null}
 
         {selectedTemplate ? (
-          <section className="rounded-md border border-teal-200 bg-teal-50 p-5 text-teal-950">
+          <section className="rounded-3xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-5 text-teal-950 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
               Recommended starting point
             </p>
@@ -82,7 +83,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
 
         <form
           action={createForm}
-          className="flex flex-col gap-5 rounded-md border border-slate-200 bg-white p-6"
+          className="flex flex-col gap-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
           id="blank-form"
         >
           <div>
@@ -97,7 +98,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Title
             <input
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              className="rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               name="title"
               required
               type="text"
@@ -107,7 +108,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Description
             <textarea
-              className="min-h-28 rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              className="min-h-28 rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               name="description"
             />
           </label>
@@ -115,7 +116,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-800">
             Mode
             <select
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+              className="rounded-2xl border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-950 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
               defaultValue={FormMode.STANDARD}
               name="mode"
             >
@@ -127,13 +128,13 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
 
           <div className="flex flex-wrap gap-3">
             <SubmitButton
-              className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
               pendingText="Creating form..."
             >
               Create Form
             </SubmitButton>
             <Link
-              className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+              className="rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
               href="/dashboard/forms"
             >
               Cancel
@@ -141,7 +142,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           </div>
         </form>
 
-        <section className="rounded-md border border-slate-200 bg-white p-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
             <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
               Create from workflow template
@@ -158,7 +159,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
           <div className="mt-5 grid gap-3">
             {templateCards.map(({ access: templateAccess, selected, template }) => (
               <article
-                className={`grid gap-4 rounded-md border p-4 sm:grid-cols-[1fr_auto] sm:items-center ${
+                className={`grid gap-4 rounded-2xl border p-4 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center ${
                   selected
                     ? "border-teal-300 bg-teal-50"
                     : "border-slate-200 bg-slate-50"
@@ -217,7 +218,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
                   <form action={createWorkflowTemplate}>
                     <input name="templateSlug" type="hidden" value={template.slug} />
                     <SubmitButton
-                      className="rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-teal-800"
+                      className="rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                       pendingText="Creating template..."
                     >
                       {templateAccess.ctaLabel}
@@ -225,7 +226,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
                   </form>
                 ) : templateAccess.formLimitReached ? (
                   <button
-                    className="rounded-md border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500"
+                    className="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500"
                     disabled
                     type="button"
                   >
@@ -233,7 +234,7 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
                   </button>
                 ) : (
                   <Link
-                    className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                     href="/dashboard/settings/billing"
                   >
                     {templateAccess.ctaLabel}
