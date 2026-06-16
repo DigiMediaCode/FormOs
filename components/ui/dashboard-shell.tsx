@@ -139,19 +139,17 @@ export function DashboardShell({
           </div>
 
           {mobileMenuOpen ? (
-            <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-              <button
-                aria-label="Close menu"
-                className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
-                onClick={() => setMobileMenuOpen(false)}
-                type="button"
-              />
-              <div className="relative flex h-full w-[min(21rem,calc(100vw-2rem))] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div
+              className="fixed inset-0 z-50 bg-white lg:hidden"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex h-full min-h-dvh flex-col">
+                <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
                   <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                     <img
                       alt="FormOS"
-                      className="h-auto max-w-[112px] object-contain"
+                      className="h-auto max-w-[128px] object-contain"
                       src="/formos-logo.png"
                     />
                   </Link>
@@ -165,7 +163,7 @@ export function DashboardShell({
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex-1 overflow-y-auto px-5 py-5">
                   <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -184,7 +182,7 @@ export function DashboardShell({
                   <div className="mt-4">{navContent}</div>
                 </div>
 
-                <div className="border-t border-slate-200 p-4">
+                <div className="border-t border-slate-200 bg-slate-50/80 p-5">
                   {profileMenu}
                 </div>
               </div>
