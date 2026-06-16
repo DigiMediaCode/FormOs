@@ -2,7 +2,6 @@ import Link from "next/link";
 import { FormStatus, UserRole } from "@prisma/client";
 import {
   CheckCircle2,
-  Circle,
   ClipboardList,
   FileText,
   HardDrive,
@@ -16,6 +15,10 @@ import {
   hideOnboardingChecklist,
   showOnboardingChecklist,
 } from "@/app/dashboard/onboarding-actions";
+import {
+  OnboardingStepper,
+  type OnboardingStepperItem,
+} from "@/components/dashboard/onboarding-stepper";
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getOwnerAnalyticsSummary } from "@/lib/forms/analytics";
@@ -27,16 +30,6 @@ import {
   getUserPlanAccess,
 } from "@/lib/plans/limits";
 import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
-
-type ChecklistItem = {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  actionLabel: string;
-  href?: string;
-  formAction?: () => Promise<void>;
-};
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -191,7 +184,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const isTrialing = subscription?.status?.toUpperCase() === "TRIALING";
   const trialPlanName = subscription?.plan?.name ?? access?.plan.name ?? "paid plan";
   const trialEndDate = subscription?.trialEndsAt ?? subscription?.currentPeriodEnd;
-  const checklistItems: ChecklistItem[] =
+  const checklistItems: OnboardingStepperItem[] =
     user && access && uploadProvider
       ? [
           {
@@ -589,111 +582,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </section>
 
         {shouldRenderOnboarding ? (
-          <section className="fixed bottom-4 right-4 z-40 max-h-[calc(100vh-2rem)] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/15">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-                  Setup Progress
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-slate-950">
-                  Set up your FormOS workspace
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {completedChecklistCount} / {checklistTotal} completed
-                </p>
-              </div>
-              <form action={hideOnboardingChecklist}>
-                <SubmitButton
-                  className="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-50"
-                  pendingText="Hiding checklist..."
-                  showStatus={false}
-                >
-                  Hide
-                </SubmitButton>
-              </form>
-            </div>
-
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-blue-600 transition-all"
-                style={{
-                  width: `${checklistTotal ? (completedChecklistCount / checklistTotal) * 100 : 0}%`,
-                }}
-              />
-            </div>
-
-            {checklistComplete ? (
-              <p className="mt-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                Your FormOS workspace is ready.
-              </p>
-            ) : null}
-
-            <div className="mt-5 grid gap-2">
-              {checklistItems.map((item) => (
-                <div
-                  className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                  key={item.id}
-                >
-                  <div className="flex gap-3">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                        item.completed
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-white text-slate-400"
-                      }`}
-                    >
-                      {item.completed ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <Circle className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-slate-950">
-                          {item.title}
-                        </h3>
-                        {item.completed ? (
-                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                            Complete
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-sm leading-5 text-slate-600">
-                        {item.description}
-                      </p>
-                    </div>
-                  </div>
-                  {item.formAction ? (
-                    <form action={item.formAction}>
-                      <SubmitButton
-                        className="w-full rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                        pendingText="Sending..."
-                        showStatus={false}
-                      >
-                        {item.actionLabel}
-                      </SubmitButton>
-                    </form>
-                  ) : item.href ? (
-                    <Link
-                      className={`inline-flex w-full justify-center rounded-2xl px-3 py-2 text-sm font-semibold transition ${
-                        item.completed
-                          ? "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
-                      }`}
-                      href={item.href}
-                    >
-                      {item.actionLabel}
-                    </Link>
-                  ) : (
-                    <span className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-sm font-semibold text-slate-500">
-                      {item.actionLabel}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
+          <OnboardingStepper
+            checklistComplete={checklistComplete}
+            completedCount={completedChecklistCount}
+            hideAction={hideOnboardingChecklist}
+            items={checklistItems}
+            totalCount={checklistTotal}
+          />
         ) : workspaceContext?.isOwner && onboardingState?.dismissedAt ? (
           <form action={showOnboardingChecklist} className="fixed right-0 top-1/2 z-40 -translate-y-1/2">
             <SubmitButton
