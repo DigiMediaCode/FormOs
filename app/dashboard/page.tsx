@@ -602,7 +602,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </form>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <Link
@@ -611,7 +611,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               >
                 Recent Submissions
               </Link>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-slate-600 sm:block">
                 Latest activity across your forms.
               </p>
             </div>
@@ -634,7 +634,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </p>
             </div>
           ) : (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
               <div className="hidden grid-cols-[1fr_150px_120px_90px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 md:grid">
                 <span>Form Name</span>
                 <span>Submitted</span>
@@ -644,31 +644,31 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div className="divide-y divide-slate-200">
                 {recentSubmissions.map((submission) => (
                   <article
-                    className="grid gap-3 bg-white p-4 md:grid-cols-[1fr_150px_120px_90px] md:items-center"
+                    className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 bg-white p-3 md:grid-cols-[1fr_150px_120px_90px] md:items-center md:gap-4 md:p-4"
                     key={submission.id}
                   >
                     <Link
-                      className="font-semibold text-slate-950 transition hover:text-blue-700"
+                      className="min-w-0 truncate font-semibold text-slate-950 transition hover:text-blue-700 md:order-1"
                       href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
                     >
                       {submission.form.title}
                     </Link>
-                    <p className="text-sm text-slate-600">
+                    <Link
+                      className="row-span-2 inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 md:order-4 md:row-span-1 md:justify-self-end md:px-3 md:py-2"
+                      href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
+                    >
+                      View
+                    </Link>
+                    <p className="text-xs text-slate-600 md:order-2 md:text-sm">
                       {formatDate(submission.createdAt)}
                     </p>
                     <span
-                      className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${submissionStatusClass(
+                      className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold md:order-3 md:px-2.5 md:py-1 md:text-xs ${submissionStatusClass(
                         submission.status,
                       )}`}
                     >
                       {submission.status}
                     </span>
-                    <Link
-                      className="inline-flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 md:justify-self-end"
-                      href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
-                    >
-                      View
-                    </Link>
                   </article>
                 ))}
               </div>
@@ -676,7 +676,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           )}
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <Link
@@ -731,42 +731,46 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div className="divide-y divide-slate-200">
                 {recentForms.map((form) => (
                   <article
-                    className="grid gap-3 bg-white p-4 md:grid-cols-[1fr_120px_120px_180px] md:items-center"
+                    className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 bg-white p-3 md:grid-cols-[1fr_120px_120px_180px] md:items-center md:gap-3 md:p-4"
                     key={form.id}
                   >
-                    <div>
+                    <div className="min-w-0 md:order-1">
                       <Link
-                        className="font-semibold text-slate-950 transition hover:text-blue-700"
+                        className="block truncate font-semibold text-slate-950 transition hover:text-blue-700"
                         href={`/dashboard/forms/${form.id}`}
                       >
                         {form.title}
                       </Link>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
                         {form._count.submissions} submissions
+                        <span className="md:hidden">
+                          {" "}
+                          · Updated {formatDate(form.updatedAt)}
+                        </span>
                       </p>
                     </div>
-                    <span className="w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                      {form.status}
-                    </span>
-                    <p className="text-sm text-slate-600">
-                      {formatDate(form.updatedAt)}
-                    </p>
-                    <div className="flex flex-wrap gap-2 md:justify-end">
+                    <div className="row-span-2 flex items-center gap-1 md:order-4 md:row-span-1 md:justify-end">
                       <Link
-                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                        className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
                         href={`/dashboard/forms/${form.id}`}
                       >
                         Manage
                       </Link>
                       {canManageForms ? (
                         <Link
-                          className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          className="hidden h-9 items-center justify-center rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:inline-flex"
                           href={`/dashboard/forms/${form.id}/builder`}
                         >
                           Builder
                         </Link>
                       ) : null}
                     </div>
+                    <span className="w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 md:order-2 md:px-2.5 md:py-1 md:text-xs">
+                      {form.status}
+                    </span>
+                    <p className="hidden text-sm text-slate-600 md:order-3 md:block">
+                      {formatDate(form.updatedAt)}
+                    </p>
                   </article>
                 ))}
               </div>
