@@ -139,8 +139,8 @@ export default async function FormsPage() {
 
         {canManageForms ? (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Workflow templates
               </p>
@@ -153,10 +153,13 @@ export default async function FormsPage() {
               </p>
             </div>
             <Link
-              className="w-fit rounded-2xl border border-blue-100 bg-white px-3 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 sm:px-4 sm:py-2.5"
+              aria-label="View all templates"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm sm:font-semibold"
               href="/dashboard/forms/new"
+              title="View all templates"
             >
-              View all templates
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:ml-2 sm:inline">View all templates</span>
             </Link>
           </div>
           <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
