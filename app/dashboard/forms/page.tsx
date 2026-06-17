@@ -102,10 +102,22 @@ export default async function FormsPage() {
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex sm:items-center sm:justify-between sm:rounded-3xl sm:p-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-              Workspace
-            </p>
+          <div className="min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Workspace
+              </p>
+              {canManageForms ? (
+                <Link
+                  aria-label="Create form"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700 sm:hidden"
+                  href="/dashboard/forms/new"
+                  title="Create Form"
+                >
+                  <Plus className="h-5 w-5" />
+                </Link>
+              ) : null}
+            </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:mt-2 sm:text-3xl">
               Forms
             </h1>
@@ -116,7 +128,7 @@ export default async function FormsPage() {
 
           {canManageForms ? (
             <Link
-              className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700 sm:mt-0"
+              className="mt-3 hidden items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700 sm:mt-0 sm:inline-flex"
               href="/dashboard/forms/new"
             >
               <Plus className="h-4 w-4" />
