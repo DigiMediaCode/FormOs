@@ -450,31 +450,31 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </Link>
             </div>
             <div className="mt-4 flex snap-x gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
-              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
+              <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Form views</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.views}
                 </p>
                 {analyticsSummary.views === 0 ? (
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                  <p className="mt-1 hidden text-xs leading-5 text-slate-500 sm:block">
                     No views yet. Share your form link or add it to your website
                     to start collecting responses.
                   </p>
                 ) : null}
               </div>
-              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
+              <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Submissions</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.submissions}
                 </p>
               </div>
-              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
+              <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Completion rate</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {analyticsSummary.averageCompletionRate}
                 </p>
               </div>
-              <div className="min-w-[76%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
+              <div className="min-w-[52%] snap-start rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:min-w-0">
                 <p className="text-xs font-medium text-slate-500">Top performing form</p>
                 {analyticsSummary.topForm ? (
                   <Link
@@ -500,51 +500,51 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="flex snap-x gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+          <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:min-w-0 sm:p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-medium text-slate-500">Total Forms</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+                <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
                   {formStats.length}
                 </p>
               </div>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 sm:h-9 sm:w-9">
                 <FileText className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:min-w-0 sm:p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-medium text-slate-500">Total Submissions</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+                <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
                   {submissionCount}
                 </p>
               </div>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 text-teal-700 sm:h-9 sm:w-9">
                 <Send className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="min-w-[42%] snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:min-w-0 sm:p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-medium text-slate-500">Published Forms</p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+                <p className="mt-1 text-xl font-semibold tracking-tight text-slate-950 sm:text-2xl">
                   {publishedFormCount}
                 </p>
               </div>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 sm:h-9 sm:w-9">
                 <CheckCircle2 className="h-4 w-4" />
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="min-w-[48%] snap-start rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:min-w-0 sm:p-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-medium text-slate-500">Storage Provider</p>
-                <p className="mt-1 text-lg font-semibold capitalize text-slate-950">
+                <p className="mt-1 truncate text-base font-semibold capitalize text-slate-950 sm:text-lg">
                   {storageLabel.toLowerCase()}
                 </p>
                 {uploadProvider?.activeProvider ? (
@@ -553,14 +553,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </span>
                 ) : null}
               </div>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 sm:h-9 sm:w-9">
                 <HardDrive className="h-4 w-4" />
               </span>
             </div>
           </div>
         </section>
 
-        <section className="flex flex-wrap gap-2">
+        <section className="flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
           {quickActions.map((action) => {
             const Icon = action.icon;
 
@@ -568,14 +568,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <Link
                 className={
                   action.primary
-                    ? "inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
-                    : "inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+                    ? "inline-flex h-11 w-11 shrink-0 snap-start items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700 sm:w-auto sm:px-4 sm:py-2.5"
+                    : "inline-flex h-11 w-11 shrink-0 snap-start items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 sm:w-auto sm:px-4 sm:py-2.5"
                 }
                 href={action.href}
                 key={action.label}
+                title={action.label}
               >
                 <Icon className="h-4 w-4" />
-                {action.label}
+                <span className="sr-only sm:not-sr-only">{action.label}</span>
               </Link>
             );
           })}
