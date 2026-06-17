@@ -88,7 +88,9 @@ export function DashboardShell({
             <img
               alt="FormOS"
               className="h-auto max-w-[116px] object-contain"
+              height={36}
               src="/formos-logo.png"
+              width={116}
             />
           </Link>
         </div>
@@ -125,7 +127,9 @@ export function DashboardShell({
               <img
                 alt="FormOS"
                 className="h-auto max-w-[112px] object-contain"
+                height={35}
                 src="/formos-logo.png"
+                width={112}
               />
             </Link>
             <div className="flex items-center gap-2">
@@ -161,7 +165,9 @@ export function DashboardShell({
                     <img
                       alt="FormOS"
                       className="h-auto max-w-[128px] object-contain"
+                      height={40}
                       src="/formos-logo.png"
+                      width={128}
                     />
                   </Link>
                   <button
