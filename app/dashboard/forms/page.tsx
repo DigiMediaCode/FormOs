@@ -160,7 +160,7 @@ export default async function FormsPage() {
               title="View all templates"
             >
               <LayoutTemplate className="h-4 w-4" />
-              <span className="hidden sm:ml-2 sm:inline">View all templates</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">View all templates</span>
             </Link>
           </div>
           <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
