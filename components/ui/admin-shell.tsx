@@ -91,7 +91,9 @@ export function AdminShell({
           <img
             alt="FormOS"
             className="h-auto max-w-[116px] object-contain"
+            height={36}
             src="/formos-logo.png"
+            width={116}
           />
         </Link>
 
@@ -137,20 +139,20 @@ export function AdminShell({
             </button>
           </div>
           {mobileMenuOpen ? (
-            <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-              <button
-                aria-label="Close admin menu"
-                className="absolute inset-0 bg-slate-950/35 backdrop-blur-[2px]"
-                onClick={() => setMobileMenuOpen(false)}
-                type="button"
-              />
-              <div className="relative flex h-full w-[min(21rem,calc(100vw-2rem))] flex-col border-r border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+            <div
+              className="fixed inset-0 z-50 bg-slate-50 lg:hidden"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex h-full min-h-dvh flex-col bg-slate-50">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 shadow-sm">
                   <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
                     <img
                       alt="FormOS"
-                      className="h-auto max-w-[112px] object-contain"
+                      className="h-auto max-w-[128px] object-contain"
+                      height={40}
                       src="/formos-logo.png"
+                      width={128}
                     />
                   </Link>
                   <button
@@ -163,7 +165,7 @@ export function AdminShell({
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-4">
+                <div className="flex-1 overflow-y-auto bg-slate-50 px-5 py-5">
                   <div className="mb-4 rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                       Super Admin
@@ -173,10 +175,12 @@ export function AdminShell({
                     </p>
                     <p className="mt-1 truncate text-xs text-slate-500">{userEmail}</p>
                   </div>
-                  {nav}
+                  <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+                    {nav}
+                  </div>
                 </div>
 
-                <div className="border-t border-slate-200 p-4">
+                <div className="border-t border-slate-200 bg-slate-50 p-5">
                   <Link
                     className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800"
                     href="/dashboard"
