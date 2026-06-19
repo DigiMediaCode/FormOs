@@ -1,4 +1,13 @@
 import Link from "next/link";
+import {
+  Activity,
+  ArrowLeft,
+  ClipboardList,
+  ExternalLink,
+  FileUp,
+  Lock,
+  PenLine,
+} from "lucide-react";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { markOfficeCompleted, saveOfficeFields } from "@/lib/forms/office-actions";
@@ -64,9 +73,13 @@ function formatFileSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function shortSubmissionId(id: string) {
+  return id.slice(0, 8).toUpperCase();
+}
+
 function renderOfficeInput(field: FormBuilderField, value: string | boolean) {
   const inputClass =
-    "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100";
+    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
   if (field.type === "textarea" || field.type === "address") {
     return (
@@ -97,7 +110,7 @@ function renderOfficeInput(field: FormBuilderField, value: string | boolean) {
 
   if (field.type === "checkbox") {
     return (
-      <label className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700">
+      <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
         <input
           className="h-4 w-4"
           defaultChecked={value === true}
@@ -138,273 +151,341 @@ export default async function SubmissionDetailPage({
   const { form, submission } = await getFormSubmissionById(formId, submissionId);
   const events = await getSubmissionEvents(formId, submissionId);
   const saveOfficeAction = saveOfficeFields.bind(null, form.id, submission.id);
+  const finalizeAction = markOfficeCompleted.bind(null, form.id, submission.id);
+  const publicAnswers = submission.answers.filter(
+    (answer) => !answer.imageDataUrl && !answer.files,
+  );
+  const uploadedFiles = submission.answers.flatMap((answer) =>
+    (answer.files ?? []).map((file) => ({
+      fieldId: answer.fieldId,
+      label: answer.label,
+      file,
+    })),
+  );
+  const signatureAnswers = submission.answers.filter((answer) => answer.imageDataUrl);
 
   return (
-    <main className="min-h-screen px-6 py-10">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <header className="border-b border-slate-200 pb-6">
-          <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-            <Link className="font-medium text-blue-700 hover:text-blue-800" href="/dashboard/forms">
-              Forms
-            </Link>
-            <span>/</span>
-            <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}`}>
-              {form.title}
-            </Link>
-            <span>/</span>
-            <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}/submissions`}>
-              Submissions
-            </Link>
-            <span>/</span>
-            <span>Submission</span>
-          </nav>
-          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5">
+        <header className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-                Submission detail
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold text-slate-950">
+              <nav className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:text-sm">
+                <Link className="font-medium text-blue-700 hover:text-blue-800" href="/dashboard/forms">
+                  Forms
+                </Link>
+                <span>/</span>
+                <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}`}>
+                  {form.title}
+                </Link>
+                <span>/</span>
+                <Link className="font-medium text-blue-700 hover:text-blue-800" href={`/dashboard/forms/${form.id}/submissions`}>
+                  Submissions
+                </Link>
+                <span>/</span>
+                <span>Submission</span>
+              </nav>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
                   {submission.snapshot.title}
                 </h1>
-                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
                   {submission.status}
                 </span>
               </div>
+              <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+                Submission #{shortSubmissionId(submission.id)} - Received{" "}
+                {formatDateTime(submission.createdAt)}
+              </p>
               {form.title !== submission.snapshot.title ? (
                 <p className="mt-2 text-sm text-slate-700">
                   Current form title: {form.title}
                 </p>
               ) : null}
             </div>
+            <Link
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm shadow-slate-950/5 transition hover:bg-slate-50"
+              href={`/dashboard/forms/${form.id}/submissions`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
           </div>
         </header>
 
         {success ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             {success}
           </p>
         ) : null}
 
         {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </p>
         ) : null}
 
-        {submission.context.length > 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-slate-950">Form context</h2>
-            <div className="mt-5 flex flex-col gap-4">
-              {submission.context.map((item) => {
-                if (item.type === "section_heading") {
-                  return (
-                    <h3 className="border-b border-slate-200 pb-2 text-lg font-semibold text-slate-950" key={item.id}>
-                      {item.content}
-                    </h3>
-                  );
-                }
-
-                if (item.type === "html") {
-                  return (
-                    <div
-                      className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700"
-                      dangerouslySetInnerHTML={{ __html: item.content }}
-                      key={item.id}
-                    />
-                  );
-                }
-
-                return (
-                  <p className="text-sm leading-6 text-slate-700" key={item.id}>
-                    {item.content}
-                  </p>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-md border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Submitted answers
-          </h2>
-          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-            Submitted {formatDateTime(submission.createdAt)}
-          </p>
-          <div className="mt-5 divide-y divide-slate-200">
-            {submission.answers.length === 0 ? (
-              <p className="text-sm leading-6 text-slate-700">
-                No answer fields were captured for this submission.
-              </p>
-            ) : null}
-            {submission.answers.map((answer) => (
-              <div className="grid gap-2 py-4 sm:grid-cols-[240px_1fr]" key={answer.fieldId}>
-                <p className="text-sm font-medium text-slate-950">
-                  {answer.label}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="flex min-w-0 flex-col gap-5">
+            <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-blue-600" />
+                  <h2 className="text-base font-semibold text-slate-950">Public answers</h2>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Submitted {formatDateTime(submission.createdAt)}
                 </p>
-                {answer.imageDataUrl ? (
-                  <div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={answer.label}
-                      className="max-h-40 rounded-md border border-slate-200 bg-white object-contain p-2"
-                      src={answer.imageDataUrl}
-                    />
+              </div>
+              <div className="mt-4 divide-y divide-slate-100">
+                {publicAnswers.length === 0 ? (
+                  <p className="py-2 text-sm leading-6 text-slate-700">
+                    No standard answer fields were captured for this submission.
+                  </p>
+                ) : null}
+                {publicAnswers.map((answer) => (
+                  <div
+                    className="grid gap-1 py-3 text-sm sm:grid-cols-[220px_1fr] sm:items-start"
+                    key={answer.fieldId}
+                  >
+                    <p className="font-medium text-slate-500">{answer.label}</p>
+                    <p className="whitespace-pre-wrap font-medium leading-6 text-slate-950 sm:text-right">
+                      {answer.value}
+                    </p>
                   </div>
-                ) : answer.files ? (
-                  <div className="flex flex-col gap-3">
-                    {answer.files.map((file) => (
-                      <div
-                        className="rounded-md border border-slate-200 bg-slate-50 p-4"
-                        key={file.provider === "google_drive" ? file.driveFileId : file.dropboxFileId}
-                      >
-                        <p className="text-sm font-medium text-slate-950">
+                ))}
+              </div>
+            </section>
+
+            {uploadedFiles.length > 0 ? (
+              <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+                <div className="flex items-center gap-2">
+                  <FileUp className="h-4 w-4 text-blue-600" />
+                  <h2 className="text-base font-semibold text-slate-950">Uploaded files</h2>
+                </div>
+                <div className="mt-4 flex flex-col gap-3">
+                  {uploadedFiles.map(({ fieldId, file }) => (
+                    <div
+                      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      key={`${fieldId}-${file.provider === "google_drive" ? file.driveFileId : file.dropboxFileId}`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-950">
                           {file.fileName}
                         </p>
-                        <p className="mt-1 text-sm text-slate-700">
-                          {file.mimeType} - {formatFileSize(file.size)}
+                        <p className="mt-1 text-xs text-slate-500">
+                          {formatFileSize(file.size)} -{" "}
+                          {file.provider === "google_drive" ? "Google Drive" : "Dropbox"}
                         </p>
-                        {file.provider === "google_drive" ? (
-                          <>
-                            {file.submissionFolderName ? (
-                              <p className="mt-1 text-sm text-slate-700">
-                                Folder: {file.submissionFolderName}
-                              </p>
-                            ) : null}
-                            {file.webViewLink ? (
-                              <Link
-                                className="mt-3 inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"
-                                href={file.webViewLink}
-                                rel="noreferrer"
-                                target="_blank"
-                              >
-                                Open in Google Drive
-                              </Link>
-                            ) : null}
-                          </>
-                        ) : (
-                          <>
-                            <p className="mt-1 break-all text-sm text-slate-700">
-                              Dropbox path: {file.path}
-                            </p>
-                            {file.submissionFolderPath ? (
-                              <p className="mt-1 break-all text-sm text-slate-700">
-                                Folder: {file.submissionFolderPath}
-                              </p>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                    {answer.value}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Office Use Only
-          </h2>
-          {submission.officeCompletedAt ? (
-            <p className="mt-2 text-sm text-slate-600">
-              Completed {formatDateTime(submission.officeCompletedAt)}.
-            </p>
-          ) : null}
-          {submission.officeFields.length === 0 ? (
-            <p className="mt-5 text-sm leading-6 text-slate-700">
-              This submission does not have office-only fields.
-            </p>
-          ) : (
-            <form action={saveOfficeAction} className="mt-5 flex flex-col gap-5">
-              {submission.officeFields.map(({ field, value, supported }) => (
-                <div className="grid gap-2 sm:grid-cols-[240px_1fr]" key={field.id}>
-                  <label className="text-sm font-medium text-slate-950" htmlFor={field.id}>
-                    {field.label || field.content || field.id}
-                  </label>
-                  {supported ? (
-                    <div>{renderOfficeInput(field, value)}</div>
-                  ) : (
-                    <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                      Not supported for office use yet.
-                    </p>
-                  )}
-                </div>
-              ))}
-              <SubmitButton
-                className="w-fit rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                pendingText="Saving office fields..."
-              >
-                Save Office Fields
-              </SubmitButton>
-            </form>
-          )}
-          {!submission.officeCompletedAt ? (
-            <form action={markOfficeCompleted.bind(null, form.id, submission.id)} className="mt-4">
-              <SubmitButton
-                className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                pendingText="Finalizing submission and sending PDF..."
-              >
-                Finalize Submission
-              </SubmitButton>
-            </form>
-          ) : (
-            <PendingLink
-              className="mt-4 inline-flex rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-              href={`/dashboard/forms/${form.id}/submissions/${submission.id}/completed-pdf`}
-              pendingText="Generating PDF..."
-              resetAfterMs={5000}
-            >
-              Download Completed PDF
-            </PendingLink>
-          )}
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Activity Timeline
-          </h2>
-          {events.length === 0 ? (
-            <p className="mt-5 text-sm leading-6 text-slate-700">
-              No activity has been recorded for this submission yet.
-            </p>
-          ) : (
-            <ol className="mt-5 divide-y divide-slate-200">
-              {events.map((event) => {
-                const metadataSummary = eventMetadataSummary(event.metadata);
-
-                return (
-                  <li className="py-4 first:pt-0 last:pb-0" key={event.id}>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-950">
-                          {event.message || eventTypeLabel(event.type)}
-                        </p>
-                        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-                          {eventTypeLabel(event.type)}
-                        </p>
-                        {metadataSummary ? (
-                          <p className="mt-2 text-sm text-slate-700">
-                            {metadataSummary}
+                        {file.provider === "google_drive" && file.submissionFolderName ? (
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            /{file.submissionFolderName}/
+                          </p>
+                        ) : null}
+                        {file.provider === "dropbox" ? (
+                          <p className="mt-1 truncate text-xs text-slate-500">
+                            {file.submissionFolderPath || file.path}
                           </p>
                         ) : null}
                       </div>
-                      <time className="text-sm text-slate-600" dateTime={event.createdAt.toISOString()}>
-                        {formatDateTime(event.createdAt)}
-                      </time>
+                      {file.provider === "google_drive" && file.webViewLink ? (
+                        <Link
+                          className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-white px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
+                          href={file.webViewLink}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Open
+                        </Link>
+                      ) : null}
                     </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </section>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {signatureAnswers.length > 0 ? (
+              <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+                <div className="flex items-center gap-2">
+                  <PenLine className="h-4 w-4 text-blue-600" />
+                  <h2 className="text-base font-semibold text-slate-950">Signatures</h2>
+                </div>
+                <div className="mt-4 flex flex-col gap-4">
+                  {signatureAnswers.map((answer) =>
+                    answer.imageDataUrl ? (
+                      <div key={answer.fieldId}>
+                        <p className="text-xs font-medium text-slate-500">
+                          {answer.label}
+                        </p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          alt={answer.label}
+                          className="mt-2 max-h-44 w-full rounded-2xl border border-slate-200 bg-slate-50 object-contain p-3"
+                          src={answer.imageDataUrl}
+                        />
+                      </div>
+                    ) : null,
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            {submission.context.length > 0 ? (
+              <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-blue-600" />
+                  <h2 className="text-base font-semibold text-slate-950">Form context</h2>
+                </div>
+                <div className="mt-4 flex flex-col gap-3">
+                  {submission.context.map((item) => {
+                    if (item.type === "section_heading") {
+                      return (
+                        <h3 className="border-b border-slate-100 pb-2 text-sm font-semibold text-slate-950" key={item.id}>
+                          {item.content}
+                        </h3>
+                      );
+                    }
+
+                    if (item.type === "html") {
+                      return (
+                        <div
+                          className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700"
+                          dangerouslySetInnerHTML={{ __html: item.content }}
+                          key={item.id}
+                        />
+                      );
+                    }
+
+                    return (
+                      <p className="text-sm leading-6 text-slate-700" key={item.id}>
+                        {item.content}
+                      </p>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-blue-600" />
+                  <h2 className="text-base font-semibold text-slate-950">
+                    Office Use Only
+                  </h2>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Internal
+                </span>
+              </div>
+              {submission.officeCompletedAt ? (
+                <p className="mt-2 text-sm text-slate-600">
+                  Completed {formatDateTime(submission.officeCompletedAt)}.
+                </p>
+              ) : null}
+              {submission.officeFields.length === 0 ? (
+                <p className="mt-5 text-sm leading-6 text-slate-700">
+                  This submission does not have office-only fields.
+                </p>
+              ) : (
+                <form action={saveOfficeAction} className="mt-5 flex flex-col gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {submission.officeFields.map(({ field, value, supported }) => (
+                      <div
+                        className={field.type === "textarea" || field.type === "address" ? "md:col-span-2" : ""}
+                        key={field.id}
+                      >
+                        <label className="text-xs font-semibold text-slate-700" htmlFor={field.id}>
+                          {field.label || field.content || field.id}
+                        </label>
+                        <div className="mt-1">
+                          {supported ? (
+                            renderOfficeInput(field, value)
+                          ) : (
+                            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                              Not supported for office use yet.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <SubmitButton
+                    className="w-fit rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                    pendingText="Saving office fields..."
+                  >
+                    Save Office Fields
+                  </SubmitButton>
+                </form>
+              )}
+              <div className="mt-4">
+                {!submission.officeCompletedAt ? (
+                  <form action={finalizeAction}>
+                    <SubmitButton
+                      className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700"
+                      pendingText="Finalizing submission and sending PDF..."
+                    >
+                      Finalize and Send PDF
+                    </SubmitButton>
+                  </form>
+                ) : (
+                  <PendingLink
+                    className="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                    href={`/dashboard/forms/${form.id}/submissions/${submission.id}/completed-pdf`}
+                    pendingText="Generating PDF..."
+                    resetAfterMs={5000}
+                  >
+                    Download Completed PDF
+                  </PendingLink>
+                )}
+              </div>
+            </section>
+          </div>
+
+          <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-950">
+                  Activity Timeline
+                </h2>
+              </div>
+              {events.length === 0 ? (
+                <p className="mt-5 text-sm leading-6 text-slate-700">
+                  No activity has been recorded for this submission yet.
+                </p>
+              ) : (
+                <ol className="mt-5 space-y-4">
+                  {events.map((event) => {
+                    const metadataSummary = eventMetadataSummary(event.metadata);
+
+                    return (
+                      <li className="relative pl-8" key={event.id}>
+                        <span className="absolute left-0 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-50 text-blue-600 ring-4 ring-white">
+                          <span className="h-2 w-2 rounded-full bg-current" />
+                        </span>
+                        <div className="border-b border-slate-100 pb-4 last:border-b-0 last:pb-0">
+                          <p className="text-sm font-semibold text-slate-950">
+                            {event.message || eventTypeLabel(event.type)}
+                          </p>
+                          <time className="mt-1 block text-xs text-slate-500" dateTime={event.createdAt.toISOString()}>
+                            {formatDateTime(event.createdAt)}
+                          </time>
+                          {metadataSummary ? (
+                            <p className="mt-2 text-xs leading-5 text-slate-600">
+                              {metadataSummary}
+                            </p>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </section>
+          </aside>
+        </div>
       </div>
     </main>
   );
