@@ -48,8 +48,11 @@ function shouldTrackButton(button: HTMLButtonElement) {
 export function GlobalPageLoader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const routeSignature = `${pathname}?${searchParams.toString()}`;
   const [loading, setLoading] = useState(false);
   const startedAtRef = useRef(0);
+  const startedRouteRef = useRef(routeSignature);
+  const currentRouteRef = useRef(routeSignature);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function clearLoader() {
@@ -63,6 +66,7 @@ export function GlobalPageLoader() {
 
   function startLoader() {
     startedAtRef.current = Date.now();
+    startedRouteRef.current = currentRouteRef.current;
     setLoading(true);
 
     if (timeoutRef.current) {
@@ -72,7 +76,7 @@ export function GlobalPageLoader() {
     timeoutRef.current = setTimeout(() => {
       setLoading(false);
       timeoutRef.current = null;
-    }, 12000);
+    }, 20000);
   }
 
   useEffect(() => {
@@ -120,16 +124,22 @@ export function GlobalPageLoader() {
   }, []);
 
   useEffect(() => {
+    currentRouteRef.current = routeSignature;
+
     if (!loading) {
       return;
     }
 
+    if (startedRouteRef.current === routeSignature) {
+      return;
+    }
+
     const elapsed = Date.now() - startedAtRef.current;
-    const remaining = Math.max(250 - elapsed, 0);
+    const remaining = Math.max(700 - elapsed, 0);
     const timeout = setTimeout(clearLoader, remaining);
 
     return () => clearTimeout(timeout);
-  }, [pathname, searchParams, loading]);
+  }, [routeSignature, loading]);
 
   if (!loading) {
     return null;
@@ -139,29 +149,16 @@ export function GlobalPageLoader() {
     <div
       aria-live="polite"
       aria-label="Page loading"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[9999]"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm"
       role="status"
     >
-      <div className="h-1 w-full overflow-hidden bg-blue-100">
-        <div className="h-full w-1/2 animate-[formos-loader_1.1s_ease-in-out_infinite] rounded-r-full bg-blue-600 shadow-[0_0_18px_rgba(37,99,235,0.55)]" />
+      <div className="flex min-w-48 flex-col items-center gap-4 rounded-3xl border border-blue-100 bg-white/95 px-7 py-6 text-center shadow-2xl shadow-slate-950/20">
+        <span className="h-12 w-12 animate-spin rounded-full border-[5px] border-blue-100 border-t-blue-600" />
+        <div>
+          <p className="text-sm font-semibold text-slate-950">Loading</p>
+          <p className="mt-1 text-xs text-slate-500">Please wait...</p>
+        </div>
       </div>
-      <div className="mx-auto mt-3 flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-white/95 px-4 py-2 text-xs font-semibold text-slate-800 shadow-xl shadow-slate-950/10 backdrop-blur">
-        <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
-        Loading...
-      </div>
-      <style jsx>{`
-        @keyframes formos-loader {
-          0% {
-            transform: translateX(-105%);
-          }
-          55% {
-            transform: translateX(95%);
-          }
-          100% {
-            transform: translateX(205%);
-          }
-        }
-      `}</style>
     </div>
   );
 }
