@@ -184,9 +184,14 @@ export default async function FormDetailPage({
     <main className="min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:gap-5">
         <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <Link className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 hover:text-blue-800" href="/dashboard/forms">
-            Forms
-          </Link>
+          <div className="flex items-start justify-between gap-3">
+            <Link className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-700 hover:text-blue-800" href="/dashboard/forms">
+              Forms
+            </Link>
+            <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+              {form.status}
+            </span>
+          </div>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h1 className="truncate text-2xl font-semibold text-slate-950 sm:text-3xl">
@@ -196,9 +201,6 @@ export default async function FormDetailPage({
                 {form.description || "No description yet."}
               </p>
             </div>
-            <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
-              {form.status}
-            </span>
           </div>
         </header>
 
@@ -233,26 +235,26 @@ export default async function FormDetailPage({
             </p>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible">
+            <div className="min-w-[150px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 lg:min-w-0">
               <p className="text-xs text-slate-500">Views</p>
               <p className="mt-1 text-xl font-semibold text-slate-950">
                 {analyticsSummary.views}
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <div className="min-w-[150px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 lg:min-w-0">
               <p className="text-xs text-slate-500">Submissions</p>
               <p className="mt-1 text-xl font-semibold text-slate-950">
                 {analyticsSummary.submissions}
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <div className="min-w-[150px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 lg:min-w-0">
               <p className="text-xs text-slate-500">Completion</p>
               <p className="mt-1 text-xl font-semibold text-slate-950">
                 {analyticsSummary.completionRate}
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <div className="min-w-[165px] rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 lg:min-w-0">
               <p className="text-xs text-slate-500">Last submission</p>
               <p className="mt-1 text-sm font-semibold text-slate-950">
                 {latestSubmissionAt ? formatDate(latestSubmissionAt) : "None yet"}
