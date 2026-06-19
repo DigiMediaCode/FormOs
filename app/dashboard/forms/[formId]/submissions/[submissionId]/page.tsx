@@ -24,14 +24,6 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-function metadataValue(value: unknown) {
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
-
-  return "Not available";
-}
-
 function eventTypeLabel(type: string) {
   return type
     .split("_")
@@ -171,18 +163,20 @@ export default async function SubmissionDetailPage({
               <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
                 Submission detail
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-                {submission.snapshot.title}
-              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-semibold text-slate-950">
+                  {submission.snapshot.title}
+                </h1>
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                  {submission.status}
+                </span>
+              </div>
               {form.title !== submission.snapshot.title ? (
                 <p className="mt-2 text-sm text-slate-700">
                   Current form title: {form.title}
                 </p>
               ) : null}
             </div>
-            <span className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800">
-              {submission.status}
-            </span>
           </div>
         </header>
 
@@ -197,27 +191,6 @@ export default async function SubmissionDetailPage({
             {error}
           </p>
         ) : null}
-
-        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-6 sm:grid-cols-3">
-          <div>
-            <p className="text-sm font-medium text-slate-950">Submitted</p>
-            <p className="mt-1 text-sm text-slate-700">
-              {formatDateTime(submission.createdAt)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-950">Form version</p>
-            <p className="mt-1 text-sm text-slate-700">
-              v{submission.formVersion}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-950">Snapshot mode</p>
-            <p className="mt-1 text-sm text-slate-700">
-              {submission.snapshot.mode || "Not available"}
-            </p>
-          </div>
-        </section>
 
         {submission.context.length > 0 ? (
           <section className="rounded-md border border-slate-200 bg-white p-6">
@@ -256,6 +229,9 @@ export default async function SubmissionDetailPage({
           <h2 className="text-xl font-semibold text-slate-950">
             Submitted answers
           </h2>
+          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Submitted {formatDateTime(submission.createdAt)}
+          </p>
           <div className="mt-5 divide-y divide-slate-200">
             {submission.answers.length === 0 ? (
               <p className="text-sm leading-6 text-slate-700">
@@ -388,30 +364,6 @@ export default async function SubmissionDetailPage({
               Download Completed PDF
             </PendingLink>
           )}
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold text-slate-950">Metadata</h2>
-          <dl className="mt-5 grid gap-4">
-            <div>
-              <dt className="text-sm font-medium text-slate-950">User agent</dt>
-              <dd className="mt-1 break-words text-sm text-slate-700">
-                {metadataValue(submission.metadata.userAgent)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-950">IP address</dt>
-              <dd className="mt-1 text-sm text-slate-700">
-                {metadataValue(submission.metadata.ipAddress)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-950">Submitted at</dt>
-              <dd className="mt-1 text-sm text-slate-700">
-                {metadataValue(submission.metadata.submittedAt)}
-              </dd>
-            </div>
-          </dl>
         </section>
 
         <section className="rounded-md border border-slate-200 bg-white p-6">
