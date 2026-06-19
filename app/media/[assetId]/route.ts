@@ -26,6 +26,7 @@ export async function GET(_request: Request, { params }: MediaRouteProps) {
   const file = await readMediaFile({
     fileName: asset.fileName,
     storagePath: asset.storagePath,
+    fileData: asset.fileData,
   });
 
   if (!file) {

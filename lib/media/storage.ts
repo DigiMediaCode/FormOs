@@ -39,6 +39,7 @@ function mediaStorageCandidates(storagePath: string, fileName: string) {
 export async function readMediaFile(input: {
   fileName: string;
   storagePath: string;
+  fileData?: Buffer | Uint8Array | null;
 }) {
   for (const candidate of mediaStorageCandidates(input.storagePath, input.fileName)) {
     try {
@@ -47,6 +48,10 @@ export async function readMediaFile(input: {
       // Try the next known storage location. Older media records may contain
       // an absolute path from a different server.
     }
+  }
+
+  if (input.fileData) {
+    return Buffer.from(input.fileData);
   }
 
   return null;
@@ -92,6 +97,7 @@ export async function saveMediaFile(input: {
       originalName: input.file.name,
       mimeType: input.file.type,
       size: input.file.size,
+      fileData: bytes,
       storagePath: fileName,
       publicPath: `/media/${id}`,
       altText: input.altText?.trim() || null,

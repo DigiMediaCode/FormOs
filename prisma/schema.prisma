@@ -372,6 +372,7 @@ model MediaAsset {
   originalName String?
   mimeType    String
   size        Int
+  fileData    Bytes?
   storagePath String
   publicPath  String   @unique
   altText     String?
