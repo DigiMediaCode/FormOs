@@ -22,6 +22,7 @@ import {
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getOwnerAnalyticsSummary } from "@/lib/forms/analytics";
+import { inferSubmitterIdentityFromSnapshot } from "@/lib/forms/submissions";
 import { getTemplateLandingPage } from "@/lib/forms/templates/template-landing-pages";
 import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-templates";
 import { getResolvedUploadProvider } from "@/lib/integrations/upload-settings";
@@ -139,6 +140,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             formId: true,
             status: true,
             createdAt: true,
+            data: true,
+            formSnapshot: true,
             form: {
               select: {
                 title: true,
@@ -279,6 +282,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const canManageForms =
     Boolean(workspaceContext?.isOwner) || workspaceContext?.role === "ADMIN";
   const recentForms = formStats.slice(0, 3);
+  const recentSubmissionsWithIdentity = recentSubmissions.map((submission) => ({
+    ...submission,
+    submitterIdentity: inferSubmitterIdentityFromSnapshot(
+      submission.formSnapshot,
+      submission.data,
+    ),
+  }));
   const storageLabel = uploadProvider?.activeProvider
     ? uploadProvider.activeProvider.replaceAll("_", " ")
     : "Not connected";
@@ -623,7 +633,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </Link>
           </div>
 
-          {recentSubmissions.length === 0 ? (
+          {recentSubmissionsWithIdentity.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-slate-950">
                 No submissions yet.
@@ -642,17 +652,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <span className="text-right">Action</span>
               </div>
               <div className="divide-y divide-slate-200">
-                {recentSubmissions.map((submission) => (
+                {recentSubmissionsWithIdentity.map((submission) => (
                   <article
                     className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 bg-white p-3 md:grid-cols-[1fr_150px_120px_90px] md:items-center md:gap-4 md:p-4"
                     key={submission.id}
                   >
-                    <Link
-                      className="min-w-0 truncate font-semibold text-slate-950 transition hover:text-blue-700 md:order-1"
-                      href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
-                    >
-                      {submission.form.title}
-                    </Link>
+                    <div className="min-w-0 md:order-1">
+                      <Link
+                        className="block truncate font-semibold text-slate-950 transition hover:text-blue-700"
+                        href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}
+                      >
+                        {submission.submitterIdentity}
+                      </Link>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {submission.form.title}
+                      </p>
+                    </div>
                     <Link
                       className="row-span-2 inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800 md:order-4 md:row-span-1 md:justify-self-end md:px-3 md:py-2"
                       href={`/dashboard/forms/${submission.formId}/submissions/${submission.id}`}

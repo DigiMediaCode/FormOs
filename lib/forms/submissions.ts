@@ -348,21 +348,9 @@ function hasSubmissionSignature(signatures: unknown) {
   return Object.values(signatures).some(isValidImageDataUrl);
 }
 
-function inferSubmitterIdentity(fields: FormBuilderField[], data: unknown) {
+export function inferSubmitterIdentity(fields: FormBuilderField[], data: unknown) {
   if (!isRecord(data)) {
     return "Unknown submitter";
-  }
-
-  const emailField = fields.find(
-    (field) =>
-      isPublicField(field) &&
-      field.type === "email" &&
-      typeof data[field.id] === "string" &&
-      String(data[field.id]).trim().length > 0,
-  );
-
-  if (emailField) {
-    return String(data[emailField.id]).trim();
   }
 
   const nameField = fields.find(
@@ -378,7 +366,50 @@ function inferSubmitterIdentity(fields: FormBuilderField[], data: unknown) {
     return String(data[nameField.id]).trim();
   }
 
+  const emailField = fields.find(
+    (field) =>
+      isPublicField(field) &&
+      field.type === "email" &&
+      typeof data[field.id] === "string" &&
+      String(data[field.id]).trim().length > 0,
+  );
+
+  if (emailField) {
+    return String(data[emailField.id]).trim();
+  }
+
+  const firstAnsweredField = fields.find((field) => {
+    const value = data[field.id];
+
+    return (
+      isPublicField(field) &&
+      !DISPLAY_ONLY_FIELD_TYPES.includes(field.type) &&
+      field.type !== "image_upload" &&
+      field.type !== "signature" &&
+      field.type !== "initials" &&
+      value !== null &&
+      value !== undefined &&
+      value !== "" &&
+      !(typeof value === "boolean" && value === false)
+    );
+  });
+
+  if (firstAnsweredField) {
+    const value = data[firstAnsweredField.id];
+    return typeof value === "boolean"
+      ? firstAnsweredField.label || "Submitted response"
+      : String(value).trim();
+  }
+
   return "Unknown submitter";
+}
+
+export function inferSubmitterIdentityFromSnapshot(
+  formSnapshot: unknown,
+  data: unknown,
+) {
+  const snapshot = normalizeSnapshot(formSnapshot);
+  return inferSubmitterIdentity(snapshot.fields, data);
 }
 
 export async function getFormSubmissions(formId: string) {
