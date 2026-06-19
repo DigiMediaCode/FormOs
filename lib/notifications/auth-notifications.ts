@@ -4,18 +4,29 @@ import { getAppUrl } from "@/lib/app-url";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderEmailTemplate } from "@/lib/email/templates";
 
+type EmailUserIdentity = {
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+};
+
 function logNotificationWarning(message: string, details?: Record<string, unknown>) {
   console.warn("[formos:notifications]", message, details ?? {});
 }
 
-export async function sendSignupNotification(user: {
-  name: string | null;
-  email: string;
-}) {
+function displayName(user: EmailUserIdentity) {
+  return user.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || "";
+}
+
+export async function sendSignupNotification(user: EmailUserIdentity) {
   try {
     const dashboardLink = `${getAppUrl()}/dashboard`;
+    const userName = displayName(user);
     const variables = {
-      userName: user.name || "",
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      userName,
       userEmail: user.email,
       dashboardLink,
     };
@@ -25,7 +36,7 @@ export async function sendSignupNotification(user: {
       fallback: {
         subject: "Welcome to FormOS",
         text: [
-          user.name ? `Hi ${user.name},` : "Hi,",
+          userName ? `Hi ${userName},` : "Hi,",
           "",
           "Welcome to FormOS. Your account is ready.",
           `Account email: ${user.email}`,
@@ -45,9 +56,13 @@ export async function sendSignupNotification(user: {
   }
 }
 
-export async function sendLoginNotification(user: { email: string }) {
+export async function sendLoginNotification(user: EmailUserIdentity) {
   try {
+    const userName = displayName(user);
     const variables = {
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      userName,
       userEmail: user.email,
       loginTime: new Date().toISOString(),
     };

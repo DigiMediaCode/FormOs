@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getAppUrl } from "@/lib/app-url";
+import { getPlatformSettings } from "@/lib/platform/settings";
 import { prisma } from "@/lib/prisma";
 
 export const EMAIL_TEMPLATE_KEYS = [
@@ -25,6 +27,26 @@ export type EmailTemplateRenderInput = {
     html?: string;
   };
 };
+
+export const SHARED_EMAIL_TEMPLATE_VARIABLES = [
+  "siteName",
+  "companyName",
+  "appUrl",
+  "dashboardLink",
+  "loginLink",
+  "signupLink",
+  "pricingLink",
+  "contactLink",
+  "supportEmail",
+  "contactEmail",
+  "currentDate",
+  "currentTime",
+  "currentYear",
+  "userName",
+  "firstName",
+  "lastName",
+  "userEmail",
+] as const;
 
 export function normalizeEmailTemplateKey(input: string) {
   return input
@@ -134,6 +156,13 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
   },
 };
 
+export const ALL_EMAIL_TEMPLATE_VARIABLES = Array.from(
+  new Set([
+    ...SHARED_EMAIL_TEMPLATE_VARIABLES,
+    ...Object.values(DEFAULT_EMAIL_TEMPLATES).flatMap((template) => template.variables),
+  ]),
+);
+
 export async function seedDefaultEmailTemplatesIfMissing(updatedById?: string) {
   await Promise.all(
     EMAIL_TEMPLATE_KEYS.map((key) => {
@@ -161,16 +190,64 @@ export async function renderEmailTemplate(input: EmailTemplateRenderInput) {
     where: { key: input.key },
   });
 
+  const variables = await buildEmailTemplateVariables(input.variables);
+
   if (!template?.isActive) {
-    return input.fallback;
+    return {
+      subject: renderTemplateString(input.fallback.subject, variables),
+      text: renderTemplateString(input.fallback.text, variables),
+      html: input.fallback.html
+        ? sanitizeEmailHtml(renderTemplateString(input.fallback.html, variables))
+        : undefined,
+    };
   }
 
   return {
-    subject: renderTemplateString(template.subject, input.variables),
-    text: renderTemplateString(template.textBody, input.variables),
+    subject: renderTemplateString(template.subject, variables),
+    text: renderTemplateString(template.textBody, variables),
     html: template.htmlBody
-      ? sanitizeEmailHtml(renderTemplateString(template.htmlBody, input.variables))
+      ? sanitizeEmailHtml(renderTemplateString(template.htmlBody, variables))
       : undefined,
+  };
+}
+
+async function buildEmailTemplateVariables(
+  variables: Record<string, string | number | null | undefined>,
+) {
+  const appUrl = getAppUrl();
+  const settings = await getPlatformSettings();
+  const now = new Date();
+  const emptyVariables = Object.fromEntries(
+    ALL_EMAIL_TEMPLATE_VARIABLES.map((variable) => [variable, ""]),
+  );
+  const firstName = String(variables.firstName ?? "").trim();
+  const lastName = String(variables.lastName ?? "").trim();
+  const userEmail = String(variables.userEmail ?? "").trim();
+  const userName =
+    String(variables.userName ?? "").trim() ||
+    [firstName, lastName].filter(Boolean).join(" ") ||
+    (userEmail ? userEmail.split("@")[0] : "");
+
+  return {
+    ...emptyVariables,
+    siteName: settings.siteName || "FormOS",
+    companyName: settings.companyName || "",
+    appUrl,
+    dashboardLink: `${appUrl}/dashboard`,
+    loginLink: `${appUrl}/login`,
+    signupLink: `${appUrl}/signup`,
+    pricingLink: `${appUrl}/pricing`,
+    contactLink: new URL(settings.contactUrl || "/contact", `${appUrl}/`).toString(),
+    supportEmail: settings.supportEmail || settings.contactEmail || "info@formos.com.au",
+    contactEmail: settings.contactEmail || settings.supportEmail || "info@formos.com.au",
+    currentDate: now.toISOString().slice(0, 10),
+    currentTime: now.toISOString(),
+    currentYear: String(now.getFullYear()),
+    ...variables,
+    firstName,
+    lastName,
+    userEmail,
+    userName,
   };
 }
 

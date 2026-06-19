@@ -64,6 +64,9 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
+          name: true,
         },
       },
     },
@@ -71,7 +74,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
 
   if (linkedAccount) {
     await createSession(linkedAccount.user.id);
-    await sendLoginNotification({ email: linkedAccount.user.email });
+    await sendLoginNotification(linkedAccount.user);
 
     return {
       userId: linkedAccount.user.id,
@@ -115,11 +118,14 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
+        name: true,
       },
     });
 
     await createSession(user.id);
-    await sendLoginNotification({ email: user.email });
+    await sendLoginNotification(user);
 
     return {
       userId: user.id,
@@ -148,13 +154,15 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
     select: {
       id: true,
       name: true,
+      firstName: true,
+      lastName: true,
       email: true,
     },
   });
 
   await createSession(user.id);
   await sendSignupNotification(user);
-  await sendLoginNotification({ email: user.email });
+  await sendLoginNotification(user);
 
   return {
     userId: user.id,

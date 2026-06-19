@@ -12,6 +12,7 @@ import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import {
+  ALL_EMAIL_TEMPLATE_VARIABLES,
   DEFAULT_EMAIL_TEMPLATES,
   EMAIL_TEMPLATE_KEYS,
   seedDefaultEmailTemplatesIfMissing,
@@ -349,7 +350,7 @@ export default async function EmailNotificationsPage({
                 <form action={saveEmailTemplateAction} className="grid gap-3">
                   <input name="key" type="hidden" value={key} />
                   <div className="flex flex-wrap gap-2">
-                    {defaults.variables.map((variable) => (
+                    {ALL_EMAIL_TEMPLATE_VARIABLES.map((variable) => (
                       <span
                         className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
                         key={variable}

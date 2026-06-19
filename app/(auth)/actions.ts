@@ -125,6 +125,9 @@ export async function loginAction(formData: FormData) {
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
+      name: true,
       passwordHash: true,
     },
   });
@@ -140,7 +143,7 @@ export async function loginAction(formData: FormData) {
   }
 
   await createSession(user.id);
-  await sendLoginNotification({ email: user.email });
+  await sendLoginNotification(user);
   redirect(template ? `/dashboard?template=${template}` : "/dashboard");
 }
 
