@@ -19,6 +19,7 @@ import {
   Pilcrow,
   Quote,
   Strikethrough,
+  Trash2,
   Underline,
   Upload,
   Video,
@@ -161,6 +162,7 @@ export function RichContentEditor({
   const [mode, setMode] = useState<EditorMode>("visual");
   const [uploading, setUploading] = useState(false);
   const [mediaAssets, setMediaAssets] = useState<MediaAssetOption[]>([]);
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -331,7 +333,42 @@ export function RichContentEditor({
     }
   }
 
-  async function uploadMedia(file: File | null) {
+  async function deleteMedia(asset: MediaAssetOption) {
+    const label = asset.altText || asset.originalName || asset.fileName;
+    const confirmed = window.confirm(`Delete "${label}" from the Media Library?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setDeletingMediaId(asset.id);
+
+    try {
+      const response = await fetch("/api/admin/media", {
+        body: JSON.stringify({ id: asset.id }),
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Unable to delete media.");
+      }
+
+      setMediaAssets((assets) => assets.filter((item) => item.id !== asset.id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete media.");
+    } finally {
+      setDeletingMediaId(null);
+    }
+  }
+
+  async function uploadMedia(file: File | null, insertAfterUpload = true) {
     if (!file) {
       return;
     }
@@ -359,18 +396,20 @@ export function RichContentEditor({
         throw new Error(payload.error || "Upload failed.");
       }
 
-      const fragment = mediaFragment({
-        alt: payload.originalName || "Uploaded media",
-        mimeType: payload.mimeType,
-        url: payload.publicUrl || payload.publicPath,
-      });
+      if (insertAfterUpload) {
+        const fragment = mediaFragment({
+          alt: payload.originalName || "Uploaded media",
+          mimeType: payload.mimeType,
+          url: payload.publicUrl || payload.publicPath,
+        });
 
-      if (mode === "html") {
-        setHtmlValue(`${html}${fragment}`);
-      } else if (payload.mimeType?.startsWith("video/")) {
-        insertHtml(fragment);
-      } else {
-        insertHtml(fragment);
+        if (mode === "html") {
+          setHtmlValue(`${html}${fragment}`);
+        } else if (payload.mimeType?.startsWith("video/")) {
+          insertHtml(fragment);
+        } else {
+          insertHtml(fragment);
+        }
       }
 
       void loadMediaAssets();
@@ -541,6 +580,25 @@ export function RichContentEditor({
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <label
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-blue-100 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 ${
+                    uploading ? "pointer-events-none opacity-60" : ""
+                  }`}
+                  title="Upload media"
+                >
+                  <Upload className="size-3.5" />
+                  {uploading ? "Uploading..." : "Upload"}
+                  <input
+                    accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(event) => {
+                      void uploadMedia(event.target.files?.[0] ?? null, false);
+                      event.target.value = "";
+                    }}
+                    type="file"
+                  />
+                </label>
                 <button
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                   disabled={mediaLoading}
@@ -575,32 +633,59 @@ export function RichContentEditor({
                     const label = asset.altText || asset.originalName || asset.fileName;
 
                     return (
-                      <button
+                      <div
                         className="group grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-left transition hover:border-blue-200 hover:bg-blue-50"
                         key={asset.id}
-                        onClick={() => insertMedia(asset)}
-                        type="button"
                       >
-                        <span className="flex h-36 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
-                          {asset.mimeType.startsWith("video/") ? (
-                            <video
-                              className="max-h-full max-w-full object-contain"
-                              muted
-                              src={src}
-                            />
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              alt={label}
-                              className="max-h-full max-w-full object-contain"
-                              src={src}
-                            />
-                          )}
-                        </span>
-                        <span className="truncate text-xs font-semibold text-slate-700 group-hover:text-blue-700">
-                          {label}
-                        </span>
-                      </button>
+                        <button
+                          className="grid gap-2 text-left"
+                          onClick={() => insertMedia(asset)}
+                          type="button"
+                        >
+                          <span className="flex h-36 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                            {asset.mimeType.startsWith("video/") ? (
+                              <video
+                                className="max-h-full max-w-full object-contain"
+                                muted
+                                src={src}
+                              />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                alt={label}
+                                className="max-h-full max-w-full object-contain"
+                                src={src}
+                              />
+                            )}
+                          </span>
+                          <span className="truncate text-xs font-semibold text-slate-700 group-hover:text-blue-700">
+                            {label}
+                          </span>
+                        </button>
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+                            onClick={() => insertMedia(asset)}
+                            type="button"
+                          >
+                            Insert
+                          </button>
+                          <button
+                            aria-label={`Delete ${label}`}
+                            className="inline-flex size-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 transition hover:bg-red-50"
+                            disabled={deletingMediaId === asset.id}
+                            onClick={() => void deleteMedia(asset)}
+                            title="Delete media"
+                            type="button"
+                          >
+                            {deletingMediaId === asset.id ? (
+                              <span className="text-[10px] font-semibold">...</span>
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
 
@@ -55,6 +55,22 @@ export async function readMediaFile(input: {
   }
 
   return null;
+}
+
+export async function deleteMediaFile(input: {
+  fileName: string;
+  storagePath: string;
+}) {
+  await Promise.all(
+    mediaStorageCandidates(input.storagePath, input.fileName).map(async (candidate) => {
+      try {
+        await unlink(candidate);
+      } catch {
+        // The database record is the source of truth. Missing legacy files are
+        // expected when media was uploaded before database-backed storage.
+      }
+    }),
+  );
 }
 
 export function validateMediaFile(file: File) {
