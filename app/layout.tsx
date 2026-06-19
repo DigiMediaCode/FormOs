@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { GlobalPageLoader } from "@/components/ui/global-page-loader";
 import { getAppUrl } from "@/lib/app-url";
 import {
   getAbsoluteSocialImageUrl,
@@ -94,7 +96,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <GlobalPageLoader />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }
