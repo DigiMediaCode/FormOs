@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import { saveMediaFile } from "@/lib/media/storage";
+import { getAppUrl } from "@/lib/app-url";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: asset.id,
       publicPath: asset.publicPath,
+      publicUrl: new URL(asset.publicPath, getAppUrl()).toString(),
       fileName: asset.fileName,
       originalName: asset.originalName,
       mimeType: asset.mimeType,
