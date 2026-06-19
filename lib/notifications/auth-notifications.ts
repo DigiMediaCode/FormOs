@@ -90,3 +90,58 @@ export async function sendLoginNotification(user: EmailUserIdentity) {
     });
   }
 }
+
+export async function sendLoginVerificationCode(input: {
+  user: EmailUserIdentity;
+  code: string;
+  expiresInMinutes: number;
+}) {
+  try {
+    const userName = displayName(input.user);
+    const variables = {
+      firstName: input.user.firstName || "",
+      lastName: input.user.lastName || "",
+      userName,
+      userEmail: input.user.email,
+      loginCode: input.code,
+      expiresInMinutes: String(input.expiresInMinutes),
+    };
+    const email = await renderEmailTemplate({
+      key: "login_verification_code",
+      variables,
+      fallback: {
+        subject: "Your FormOS login code",
+        text: [
+          userName ? `Hi ${userName},` : "Hi,",
+          "",
+          "Your FormOS login code is:",
+          "",
+          input.code,
+          "",
+          `This code expires in ${input.expiresInMinutes} minutes.`,
+          "If you did not try to sign in, you can ignore this email.",
+        ].join("\n"),
+        html: [
+          `<p>${userName ? `Hi ${userName},` : "Hi,"}</p>`,
+          "<p>Your FormOS login code is:</p>",
+          `<p style="font-size:28px;font-weight:700;letter-spacing:8px;">${input.code}</p>`,
+          `<p>This code expires in ${input.expiresInMinutes} minutes.</p>`,
+          "<p>If you did not try to sign in, you can ignore this email.</p>",
+        ].join(""),
+      },
+    });
+
+    await sendEmail({
+      to: input.user.email,
+      ...email,
+    });
+
+    return true;
+  } catch (error) {
+    logNotificationWarning("Login verification code email failed safely.", {
+      error: error instanceof Error ? error.message : "Unknown notification error",
+    });
+
+    return false;
+  }
+}

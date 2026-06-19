@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export const EMAIL_TEMPLATE_KEYS = [
   "signup_welcome",
+  "login_verification_code",
   "login_notification",
   "email_verification",
   "password_reset",
@@ -87,6 +88,16 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
     textBody:
       "Hi {{userName}},\n\nWelcome to FormOS. Your account is ready.\nAccount email: {{userEmail}}\nDashboard: {{dashboardLink}}",
     variables: ["userName", "userEmail", "dashboardLink"],
+  },
+  login_verification_code: {
+    name: "Login verification code",
+    description: "Sent when a user signs in and needs to verify the login.",
+    subject: "Your FormOS login code",
+    textBody:
+      "Hi {{userName}},\n\nYour FormOS login code is:\n\n{{loginCode}}\n\nThis code expires in {{expiresInMinutes}} minutes.\nIf you did not try to sign in, you can ignore this email.",
+    htmlBody:
+      "<p>Hi {{userName}},</p><p>Your FormOS login code is:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:8px;\">{{loginCode}}</p><p>This code expires in {{expiresInMinutes}} minutes.</p><p>If you did not try to sign in, you can ignore this email.</p>",
+    variables: ["userName", "userEmail", "loginCode", "expiresInMinutes"],
   },
   login_notification: {
     name: "Successful login",

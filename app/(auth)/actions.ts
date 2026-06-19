@@ -2,11 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createSession, destroySession } from "@/lib/auth/session";
+import { destroySession } from "@/lib/auth/session";
+import {
+  resendPendingLoginCode,
+  startLoginVerification,
+  verifyPendingLoginCode,
+} from "@/lib/auth/login-verification";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createAuthToken } from "@/lib/auth/tokens";
 import {
-  sendLoginNotification,
   sendSignupNotification,
 } from "@/lib/notifications/auth-notifications";
 import { sendEmailVerificationEmail } from "@/lib/notifications/auth-token-notifications";
@@ -142,12 +146,49 @@ export async function loginAction(formData: FormData) {
     errorRedirect("/login", "Invalid email or password.");
   }
 
-  await createSession(user.id);
-  await sendLoginNotification(user);
-  redirect(template ? `/dashboard?template=${template}` : "/dashboard");
+  const verification = await startLoginVerification({
+    user,
+    nextPath: template ? `/dashboard?template=${template}` : "/dashboard",
+  });
+
+  if (!verification.ok) {
+    errorRedirect("/login", verification.message);
+  }
+
+  redirect(
+    `/verify-login?success=${encodeURIComponent(verification.message)}`,
+  );
 }
 
 export async function logoutAction() {
   await destroySession();
   redirect("/login");
+}
+
+export async function verifyLoginCodeAction(formData: FormData) {
+  const code = String(formData.get("code") ?? "");
+  const result = await verifyPendingLoginCode(code);
+
+  if (!result.ok) {
+    const message =
+      "message" in result && result.message
+        ? result.message
+        : "Unable to verify that login code.";
+    redirect(`/verify-login?error=${encodeURIComponent(message)}`);
+  }
+
+  const nextPath =
+    "nextPath" in result && result.nextPath ? result.nextPath : "/dashboard";
+  redirect(nextPath);
+}
+
+export async function resendLoginCodeAction() {
+  const result = await resendPendingLoginCode();
+  const paramName = result.ok ? "success" : "error";
+  const message =
+    "message" in result && result.message
+      ? result.message
+      : "Unable to send another code.";
+
+  redirect(`/verify-login?${paramName}=${encodeURIComponent(message)}`);
 }

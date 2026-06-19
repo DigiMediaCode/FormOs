@@ -47,5 +47,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(getAppRedirectUrl("/dashboard"), { status: 303 });
+  return NextResponse.redirect(
+    getAppRedirectUrl(
+      "/verify-login?success=We%20sent%20a%20login%20code%20to%20your%20email%20address.",
+    ),
+    { status: 303 },
+  );
 }

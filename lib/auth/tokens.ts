@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const LOGIN_OTP_TTL_MS = 10 * 60 * 1000;
 
 export type ValidAuthToken = {
   id: string;
@@ -23,9 +24,15 @@ export function hashAuthToken(rawToken: string) {
 }
 
 function tokenTtl(type: AuthTokenType) {
-  return type === AuthTokenType.EMAIL_VERIFICATION
-    ? EMAIL_VERIFICATION_TTL_MS
-    : PASSWORD_RESET_TTL_MS;
+  if (type === AuthTokenType.EMAIL_VERIFICATION) {
+    return EMAIL_VERIFICATION_TTL_MS;
+  }
+
+  if (type === AuthTokenType.LOGIN_OTP) {
+    return LOGIN_OTP_TTL_MS;
+  }
+
+  return PASSWORD_RESET_TTL_MS;
 }
 
 function normalizeEmail(email: string) {

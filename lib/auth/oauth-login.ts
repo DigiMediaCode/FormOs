@@ -1,8 +1,7 @@
 import "server-only";
 
-import { createSession } from "@/lib/auth/session";
+import { startLoginVerification } from "@/lib/auth/login-verification";
 import {
-  sendLoginNotification,
   sendSignupNotification,
 } from "@/lib/notifications/auth-notifications";
 import { prisma } from "@/lib/prisma";
@@ -45,6 +44,25 @@ function splitName(name: string | null | undefined) {
   };
 }
 
+async function requireLoginVerification(user: LoginVerificationUser) {
+  const verification = await startLoginVerification({
+    user,
+    nextPath: "/dashboard",
+  });
+
+  if (!verification.ok) {
+    throw new Error(verification.message);
+  }
+}
+
+type LoginVerificationUser = {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+};
+
 export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
   const email = normalizeEmail(profile.email);
 
@@ -73,8 +91,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
   });
 
   if (linkedAccount) {
-    await createSession(linkedAccount.user.id);
-    await sendLoginNotification(linkedAccount.user);
+    await requireLoginVerification(linkedAccount.user);
 
     return {
       userId: linkedAccount.user.id,
@@ -124,8 +141,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
       },
     });
 
-    await createSession(user.id);
-    await sendLoginNotification(user);
+    await requireLoginVerification(user);
 
     return {
       userId: user.id,
@@ -160,9 +176,8 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
     },
   });
 
-  await createSession(user.id);
   await sendSignupNotification(user);
-  await sendLoginNotification(user);
+  await requireLoginVerification(user);
 
   return {
     userId: user.id,
