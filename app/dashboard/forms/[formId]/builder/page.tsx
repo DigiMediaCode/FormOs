@@ -51,6 +51,44 @@ export default async function BuilderPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
+      <div
+        aria-labelledby="desktop-builder-required-title"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-5 backdrop-blur-sm lg:hidden"
+        role="dialog"
+      >
+        <section className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-2xl">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl font-semibold text-blue-700">
+            !
+          </div>
+          <h2
+            className="mt-4 text-xl font-semibold text-slate-950"
+            id="desktop-builder-required-title"
+          >
+            Use a desktop to edit this form
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            The FormOS builder needs a larger screen for drag-and-drop fields,
+            live preview, and field settings. Please open this page on a desktop
+            or laptop to edit safely.
+          </p>
+          <div className="mt-5 grid gap-2">
+            <Link
+              className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              href={`/dashboard/forms/${form.id}`}
+            >
+              Back to form
+            </Link>
+            <Link
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              href="/dashboard/forms"
+            >
+              View forms
+            </Link>
+          </div>
+        </section>
+      </div>
+
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-[96rem] flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
