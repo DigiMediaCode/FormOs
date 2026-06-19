@@ -14,9 +14,30 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_PLANS_PATH = "/admin/plans";
+const ADMIN_NEW_PLAN_PATH = "/admin/plans/new";
 
-function redirectWith(messageType: "error" | "success", message: string): never {
-  redirect(`${ADMIN_PLANS_PATH}?${messageType}=${encodeURIComponent(message)}`);
+function safeRedirectPath(value: unknown) {
+  if (typeof value !== "string") {
+    return ADMIN_PLANS_PATH;
+  }
+
+  if (value === ADMIN_PLANS_PATH || value === ADMIN_NEW_PLAN_PATH) {
+    return value;
+  }
+
+  if (/^\/admin\/plans\/[a-zA-Z0-9_-]+$/.test(value)) {
+    return value;
+  }
+
+  return ADMIN_PLANS_PATH;
+}
+
+function redirectWith(
+  messageType: "error" | "success",
+  message: string,
+  path = ADMIN_PLANS_PATH,
+): never {
+  redirect(`${safeRedirectPath(path)}?${messageType}=${encodeURIComponent(message)}`);
 }
 
 function readString(formData: FormData, key: string) {
@@ -130,8 +151,12 @@ function readPlanData(formData: FormData) {
   };
 }
 
-export async function syncPlanToStripeAction(planId: string) {
+export async function syncPlanToStripeAction(
+  planId: string,
+  redirectPath: string | FormData = ADMIN_PLANS_PATH,
+) {
   await requireSuperAdmin();
+  const destination = safeRedirectPath(redirectPath);
 
   try {
     await syncPlanToStripe(planId);
@@ -140,11 +165,13 @@ export async function syncPlanToStripeAction(planId: string) {
     redirectWith(
       "error",
       error instanceof Error ? error.message : "Unable to sync plan to Stripe.",
+      destination,
     );
   }
 
   revalidatePath(ADMIN_PLANS_PATH);
-  redirectWith("success", "Plan synced to Stripe.");
+  revalidatePath(`/admin/plans/${planId}`);
+  redirectWith("success", "Plan synced to Stripe.", destination);
 }
 
 export async function seedDefaultPlansAction() {
@@ -156,24 +183,33 @@ export async function seedDefaultPlansAction() {
 
 export async function createPlanAction(formData: FormData) {
   await requireSuperAdmin();
+  let planId = "";
 
   try {
-    await prisma.subscriptionPlan.create({
+    const plan = await prisma.subscriptionPlan.create({
       data: readPlanData(formData),
+      select: {
+        id: true,
+      },
     });
+    planId = plan.id;
   } catch (error) {
     redirectWith(
       "error",
       error instanceof Error ? error.message : "Unable to create plan.",
+      ADMIN_NEW_PLAN_PATH,
     );
   }
 
   revalidatePath(ADMIN_PLANS_PATH);
-  redirectWith("success", "Plan created.");
+  redirectWith("success", "Plan created.", `/admin/plans/${planId}`);
 }
 
 export async function updatePlanAction(planId: string, formData: FormData) {
   await requireSuperAdmin();
+  const redirectPath = safeRedirectPath(
+    readString(formData, "redirectTo") || `/admin/plans/${planId}`,
+  );
 
   try {
     await prisma.subscriptionPlan.update({
@@ -184,15 +220,21 @@ export async function updatePlanAction(planId: string, formData: FormData) {
     redirectWith(
       "error",
       error instanceof Error ? error.message : "Unable to update plan.",
+      redirectPath,
     );
   }
 
   revalidatePath(ADMIN_PLANS_PATH);
-  redirectWith("success", "Plan updated.");
+  revalidatePath(`/admin/plans/${planId}`);
+  redirectWith("success", "Plan updated.", redirectPath);
 }
 
-export async function toggleSubscriptionPlanStatus(planId: string) {
+export async function toggleSubscriptionPlanStatus(
+  planId: string,
+  redirectPath: string | FormData = ADMIN_PLANS_PATH,
+) {
   await requireSuperAdmin();
+  const destination = safeRedirectPath(redirectPath);
 
   const plan = await prisma.subscriptionPlan.findUnique({
     where: { id: planId },
@@ -204,7 +246,7 @@ export async function toggleSubscriptionPlanStatus(planId: string) {
   });
 
   if (!plan) {
-    redirectWith("error", "Plan not found.");
+    redirectWith("error", "Plan not found.", destination);
   }
 
   const nextIsActive = !plan.isActive;
@@ -217,14 +259,20 @@ export async function toggleSubscriptionPlanStatus(planId: string) {
   });
 
   revalidatePath(ADMIN_PLANS_PATH);
+  revalidatePath(`/admin/plans/${plan.id}`);
   redirectWith(
     "success",
     `${plan.name} ${nextIsActive ? "activated" : "deactivated"}.`,
+    destination,
   );
 }
 
-export async function deleteSubscriptionPlan(planId: string) {
+export async function deleteSubscriptionPlan(
+  planId: string,
+  redirectPath: string | FormData = ADMIN_PLANS_PATH,
+) {
   await requireSuperAdmin();
+  const destination = safeRedirectPath(redirectPath);
 
   const plan = await prisma.subscriptionPlan.findUnique({
     where: { id: planId },
@@ -240,13 +288,14 @@ export async function deleteSubscriptionPlan(planId: string) {
   });
 
   if (!plan) {
-    redirectWith("error", "Plan not found.");
+    redirectWith("error", "Plan not found.", destination);
   }
 
   if (plan._count.subscriptions > 0) {
     redirectWith(
       "error",
       "This plan is assigned to users and cannot be deleted. Deactivate it instead.",
+      destination,
     );
   }
 
