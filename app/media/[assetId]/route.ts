@@ -1,5 +1,5 @@
-import { readFile } from "fs/promises";
 import { notFound } from "next/navigation";
+import { readMediaFile } from "@/lib/media/storage";
 import { prisma } from "@/lib/prisma";
 
 type MediaRouteProps = {
@@ -10,24 +10,32 @@ type MediaRouteProps = {
 
 export async function GET(_request: Request, { params }: MediaRouteProps) {
   const { assetId } = await params;
-  const asset = await prisma.mediaAsset.findUnique({
-    where: { id: assetId },
+  const asset = await prisma.mediaAsset.findFirst({
+    where: {
+      OR: [
+        { id: assetId },
+        { publicPath: `/media/${assetId}` },
+      ],
+    },
   });
 
   if (!asset) {
     notFound();
   }
 
-  try {
-    const file = await readFile(asset.storagePath);
+  const file = await readMediaFile({
+    fileName: asset.fileName,
+    storagePath: asset.storagePath,
+  });
 
-    return new Response(file, {
-      headers: {
-        "content-type": asset.mimeType,
-        "cache-control": "public, max-age=31536000, immutable",
-      },
-    });
-  } catch {
+  if (!file) {
     notFound();
   }
+
+  return new Response(file, {
+    headers: {
+      "content-type": asset.mimeType,
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
 }

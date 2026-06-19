@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +20,36 @@ const ALLOWED_MEDIA_TYPES = new Set([
 
 export function mediaStorageRoot() {
   return path.join(process.cwd(), "storage", "media");
+}
+
+function mediaStorageCandidates(storagePath: string, fileName: string) {
+  const candidates = new Set<string>();
+
+  if (storagePath) {
+    candidates.add(path.isAbsolute(storagePath) ? storagePath : path.join(process.cwd(), storagePath));
+  }
+
+  if (fileName) {
+    candidates.add(path.join(mediaStorageRoot(), fileName));
+  }
+
+  return Array.from(candidates);
+}
+
+export async function readMediaFile(input: {
+  fileName: string;
+  storagePath: string;
+}) {
+  for (const candidate of mediaStorageCandidates(input.storagePath, input.fileName)) {
+    try {
+      return await readFile(candidate);
+    } catch {
+      // Try the next known storage location. Older media records may contain
+      // an absolute path from a different server.
+    }
+  }
+
+  return null;
 }
 
 export function validateMediaFile(file: File) {
@@ -57,11 +87,12 @@ export async function saveMediaFile(input: {
 
   return prisma.mediaAsset.create({
     data: {
+      id,
       fileName,
       originalName: input.file.name,
       mimeType: input.file.type,
       size: input.file.size,
-      storagePath,
+      storagePath: fileName,
       publicPath: `/media/${id}`,
       altText: input.altText?.trim() || null,
       createdById: input.createdById,
