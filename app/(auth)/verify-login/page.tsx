@@ -24,7 +24,7 @@ export default async function VerifyLoginPage({
   const settings = await getPlatformSettings();
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12 font-sans text-zinc-950">
+    <main className="min-h-screen overflow-x-hidden bg-slate-50 px-4 py-10 font-sans text-zinc-950 sm:px-6 sm:py-12">
       <section className="mx-auto flex w-full max-w-md flex-col items-center">
         <PlatformBrand
           href="/"
@@ -33,7 +33,7 @@ export default async function VerifyLoginPage({
           textClassName="text-2xl font-bold tracking-tight text-zinc-950"
         />
 
-        <div className="mt-10 w-full rounded-2xl bg-white p-8 shadow-lg shadow-blue-950/5">
+        <div className="mt-8 w-full overflow-hidden rounded-2xl bg-white p-6 shadow-lg shadow-blue-950/5 sm:mt-10 sm:p-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <MailCheck className="h-6 w-6" />
           </div>
@@ -64,13 +64,13 @@ export default async function VerifyLoginPage({
 
           {pendingLogin ? (
             <>
-              <form action={verifyLoginCodeAction} className="mt-6 grid gap-4">
-                <label className="grid gap-2 text-sm font-medium text-zinc-950">
+              <form action={verifyLoginCodeAction} className="mt-6 grid w-full gap-4">
+                <label className="grid min-w-0 gap-2 text-sm font-medium text-zinc-950">
                   Login code
                   <input
                     autoComplete="one-time-code"
                     autoFocus
-                    className="rounded-lg border border-zinc-100 bg-white px-4 py-3 text-center text-2xl font-bold tracking-[0.35em] text-zinc-950 shadow-sm outline-none transition placeholder:text-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full min-w-0 rounded-lg border border-zinc-100 bg-white px-3 py-3 text-center text-xl font-bold tracking-[0.22em] text-zinc-950 shadow-sm outline-none transition placeholder:text-zinc-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:px-4 sm:text-2xl sm:tracking-[0.35em]"
                     inputMode="numeric"
                     maxLength={6}
                     name="code"
@@ -82,7 +82,7 @@ export default async function VerifyLoginPage({
                 </label>
 
                 <SubmitButton
-                  className="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                  className="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                   pendingText="Verifying code..."
                   showStatus={false}
                 >
