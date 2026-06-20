@@ -108,6 +108,7 @@ function readQuotaOverride(formData: FormData) {
     "allowEmbeds",
     "allowApiAccess",
     "allowConditionalLogic",
+    "allowCustomSubmissionNotifications",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

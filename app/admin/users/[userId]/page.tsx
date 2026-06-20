@@ -54,6 +54,7 @@ const booleanOverrideFields = [
   ["allowEmbeds", "Form embeds"],
   ["allowApiAccess", "API access"],
   ["allowConditionalLogic", "Conditional logic"],
+  ["allowCustomSubmissionNotifications", "Custom submission notification email"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -28,6 +28,7 @@ export type PlanLimits = {
   allowApiAccess: boolean;
   allowConditionalLogic: boolean;
   allowBasicAnalytics: boolean;
+  allowCustomSubmissionNotifications: boolean;
   maxTeamMembers: NumericLimit;
   maxConditionalRules: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
@@ -76,6 +77,7 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowApiAccess",
   "allowConditionalLogic",
   "allowBasicAnalytics",
+  "allowCustomSubmissionNotifications",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -94,6 +96,7 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowApiAccess: true,
   allowConditionalLogic: true,
   allowBasicAnalytics: true,
+  allowCustomSubmissionNotifications: true,
   maxTeamMembers: null,
   maxConditionalRules: null,
   allowedFieldTypes: null,
@@ -146,6 +149,7 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowApiAccess: false,
     allowConditionalLogic: false,
     allowBasicAnalytics: true,
+    allowCustomSubmissionNotifications: false,
     maxTeamMembers: 0,
     maxConditionalRules: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
@@ -191,6 +195,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowApiAccess: false,
       allowConditionalLogic: false,
       allowBasicAnalytics: true,
+      allowCustomSubmissionNotifications: true,
       maxTeamMembers: 0,
       maxConditionalRules: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
@@ -223,6 +228,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowApiAccess: true,
       allowConditionalLogic: true,
       allowBasicAnalytics: true,
+      allowCustomSubmissionNotifications: true,
       maxTeamMembers: 0,
       maxConditionalRules: null,
       allowedFieldTypes: null,
@@ -254,6 +260,7 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowApiAccess: true,
       allowConditionalLogic: true,
       allowBasicAnalytics: true,
+      allowCustomSubmissionNotifications: true,
       maxTeamMembers: 5,
       maxConditionalRules: null,
       allowedFieldTypes: null,
@@ -412,6 +419,7 @@ export async function seedDefaultPlansIfMissing() {
           "allowApiAccess" in plan.limits &&
           "allowConditionalLogic" in plan.limits &&
           "allowBasicAnalytics" in plan.limits &&
+          "allowCustomSubmissionNotifications" in plan.limits &&
           "maxConditionalRules" in plan.limits
         ) {
           return Promise.resolve();
@@ -438,6 +446,8 @@ export async function seedDefaultPlansIfMissing() {
               allowApiAccess: defaults.limits.allowApiAccess,
               allowConditionalLogic: defaults.limits.allowConditionalLogic,
               allowBasicAnalytics: defaults.limits.allowBasicAnalytics,
+              allowCustomSubmissionNotifications:
+                defaults.limits.allowCustomSubmissionNotifications,
               maxConditionalRules: defaults.limits.maxConditionalRules,
             } as unknown as Prisma.InputJsonValue,
           },
@@ -693,6 +703,10 @@ export function featureLabels(limits: PlanLimits) {
     { label: "API access", allowed: limits.allowApiAccess },
     { label: "Conditional logic", allowed: limits.allowConditionalLogic },
     { label: "Basic analytics", allowed: limits.allowBasicAnalytics },
+    {
+      label: "Custom submission notification email",
+      allowed: limits.allowCustomSubmissionNotifications,
+    },
   ];
 }
 

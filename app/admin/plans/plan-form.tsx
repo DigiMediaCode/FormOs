@@ -17,6 +17,7 @@ export const booleanLimitFields = [
   ["allowApiAccess", "API access"],
   ["allowConditionalLogic", "Conditional logic"],
   ["allowBasicAnalytics", "Basic analytics"],
+  ["allowCustomSubmissionNotifications", "Custom submission notification email"],
 ] as const;
 
 type PlanFormDefaults = {

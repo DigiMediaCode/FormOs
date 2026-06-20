@@ -10,11 +10,16 @@ import {
   mergePdfDeliveryMode,
 } from "@/lib/forms/pdf-delivery";
 import {
+  mergeSubmissionNotificationEmail,
+  parseSubmissionNotificationEmail,
+} from "@/lib/forms/notification-settings";
+import {
   assertCanCreateForm,
   assertCanGeneratePdf,
   assertCanUseConditionalLogic,
   assertCanUseFieldTypes,
   assertCanUseOfficeFields,
+  getUserEffectiveLimits,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import {
@@ -193,6 +198,7 @@ export async function updateForm(formId: string, formData: FormData) {
   const description = normalizeDescription(formData.get("description"));
   const mode = parseFormMode(formData.get("mode"));
   const pdfDeliveryModeValue = formData.get("pdfDeliveryMode");
+  const notificationEmailWasSubmitted = formData.has("submissionNotificationEmail");
   const errorPath = `/dashboard/forms/${formId}`;
 
   if (!title) {
@@ -222,6 +228,7 @@ export async function updateForm(formId: string, formData: FormData) {
   const pdfDeliveryMode = isPdfDeliveryMode(pdfDeliveryModeValue)
     ? pdfDeliveryModeValue
     : null;
+  let nextSettings: Prisma.InputJsonValue | undefined;
 
   if (pdfDeliveryMode && pdfDeliveryMode !== "MANUAL") {
     try {
@@ -246,6 +253,43 @@ export async function updateForm(formId: string, formData: FormData) {
     );
   }
 
+  if (pdfDeliveryMode) {
+    nextSettings = mergePdfDeliveryMode(existingForm.settings, pdfDeliveryMode);
+  }
+
+  if (notificationEmailWasSubmitted) {
+    if (!context.isOwner) {
+      errorRedirect(
+        errorPath,
+        "Only the workspace owner can update the submission notification email.",
+      );
+    }
+
+    const notificationEmail = parseSubmissionNotificationEmail(
+      formData.get("submissionNotificationEmail"),
+    );
+
+    if (notificationEmail.error) {
+      errorRedirect(errorPath, notificationEmail.error);
+    }
+
+    if (notificationEmail.email) {
+      const limits = await getUserEffectiveLimits(context.ownerId);
+
+      if (!limits.allowCustomSubmissionNotifications) {
+        errorRedirect(
+          errorPath,
+          "Custom submission notification email addresses are not included in your current plan.",
+        );
+      }
+    }
+
+    nextSettings = mergeSubmissionNotificationEmail(
+      nextSettings ?? existingForm.settings,
+      notificationEmail.email,
+    );
+  }
+
   await prisma.form.update({
     where: {
       id: existingForm.id,
@@ -254,11 +298,7 @@ export async function updateForm(formId: string, formData: FormData) {
       title,
       description,
       mode,
-      ...(pdfDeliveryMode
-        ? {
-            settings: mergePdfDeliveryMode(existingForm.settings, pdfDeliveryMode),
-          }
-        : {}),
+      ...(nextSettings !== undefined ? { settings: nextSettings } : {}),
     },
   });
 

@@ -118,6 +118,10 @@ function readLimits(formData: FormData): PlanLimits {
     allowApiAccess: readBoolean(formData, "allowApiAccess"),
     allowConditionalLogic: readBoolean(formData, "allowConditionalLogic"),
     allowBasicAnalytics: readBoolean(formData, "allowBasicAnalytics"),
+    allowCustomSubmissionNotifications: readBoolean(
+      formData,
+      "allowCustomSubmissionNotifications",
+    ),
     allowedFieldTypes,
   });
 }

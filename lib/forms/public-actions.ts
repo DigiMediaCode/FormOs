@@ -30,6 +30,7 @@ import {
   sendCompletedSubmissionPdfNotifications,
   sendNewSubmissionNotification,
 } from "@/lib/notifications/form-notifications";
+import { resolveSubmissionNotificationEmail } from "@/lib/forms/notification-settings";
 import {
   formHasOfficeFields,
   normalizePdfDeliveryMode,
@@ -564,12 +565,12 @@ async function submitFormInternal(
     );
   }
 
+  const ownerLimits = await getUserEffectiveLimits(form.ownerId);
+
   try {
     await assertCanReceiveSubmission(form.ownerId);
     if (source === "embed") {
-      const limits = await getUserEffectiveLimits(form.ownerId);
-
-      if (!limits.allowEmbeds) {
+      if (!ownerLimits.allowEmbeds) {
         throw new Error("This form cannot be embedded on the owner's current plan.");
       }
     }
@@ -971,8 +972,15 @@ async function submitFormInternal(
     }
   }
 
-  await sendNewSubmissionNotification({
+  const ownerNotificationEmail = resolveSubmissionNotificationEmail({
+    settings: form.settings,
     ownerEmail: form.owner.email,
+    allowCustomSubmissionNotifications:
+      ownerLimits.allowCustomSubmissionNotifications,
+  });
+
+  await sendNewSubmissionNotification({
+    ownerEmail: ownerNotificationEmail,
     formId: form.id,
     submissionId: submission.id,
     formTitle: form.title,
