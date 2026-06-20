@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BadgeDollarSign,
   Brush,
+  Code2,
   KeyRound,
   FileText,
   Gauge,
@@ -23,6 +24,11 @@ const NAV_ITEMS = [
     href: "/dashboard/forms",
     label: "Forms",
     icon: FileText,
+  },
+  {
+    href: "/dashboard/widgets",
+    label: "Widget",
+    icon: Code2,
   },
   {
     href: "/dashboard/settings/integrations",

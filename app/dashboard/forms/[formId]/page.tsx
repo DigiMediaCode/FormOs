@@ -1,6 +1,5 @@
 import { FormMode, FormStatus } from "@prisma/client";
 import Link from "next/link";
-import { FormEmbedCard } from "@/components/forms/form-embed-card";
 import { GoogleDriveUploadWarning } from "@/components/forms/google-drive-upload-warning";
 import { PublicFormQrCard } from "@/components/forms/public-form-qr-card";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -83,8 +82,7 @@ export default async function FormDetailPage({
   const appUrl = getAppUrl();
   const publicPath = `/f/${form.id}`;
   const publicFormUrl = `${appUrl}${publicPath}`;
-  const embedPath = `/embed/forms/${form.id}`;
-  const embedUrl = `${appUrl}${embedPath}`;
+  const widgetPath = `/dashboard/widgets?formId=${form.id}`;
   const isPublished = form.status === FormStatus.PUBLISHED;
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
@@ -151,7 +149,7 @@ export default async function FormDetailPage({
     {
       title: "Embed Form",
       description: "Copy iframe or JavaScript embed snippets for your website.",
-      href: "#embed-form",
+      href: widgetPath,
       label: limits.allowEmbeds ? "Embed" : "Locked",
     },
     {
@@ -520,22 +518,25 @@ export default async function FormDetailPage({
             </div>
           </details>
 
-          <details className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" id="embed-form">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-950">
-              Embed and share code
-              <span className="text-xs font-semibold text-blue-700 group-open:hidden">Open</span>
-              <span className="hidden text-xs font-semibold text-blue-700 group-open:inline">Close</span>
-            </summary>
-            <div className="mt-4">
-              <FormEmbedCard
-                allowEmbeds={limits.allowEmbeds}
-                embedUrl={embedUrl}
-                formId={form.id}
-                isPublished={isPublished}
-                scriptUrl={`${appUrl}/embed.js`}
-              />
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">
+                  Embed widget
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Open the Widget page to design this form&apos;s website embed
+                  and copy iframe or JavaScript code.
+                </p>
+              </div>
+              <Link
+                className="inline-flex w-fit rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                href={widgetPath}
+              >
+                Open widget
+              </Link>
             </div>
-          </details>
+          </section>
         </div>
 
         <details className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -598,9 +599,9 @@ export default async function FormDetailPage({
                   ) : null}
                   {limits.allowEmbeds ? (
                     <NextStepCard
-                      description="Use the embed card above to place this form on your website."
-                      href={`/dashboard/forms/${form.id}`}
-                      label="View embed code"
+                      description="Use the Widget page to place this form on your website."
+                      href={widgetPath}
+                      label="Open widget"
                       title="Embed on website"
                     />
                   ) : null}

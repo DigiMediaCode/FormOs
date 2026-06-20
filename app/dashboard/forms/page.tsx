@@ -349,7 +349,7 @@ export default async function FormsPage() {
                       <Link
                         aria-label="Embed and share"
                         className={smallActionClass("muted")}
-                        href={`/dashboard/forms/${form.id}#embed-form`}
+                        href={`/dashboard/widgets?formId=${form.id}`}
                         title="Embed and share"
                       >
                         <Share2 className="h-4 w-4" />
