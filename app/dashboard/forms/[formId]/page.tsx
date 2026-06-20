@@ -80,20 +80,11 @@ export default async function FormDetailPage({
   const context = await requireWorkspaceMember();
   const canManageForms = canManageWorkspaceForms(context);
   const form = await getUserFormById(formId);
+  const appUrl = getAppUrl();
   const publicPath = `/f/${form.id}`;
-  const publicFormUrl = `${getAppUrl()}${publicPath}`;
+  const publicFormUrl = `${appUrl}${publicPath}`;
   const embedPath = `/embed/forms/${form.id}`;
-  const embedUrl = `${getAppUrl()}${embedPath}`;
-  const iframeEmbedCode = `<iframe
-  src="${embedUrl}"
-  width="100%"
-  height="800"
-  frameborder="0"
-  style="border:0; width:100%; min-height:800px;"
-  loading="lazy"
-></iframe>`;
-  const jsEmbedCode = `<div data-formos-form="${form.id}"></div>
-<script src="${getAppUrl()}/embed.js" async></script>`;
+  const embedUrl = `${appUrl}${embedPath}`;
   const isPublished = form.status === FormStatus.PUBLISHED;
   const isArchived = form.status === FormStatus.ARCHIVED;
   const fields = normalizeFormFields(form.fields);
@@ -539,9 +530,9 @@ export default async function FormDetailPage({
               <FormEmbedCard
                 allowEmbeds={limits.allowEmbeds}
                 embedUrl={embedUrl}
-                iframeCode={iframeEmbedCode}
+                formId={form.id}
                 isPublished={isPublished}
-                jsCode={jsEmbedCode}
+                scriptUrl={`${appUrl}/embed.js`}
               />
             </div>
           </details>
