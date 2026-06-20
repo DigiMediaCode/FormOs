@@ -118,7 +118,10 @@ export default async function EmbedFormPage({
       <SignatureCanvasBootstrapScript />
       <EmbedHeightScript formId={form.id} />
 
-      <section className="mx-auto w-full max-w-3xl">
+      <section
+        className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-3 sm:p-4"
+        data-formos-embed-card
+      >
         <div className="mb-3 flex flex-col gap-3">
           {success ? <Message tone="success">{success}</Message> : null}
           {error ? <Message tone="error">{error}</Message> : null}

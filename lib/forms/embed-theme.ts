@@ -165,20 +165,26 @@ body {
 .formos-embed-scope .shadow-sm {
   box-shadow: none !important;
 }
+.formos-embed-scope [data-formos-embed-card] {
+  background: var(--formos-embed-surface) !important;
+  border-color: var(--formos-embed-border) !important;
+  padding: var(--formos-embed-pad) !important;
+}
 .formos-embed-scope [data-formos-field-id] > section,
 .formos-embed-scope form > section {
   background: transparent !important;
-  border-color: color-mix(in srgb, var(--formos-embed-border), transparent 24%) !important;
+  border-color: transparent !important;
+  border-width: 0 !important;
   box-shadow: none !important;
 }
 .formos-embed-scope [data-formos-field-id] > section {
-  padding: 0.65rem 0 !important;
+  padding: 0.45rem 0 !important;
 }
 .formos-embed-scope [data-formos-field-id] > section > div {
   gap: 0.45rem !important;
 }
 .formos-embed-scope [data-formos-field-id]:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--formos-embed-border), transparent 42%);
+  border-bottom: 0 !important;
 }
 .formos-embed-scope [data-formos-field-id] label,
 .formos-embed-scope [data-formos-field-id] legend {
@@ -223,6 +229,12 @@ body {
 .formos-embed-scope select,
 .formos-embed-scope label:has(input[type="checkbox"]) {
   min-height: 0 !important;
+}
+.formos-embed-scope label:has(input[type="checkbox"]) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0.35rem 0 !important;
 }
 .formos-embed-scope input,
 .formos-embed-scope textarea,
