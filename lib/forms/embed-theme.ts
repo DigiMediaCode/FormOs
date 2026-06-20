@@ -142,6 +142,10 @@ body {
   color: var(--formos-embed-text) !important;
   font-family: var(--formos-embed-font) !important;
 }
+.formos-embed-scope form {
+  gap: var(--formos-embed-gap) !important;
+  margin-top: 0 !important;
+}
 .formos-embed-scope section,
 .formos-embed-scope header,
 .formos-embed-scope input,
@@ -160,6 +164,31 @@ body {
 }
 .formos-embed-scope .shadow-sm {
   box-shadow: none !important;
+}
+.formos-embed-scope [data-formos-field-id] > section,
+.formos-embed-scope form > section {
+  background: transparent !important;
+  border-color: color-mix(in srgb, var(--formos-embed-border), transparent 24%) !important;
+  box-shadow: none !important;
+}
+.formos-embed-scope [data-formos-field-id] > section {
+  padding: 0.65rem 0 !important;
+}
+.formos-embed-scope [data-formos-field-id] > section > div {
+  gap: 0.45rem !important;
+}
+.formos-embed-scope [data-formos-field-id]:not(:last-child) {
+  border-bottom: 1px solid color-mix(in srgb, var(--formos-embed-border), transparent 42%);
+}
+.formos-embed-scope [data-formos-field-id] label,
+.formos-embed-scope [data-formos-field-id] legend {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+}
+.formos-embed-scope form > section:last-child,
+.formos-embed-scope [data-formos-embed-inner] > section:last-child {
+  border: 0 !important;
+  padding: 0.75rem 0 0 !important;
 }
 .formos-embed-scope .bg-slate-50,
 .formos-embed-scope .from-white,
@@ -189,6 +218,20 @@ body {
   border-color: var(--formos-embed-border) !important;
   color: var(--formos-embed-text) !important;
 }
+.formos-embed-scope input,
+.formos-embed-scope textarea,
+.formos-embed-scope select,
+.formos-embed-scope label:has(input[type="checkbox"]) {
+  min-height: 0 !important;
+}
+.formos-embed-scope input,
+.formos-embed-scope textarea,
+.formos-embed-scope select {
+  padding: 0.78rem 0.9rem !important;
+}
+.formos-embed-scope textarea {
+  min-height: 7rem !important;
+}
 .formos-embed-scope input:focus,
 .formos-embed-scope textarea:focus,
 .formos-embed-scope select:focus {
@@ -211,6 +254,9 @@ body {
 }
 .formos-embed-scope [data-formos-embed-inner] > section {
   padding: var(--formos-embed-pad);
+}
+.formos-embed-scope footer {
+  padding-bottom: 0 !important;
 }
 .formos-embed-scope[data-theme="auto"] {
   color-scheme: light dark;

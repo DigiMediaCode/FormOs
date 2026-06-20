@@ -105,7 +105,7 @@ export default async function EmbedFormPage({
 
   return (
     <main
-      className="formos-embed-scope min-h-screen px-3 py-4 sm:px-4"
+      className="formos-embed-scope min-h-0 px-0 py-0"
       data-theme={embedTheme.theme}
       style={embedTheme.style}
     >
@@ -118,23 +118,8 @@ export default async function EmbedFormPage({
       <SignatureCanvasBootstrapScript />
       <EmbedHeightScript formId={form.id} />
 
-      <section className="mx-auto max-w-3xl">
-        <header
-          className="overflow-hidden rounded-2xl border border-t-4 border-slate-200 bg-white shadow-sm"
-        >
-          <div className="border-b border-slate-100 bg-gradient-to-b from-white to-slate-50 px-5 py-6 text-center sm:px-7">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-              {form.title}
-            </h1>
-            {form.description ? (
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-700">
-                {form.description}
-              </p>
-            ) : null}
-          </div>
-        </header>
-
-        <div className="mt-4 flex flex-col gap-3">
+      <section className="mx-auto w-full max-w-3xl">
+        <div className="mb-3 flex flex-col gap-3">
           {success ? <Message tone="success">{success}</Message> : null}
           {error ? <Message tone="error">{error}</Message> : null}
         </div>

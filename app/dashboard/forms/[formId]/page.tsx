@@ -495,7 +495,7 @@ export default async function FormDetailPage({
           </aside>
         </section>
 
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div>
           <details className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" id="qr-code">
             <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-slate-950">
               QR code and public link
@@ -517,26 +517,6 @@ export default async function FormDetailPage({
               )}
             </div>
           </details>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-950">
-                  Embed widget
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Open the Widget page to design this form&apos;s website embed
-                  and copy iframe or JavaScript code.
-                </p>
-              </div>
-              <Link
-                className="inline-flex w-fit rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                href={widgetPath}
-              >
-                Open widget
-              </Link>
-            </div>
-          </section>
         </div>
 
         <details className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
