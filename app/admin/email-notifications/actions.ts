@@ -17,9 +17,35 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_EMAIL_PATH = "/admin/email-notifications";
+const ADMIN_EMAIL_NEW_PATH = "/admin/email-notifications/new";
+const ADMIN_EMAIL_BROADCAST_PATH = "/admin/email-notifications/broadcast";
 
-function redirectWith(type: "success" | "error", message: string): never {
-  redirect(`${ADMIN_EMAIL_PATH}?${type}=${encodeURIComponent(message)}`);
+function safeRedirectPath(value: unknown) {
+  if (
+    value === ADMIN_EMAIL_PATH ||
+    value === ADMIN_EMAIL_NEW_PATH ||
+    value === ADMIN_EMAIL_BROADCAST_PATH
+  ) {
+    return value;
+  }
+
+  if (
+    typeof value === "string" &&
+    (/^\/admin\/email-notifications\/[a-zA-Z0-9_-]+$/.test(value) ||
+      /^\/admin\/email-notifications\/broadcast\/[a-zA-Z0-9_-]+$/.test(value))
+  ) {
+    return value;
+  }
+
+  return ADMIN_EMAIL_PATH;
+}
+
+function redirectWith(
+  type: "success" | "error",
+  message: string,
+  path = ADMIN_EMAIL_PATH,
+): never {
+  redirect(`${safeRedirectPath(path)}?${type}=${encodeURIComponent(message)}`);
 }
 
 function isTemplateKey(value: string): value is EmailTemplateKey {
@@ -28,6 +54,17 @@ function isTemplateKey(value: string): value is EmailTemplateKey {
 
 function sanitizePlainText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
+}
+
+function parseEmailList(value: FormDataEntryValue | null) {
+  return Array.from(
+    new Set(
+      String(value ?? "")
+        .split(/[\s,;]+/)
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+    ),
+  );
 }
 
 export async function seedDefaultEmailTemplatesAction() {
@@ -40,13 +77,16 @@ export async function seedDefaultEmailTemplatesAction() {
 export async function saveEmailTemplateAction(formData: FormData) {
   const user = await requireSuperAdmin();
   const key = String(formData.get("key") ?? "");
+  const redirectPath = safeRedirectPath(
+    sanitizePlainText(formData.get("redirectTo")) || ADMIN_EMAIL_PATH,
+  );
 
   const existing = await prisma.emailTemplate.findUnique({
     where: { key },
   });
 
   if (!existing && !isTemplateKey(key)) {
-    redirectWith("error", "Template not found.");
+    redirectWith("error", "Template not found.", redirectPath);
   }
 
   const defaults = isTemplateKey(key) ? DEFAULT_EMAIL_TEMPLATES[key] : null;
@@ -58,7 +98,7 @@ export async function saveEmailTemplateAction(formData: FormData) {
   const htmlBody = sanitizePlainText(formData.get("htmlBody"));
 
   if (!subject || !textBody) {
-    redirectWith("error", "Subject and text body are required.");
+    redirectWith("error", "Subject and text body are required.", redirectPath);
   }
 
   await prisma.emailTemplate.upsert({
@@ -85,7 +125,8 @@ export async function saveEmailTemplateAction(formData: FormData) {
   });
 
   revalidatePath(ADMIN_EMAIL_PATH);
-  redirectWith("success", `${name} template saved.`);
+  revalidatePath(redirectPath);
+  redirectWith("success", `${name} template saved.`, redirectPath);
 }
 
 export async function createEmailTemplateAction(formData: FormData) {
@@ -94,11 +135,15 @@ export async function createEmailTemplateAction(formData: FormData) {
   const keyError = validateEmailTemplateKey(key);
 
   if (keyError) {
-    redirectWith("error", keyError);
+    redirectWith("error", keyError, ADMIN_EMAIL_NEW_PATH);
   }
 
   if (isTemplateKey(key)) {
-    redirectWith("error", "This key is reserved for a built-in system template.");
+    redirectWith(
+      "error",
+      "This key is reserved for a built-in system template.",
+      ADMIN_EMAIL_NEW_PATH,
+    );
   }
 
   const name = sanitizePlainText(formData.get("name"));
@@ -108,11 +153,16 @@ export async function createEmailTemplateAction(formData: FormData) {
   const htmlBody = sanitizePlainText(formData.get("htmlBody"));
 
   if (!name || !subject || !textBody) {
-    redirectWith("error", "Name, subject, and text body are required.");
+    redirectWith(
+      "error",
+      "Name, subject, and text body are required.",
+      ADMIN_EMAIL_NEW_PATH,
+    );
   }
+  let templateId = "";
 
   try {
-    await prisma.emailTemplate.create({
+    const template = await prisma.emailTemplate.create({
       data: {
         key,
         name,
@@ -123,18 +173,30 @@ export async function createEmailTemplateAction(formData: FormData) {
         isActive: formData.get("isActive") === "on",
         updatedById: user.id,
       },
+      select: {
+        id: true,
+      },
     });
+    templateId = template.id;
   } catch {
-    redirectWith("error", "A template with this key already exists.");
+    redirectWith(
+      "error",
+      "A template with this key already exists.",
+      ADMIN_EMAIL_NEW_PATH,
+    );
   }
 
   revalidatePath(ADMIN_EMAIL_PATH);
-  redirectWith("success", `${name} template created.`);
+  redirectWith("success", `${name} template created.`, `${ADMIN_EMAIL_PATH}/${templateId}`);
 }
 
-export async function resetEmailTemplateAction(key: EmailTemplateKey) {
+export async function resetEmailTemplateAction(
+  key: EmailTemplateKey,
+  redirectPath: string | FormData = ADMIN_EMAIL_PATH,
+) {
   const user = await requireSuperAdmin();
   const defaults = DEFAULT_EMAIL_TEMPLATES[key];
+  const destination = safeRedirectPath(redirectPath);
 
   await prisma.emailTemplate.upsert({
     where: { key },
@@ -160,7 +222,8 @@ export async function resetEmailTemplateAction(key: EmailTemplateKey) {
   });
 
   revalidatePath(ADMIN_EMAIL_PATH);
-  redirectWith("success", `${defaults.name} template reset.`);
+  revalidatePath(destination);
+  redirectWith("success", `${defaults.name} template reset.`, destination);
 }
 
 export async function sendBroadcastEmailAction(formData: FormData) {
@@ -169,9 +232,44 @@ export async function sendBroadcastEmailAction(formData: FormData) {
   const subject = sanitizePlainText(formData.get("subject"));
   const textBody = sanitizePlainText(formData.get("textBody"));
   const htmlBody = sanitizePlainText(formData.get("htmlBody"));
+  const recipientMode = sanitizePlainText(formData.get("recipientMode")) || "all";
 
   if (!subject || !textBody) {
-    redirectWith("error", "Broadcast subject and text body are required.");
+    redirectWith(
+      "error",
+      "Broadcast subject and text body are required.",
+      ADMIN_EMAIL_BROADCAST_PATH,
+    );
+  }
+
+  const selectedUserIds = formData
+    .getAll("recipientUserIds")
+    .map((value) => String(value))
+    .filter(Boolean);
+  const selectedEmails = parseEmailList(formData.get("recipientEmails"));
+  const recipientOrFilters = [
+    selectedUserIds.length > 0
+      ? {
+          id: {
+            in: selectedUserIds,
+          },
+        }
+      : null,
+    selectedEmails.length > 0
+      ? {
+          email: {
+            in: selectedEmails,
+          },
+        }
+      : null,
+  ].filter((filter): filter is NonNullable<typeof filter> => filter !== null);
+
+  if (recipientMode === "specific" && recipientOrFilters.length === 0) {
+    redirectWith(
+      "error",
+      "Choose at least one user or enter at least one valid email address.",
+      ADMIN_EMAIL_BROADCAST_PATH,
+    );
   }
 
   const recipients = await prisma.user.findMany({
@@ -180,6 +278,11 @@ export async function sendBroadcastEmailAction(formData: FormData) {
         not: "",
       },
       suspendedAt: null,
+      ...(recipientMode === "specific"
+        ? {
+            OR: recipientOrFilters,
+          }
+        : {}),
     },
     select: {
       email: true,
@@ -190,7 +293,7 @@ export async function sendBroadcastEmailAction(formData: FormData) {
   });
 
   if (recipients.length === 0) {
-    redirectWith("error", "No eligible users found for this broadcast.");
+    redirectWith("error", "No eligible users found for this broadcast.", ADMIN_EMAIL_BROADCAST_PATH);
   }
 
   let sentCount = 0;
@@ -238,10 +341,12 @@ export async function sendBroadcastEmailAction(formData: FormData) {
   });
 
   revalidatePath(ADMIN_EMAIL_PATH);
+  revalidatePath(ADMIN_EMAIL_BROADCAST_PATH);
   redirectWith(
     "success",
     failedCount > 0
       ? `Broadcast sent to ${sentCount} users. ${failedCount} failed safely.`
       : `Broadcast sent to ${sentCount} users.`,
+    ADMIN_EMAIL_BROADCAST_PATH,
   );
 }
