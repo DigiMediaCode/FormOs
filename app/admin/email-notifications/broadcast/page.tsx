@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, BarChart3, CreditCard, Send, Users } from "lucide-react";
 import { sendBroadcastEmailAction } from "@/app/admin/email-notifications/actions";
+import { BroadcastDraftPersistence } from "@/app/admin/email-notifications/broadcast/broadcast-draft-persistence";
 import {
   formatDate,
   inputClass,
@@ -75,6 +76,7 @@ export default async function BroadcastEmailPage({
       take: 50,
     }),
   ]);
+  const formId = "email-broadcast-form";
 
   return (
     <main className="px-4 py-6 lg:px-6">
@@ -127,7 +129,11 @@ export default async function BroadcastEmailPage({
             </div>
           </div>
 
-          <form action={sendBroadcastEmailAction} className="grid gap-4">
+          <form action={sendBroadcastEmailAction} className="grid gap-4" id={formId}>
+            <BroadcastDraftPersistence
+              clearOnSuccess={Boolean(success)}
+              formId={formId}
+            />
             <div className="grid gap-3 md:grid-cols-2">
               <label className={labelClass}>
                 Campaign Name

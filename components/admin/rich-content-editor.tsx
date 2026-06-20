@@ -197,6 +197,28 @@ export function RichContentEditor({
     }
   }
 
+  useEffect(() => {
+    function restoreFromDraft(event: Event) {
+      const customEvent = event as CustomEvent<{
+        html?: string;
+        name?: string;
+      }>;
+
+      if (customEvent.detail?.name !== name) {
+        return;
+      }
+
+      setHtmlValue(customEvent.detail.html || EMPTY_HTML);
+    }
+
+    window.addEventListener("formos:rich-editor-restore", restoreFromDraft);
+
+    return () => {
+      window.removeEventListener("formos:rich-editor-restore", restoreFromDraft);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
+
   function initializeVisualEditor(syncContent = false) {
     const doc = getEditorDocument();
     const body = doc?.body;

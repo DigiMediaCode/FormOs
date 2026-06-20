@@ -285,9 +285,15 @@ export async function sendBroadcastEmailAction(formData: FormData) {
     .map((value) => String(value))
     .filter(Boolean);
   const selectedEmails = parseEmailList(formData.get("recipientEmails"));
+  const effectiveRecipientMode =
+    selectedPlanIds.length > 0
+      ? "plan"
+      : selectedUserIds.length > 0 || selectedEmails.length > 0
+        ? "specific"
+        : recipientMode;
 
   if (
-    recipientMode === "specific" &&
+    effectiveRecipientMode === "specific" &&
     selectedUserIds.length === 0 &&
     selectedEmails.length === 0
   ) {
@@ -298,7 +304,7 @@ export async function sendBroadcastEmailAction(formData: FormData) {
     );
   }
 
-  if (recipientMode === "plan" && selectedPlanIds.length === 0) {
+  if (effectiveRecipientMode === "plan" && selectedPlanIds.length === 0) {
     redirectWith(
       "error",
       "Choose at least one package/plan for this broadcast.",
@@ -307,7 +313,7 @@ export async function sendBroadcastEmailAction(formData: FormData) {
   }
 
   const selectedPlans =
-    recipientMode === "plan"
+    effectiveRecipientMode === "plan"
       ? await prisma.subscriptionPlan.findMany({
           where: {
             id: {
@@ -330,7 +336,7 @@ export async function sendBroadcastEmailAction(formData: FormData) {
     name: true,
   } as const;
   const registeredRecipients =
-    recipientMode === "all"
+    effectiveRecipientMode === "all"
       ? await prisma.user.findMany({
           where: {
             email: {
@@ -340,7 +346,7 @@ export async function sendBroadcastEmailAction(formData: FormData) {
           },
           select: userSelect,
         })
-      : recipientMode === "plan"
+      : effectiveRecipientMode === "plan"
         ? await prisma.user.findMany({
             where: {
               email: {
