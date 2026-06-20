@@ -81,6 +81,8 @@ type PublicFormSettings = {
   successMessage?: string;
 };
 
+type SubmissionFieldValue = string | boolean | string[];
+
 type PublicSubmissionSource = "public_form" | "embed";
 
 type PublicFormSnapshot = {
@@ -193,6 +195,13 @@ function isImageDataUrl(value: string) {
 
 function readSubmissionValue(field: FormBuilderField, formData: FormData) {
   if (field.type === "checkbox") {
+    if (field.options.length > 0) {
+      return formData
+        .getAll(field.id)
+        .map((value) => String(value).trim())
+        .filter((value) => field.options.includes(value));
+    }
+
     return formData.get(field.id) === "on";
   }
 
@@ -200,7 +209,7 @@ function readSubmissionValue(field: FormBuilderField, formData: FormData) {
 }
 
 function collectConditionalAnswers(fields: FormBuilderField[], formData: FormData) {
-  const values: Record<string, string | boolean> = {};
+  const values: Record<string, SubmissionFieldValue> = {};
 
   for (const field of fields) {
     if (!isPublicField(field) || !isInputField(field)) {
@@ -257,7 +266,7 @@ function shortSubmissionId(submissionId: string) {
 
 function submissionFolderName(
   fields: FormBuilderField[],
-  data: Record<string, string | boolean>,
+  data: Record<string, SubmissionFieldValue>,
   submissionId: string,
 ) {
   const shortId = shortSubmissionId(submissionId);
@@ -585,7 +594,7 @@ async function submitFormInternal(
   }
 
   const formSnapshot = buildSnapshot(form);
-  const submittedData: Record<string, string | boolean> = {};
+  const submittedData: Record<string, SubmissionFieldValue> = {};
   const submittedSignatures: Record<string, string> = {};
   const uploadRequests: UploadRequest[] = [];
   const conditionalAnswers = collectConditionalAnswers(formSnapshot.fields, formData);
@@ -705,7 +714,10 @@ async function submitFormInternal(
     const value = readSubmissionValue(field, formData);
 
     if (field.required) {
-      if (field.type === "checkbox" && value !== true) {
+      if (
+        field.type === "checkbox" &&
+        (Array.isArray(value) ? value.length === 0 : value !== true)
+      ) {
         errorRedirect(form.id, `${field.label || "A required field"} is required.`, source);
       }
 

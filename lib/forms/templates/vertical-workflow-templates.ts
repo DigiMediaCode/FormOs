@@ -8,6 +8,7 @@ import type {
   FormFieldType,
   FormFieldVisibility,
 } from "@/lib/forms/fields";
+import { fieldSupportsOptions } from "@/lib/forms/fields";
 import {
   getVehicleHireAgreementFields,
   VEHICLE_HIRE_AGREEMENT_TEMPLATE,
@@ -67,7 +68,7 @@ function createTemplateFields(items: TemplateFieldInput[]): FormBuilderField[] {
       ? false
       : Boolean(item.required ?? true),
     order: index + 1,
-    options: item.type === "select" ? item.options ?? [] : [],
+    options: fieldSupportsOptions(item.type) ? item.options ?? [] : [],
     content: item.content ?? "",
     conditionalLogic: item.conditionalLogic ?? defaultConditionalLogic(),
     settings: {},

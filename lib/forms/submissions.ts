@@ -68,7 +68,7 @@ export type SubmissionFileMetadata =
 
 export type OfficeFieldAnswer = {
   field: FormBuilderField;
-  value: string | boolean;
+  value: string | boolean | string[];
   supported: boolean;
 };
 
@@ -134,6 +134,12 @@ function formatAnswerValue(
   }
 
   if (field.type === "checkbox") {
+    if (Array.isArray(rawValue)) {
+      return rawValue.length > 0
+        ? rawValue.map((value) => String(value)).join(", ")
+        : "No answer";
+    }
+
     return rawValue === true ? "Yes" : "No";
   }
 
@@ -307,14 +313,20 @@ export function buildOfficeFieldAnswers(
 
   return fields
     .filter(isOfficeField)
-    .map((field) => ({
-      field,
-      value:
-        field.type === "checkbox"
-          ? savedOfficeData[field.id] === true
-          : String(savedOfficeData[field.id] ?? ""),
-      supported: OFFICE_SUPPORTED_FIELD_TYPES.includes(field.type),
-    }));
+    .map((field) => {
+      const rawValue = savedOfficeData[field.id];
+
+      return {
+        field,
+        value:
+          field.type === "checkbox"
+            ? Array.isArray(rawValue)
+              ? rawValue.map((value) => String(value))
+              : rawValue === true
+            : String(rawValue ?? ""),
+        supported: OFFICE_SUPPORTED_FIELD_TYPES.includes(field.type),
+      };
+    });
 }
 
 export function buildSubmissionPreview(fields: FormBuilderField[], data: unknown) {

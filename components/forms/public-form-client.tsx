@@ -24,10 +24,16 @@ export function PublicFormDraftScript({
       function collect(form) {
         const values = {};
         const data = new FormData(form);
+        const checkboxNames = new Set();
         for (const element of Array.from(form.elements)) {
           if (!element || !element.name || element.type === "file") continue;
           if (element instanceof HTMLInputElement && element.type === "checkbox") {
-            values[element.name] = data.get(element.name) === "on";
+            if (checkboxNames.has(element.name)) continue;
+            checkboxNames.add(element.name);
+            const checkboxes = Array.from(form.querySelectorAll('input[type="checkbox"]'))
+              .filter((input) => input.name === element.name);
+            const selected = data.getAll(element.name).map(String);
+            values[element.name] = checkboxes.length > 1 ? selected : selected.includes("on");
           } else if (
             element instanceof HTMLInputElement ||
             element instanceof HTMLTextAreaElement ||
@@ -66,6 +72,16 @@ export function PublicFormDraftScript({
         for (const [name, value] of Object.entries(draft)) {
           const element = form.elements.namedItem(name);
           if (!element) continue;
+
+          if (typeof RadioNodeList !== "undefined" && element instanceof RadioNodeList) {
+            const selected = Array.isArray(value) ? value.map(String) : [];
+            for (const item of Array.from(element)) {
+              if (item instanceof HTMLInputElement && item.type === "checkbox") {
+                item.checked = selected.includes(item.value);
+              }
+            }
+            continue;
+          }
 
           if (element instanceof HTMLInputElement && element.type === "checkbox") {
             element.checked = Boolean(value);
@@ -146,11 +162,11 @@ type PublicFormClientProps = {
 };
 
 function valueIsMissing(field: RequiredPublicField, formData: FormData) {
-  const value = formData.get(field.id);
-
   if (field.type === "checkbox") {
-    return value !== "on";
+    return formData.getAll(field.id).length === 0;
   }
+
+  const value = formData.get(field.id);
 
   if (field.type === "image_upload") {
     return !(value instanceof File) || value.size === 0;
@@ -176,7 +192,7 @@ export function PublicFormClient({
 
   function collectDraft(form: HTMLFormElement) {
     const formData = new FormData(form);
-    const values: Record<string, string | boolean> = {};
+    const values: Record<string, string | boolean | string[]> = {};
 
     for (const element of Array.from(form.elements)) {
       if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement)) {
@@ -188,7 +204,16 @@ export function PublicFormClient({
       }
 
       if (element instanceof HTMLInputElement && element.type === "checkbox") {
-        values[element.name] = formData.get(element.name) === "on";
+        if (element.name in values) {
+          continue;
+        }
+
+        const checkboxes = Array.from(
+          form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+        ).filter((input) => input.name === element.name);
+        const selected = formData.getAll(element.name).map(String);
+        values[element.name] =
+          checkboxes.length > 1 ? selected : selected.includes("on");
         continue;
       }
 
@@ -200,7 +225,7 @@ export function PublicFormClient({
 
   function collectCurrentValues(form: HTMLFormElement) {
     const formData = new FormData(form);
-    const values: Record<string, string | boolean> = {};
+    const values: Record<string, string | boolean | string[]> = {};
 
     for (const element of Array.from(form.elements)) {
       if (
@@ -218,7 +243,16 @@ export function PublicFormClient({
       }
 
       if (element instanceof HTMLInputElement && element.type === "checkbox") {
-        values[element.name] = formData.get(element.name) === "on";
+        if (element.name in values) {
+          continue;
+        }
+
+        const checkboxes = Array.from(
+          form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+        ).filter((input) => input.name === element.name);
+        const selected = formData.getAll(element.name).map(String);
+        values[element.name] =
+          checkboxes.length > 1 ? selected : selected.includes("on");
         continue;
       }
 
@@ -326,6 +360,16 @@ export function PublicFormClient({
     for (const [name, value] of Object.entries(draft)) {
       const element = form.elements.namedItem(name);
 
+      if (typeof RadioNodeList !== "undefined" && element instanceof RadioNodeList) {
+        const selected = Array.isArray(value) ? value.map(String) : [];
+        for (const item of Array.from(element)) {
+          if (item instanceof HTMLInputElement && item.type === "checkbox") {
+            item.checked = selected.includes(item.value);
+          }
+        }
+        continue;
+      }
+
       if (element instanceof HTMLInputElement && element.type === "checkbox") {
         element.checked = Boolean(value);
         continue;
@@ -390,11 +434,19 @@ export function PublicFormClient({
 
     const fieldElement = event.currentTarget.elements.namedItem(missingField.id);
 
-    if (fieldElement instanceof HTMLElement) {
-      fieldElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    const focusElement =
+      typeof RadioNodeList !== "undefined" && fieldElement instanceof RadioNodeList
+        ? Array.from(fieldElement).find(
+            (element): element is HTMLInputElement =>
+              element instanceof HTMLInputElement,
+          )
+        : fieldElement;
 
-      if ("focus" in fieldElement) {
-        fieldElement.focus();
+    if (focusElement instanceof HTMLElement) {
+      focusElement.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      if ("focus" in focusElement) {
+        focusElement.focus();
       }
     }
   }

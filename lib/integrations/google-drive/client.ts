@@ -811,7 +811,7 @@ export async function ensureSubmissionFolder(
 
 export function extractSubmitterName(
   fields: FormBuilderField[],
-  data: Record<string, string | boolean>,
+  data: Record<string, unknown>,
 ) {
   const textLikeFields = fields.filter(
     (field) => field.type === "text" || field.type === "textarea",

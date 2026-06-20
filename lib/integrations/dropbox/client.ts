@@ -525,7 +525,7 @@ export function getDropboxUploadPaths(input: {
   parentPath: string;
   formTitle: string;
   fields: FormBuilderField[];
-  data: Record<string, string | boolean>;
+  data: Record<string, unknown>;
   submissionId: string;
   fileName: string;
 }) {
@@ -562,7 +562,7 @@ export async function uploadFileToDropbox(
     parentPath: string;
     formTitle: string;
     fields: FormBuilderField[];
-    data: Record<string, string | boolean>;
+    data: Record<string, unknown>;
     submissionId: string;
   },
 ): Promise<DropboxFileMetadata> {

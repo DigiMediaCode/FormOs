@@ -430,6 +430,12 @@ function answerFor(field: FormBuilderField, data: Record<string, unknown>) {
   const rawValue = data[field.id];
 
   if (field.type === "checkbox") {
+    if (Array.isArray(rawValue)) {
+      return rawValue.length > 0
+        ? rawValue.map((value) => safeText(value)).filter(Boolean).join(", ")
+        : "No answer";
+    }
+
     return rawValue === true ? "Yes" : "No";
   }
 

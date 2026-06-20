@@ -52,6 +52,12 @@ export const DISPLAY_ONLY_FIELD_TYPES: FormFieldType[] = [
   "html",
 ];
 
+export const OPTION_FIELD_TYPES: FormFieldType[] = ["select", "checkbox"];
+
+export function fieldSupportsOptions(type: FormFieldType) {
+  return OPTION_FIELD_TYPES.includes(type);
+}
+
 export function isSupportedFieldType(type: string): type is FormFieldType {
   return SUPPORTED_FIELD_TYPE_SET.has(type);
 }
@@ -229,10 +235,10 @@ export function validateFormFields(value: unknown) {
 
     const options = normalizeOptions(rawField.options);
 
-    if (type === "select" && !Array.isArray(rawField.options)) {
+    if (fieldSupportsOptions(type) && !Array.isArray(rawField.options)) {
       return {
         fields: null,
-        error: `Field ${index + 1} needs select options.`,
+        error: `Field ${index + 1} needs options.`,
       };
     }
 
@@ -318,7 +324,7 @@ export function validateFormFields(value: unknown) {
       .map((field, index) => ({
         ...field,
         order: index + 1,
-        options: field.type === "select" ? field.options : [],
+        options: fieldSupportsOptions(field.type) ? field.options : [],
       })),
     error: null,
   };

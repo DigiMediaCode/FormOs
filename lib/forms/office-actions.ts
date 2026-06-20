@@ -33,6 +33,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readOfficeValue(field: FormBuilderField, formData: FormData) {
   if (field.type === "checkbox") {
+    if (field.options.length > 0) {
+      return formData
+        .getAll(field.id)
+        .map((value) => String(value).trim())
+        .filter((value) => field.options.includes(value));
+    }
+
     return formData.get(field.id) === "on";
   }
 
@@ -72,7 +79,7 @@ export async function saveOfficeFields(
 
   const snapshot = isRecord(submission.formSnapshot) ? submission.formSnapshot : {};
   const fields = normalizeFormFields(snapshot.fields);
-  const nextOfficeData: Record<string, string | boolean> = {};
+  const nextOfficeData: Record<string, string | boolean | string[]> = {};
 
   for (const field of fields.filter(isOfficeField)) {
     if (!OFFICE_SUPPORTED_FIELD_TYPES.includes(field.type)) {

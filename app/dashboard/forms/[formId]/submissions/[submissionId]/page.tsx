@@ -77,7 +77,7 @@ function shortSubmissionId(id: string) {
   return id.slice(0, 8).toUpperCase();
 }
 
-function renderOfficeInput(field: FormBuilderField, value: string | boolean) {
+function renderOfficeInput(field: FormBuilderField, value: string | boolean | string[]) {
   const inputClass =
     "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
@@ -109,6 +109,27 @@ function renderOfficeInput(field: FormBuilderField, value: string | boolean) {
   }
 
   if (field.type === "checkbox") {
+    if (field.options.length > 0) {
+      const selected = Array.isArray(value) ? value.map(String) : [];
+
+      return (
+        <div className="grid gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3">
+          {field.options.map((option) => (
+            <label className="flex items-center gap-3 text-sm text-slate-700" key={option}>
+              <input
+                className="h-4 w-4"
+                defaultChecked={selected.includes(option)}
+                name={field.id}
+                type="checkbox"
+                value={option}
+              />
+              {option}
+            </label>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
         <input

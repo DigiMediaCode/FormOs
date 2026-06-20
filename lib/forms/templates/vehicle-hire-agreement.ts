@@ -3,7 +3,12 @@ import {
   defaultConditionalLogic,
   type FieldConditionalLogic,
 } from "@/lib/forms/conditional-logic";
-import type { FormBuilderField, FormFieldType, FormFieldVisibility } from "@/lib/forms/fields";
+import {
+  fieldSupportsOptions,
+  type FormBuilderField,
+  type FormFieldType,
+  type FormFieldVisibility,
+} from "@/lib/forms/fields";
 
 export const VEHICLE_HIRE_AGREEMENT_TEMPLATE = {
   title: "Vehicle Hire Agreement",
@@ -38,7 +43,7 @@ function createTemplateFields(items: TemplateFieldInput[]): FormBuilderField[] {
     placeholder: item.placeholder ?? "",
     required: item.type === "html" ? false : Boolean(item.required),
     order: index + 1,
-    options: item.type === "select" ? item.options ?? [] : [],
+    options: fieldSupportsOptions(item.type) ? item.options ?? [] : [],
     content: item.content ?? "",
     conditionalLogic: item.conditionalLogic ?? defaultConditionalLogic(),
     settings: item.settings ?? {},

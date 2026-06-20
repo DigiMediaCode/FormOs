@@ -94,6 +94,33 @@ function renderInput(field: FormBuilderField) {
   }
 
   if (field.type === "checkbox") {
+    if (field.options.length > 0) {
+      return (
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-semibold text-slate-900">
+            {field.label}
+            <RequiredMarker required={field.required} />
+          </legend>
+          <div className="grid gap-2">
+            {field.options.map((option) => (
+              <label
+                className="flex min-h-12 items-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100"
+                key={option}
+              >
+                <input
+                  className="h-5 w-5 rounded border-slate-300 text-blue-700 focus:ring-blue-600"
+                  name={field.id}
+                  type="checkbox"
+                  value={option}
+                />
+                <span className="leading-6">{option}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      );
+    }
+
     return (
       <label
         className="flex min-h-14 items-start gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-100"

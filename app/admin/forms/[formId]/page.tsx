@@ -132,6 +132,25 @@ function PreviewField({ field }: { field: FormBuilderField }) {
   }
 
   if (field.type === "checkbox") {
+    if (field.options.length > 0) {
+      return (
+        <div className="rounded-md border border-slate-200 bg-white p-3">
+          <p className="text-sm font-medium text-slate-800">
+            {label}
+            {field.required ? <span className="text-red-600"> *</span> : null}
+          </p>
+          <div className="mt-3 grid gap-2">
+            {field.options.map((option) => (
+              <div className="flex items-center gap-2 text-sm text-slate-700" key={option}>
+                <span className="h-4 w-4 rounded border border-slate-300 bg-slate-50" />
+                {option}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-start gap-3 rounded-md border border-slate-200 bg-white p-3">
         <span className="mt-0.5 h-4 w-4 rounded border border-slate-300 bg-slate-50" />
