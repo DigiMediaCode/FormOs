@@ -149,7 +149,7 @@ export default async function EmbedFormPage({
               </section>
             )}
 
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="py-2" data-formos-submit-shell>
               <PublicFormSubmitControls
                 hasUploadFields={hasUploadFields}
                 submitButtonText={submitButtonText}
