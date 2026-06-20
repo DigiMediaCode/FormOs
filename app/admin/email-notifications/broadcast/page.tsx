@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Send, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, CreditCard, Send, Users } from "lucide-react";
 import { sendBroadcastEmailAction } from "@/app/admin/email-notifications/actions";
 import {
   formatDate,
@@ -36,7 +36,7 @@ export default async function BroadcastEmailPage({
 }: BroadcastPageProps) {
   await requireSuperAdmin();
   const { error, success } = await searchParams;
-  const [users, campaigns] = await Promise.all([
+  const [users, plans, campaigns] = await Promise.all([
     prisma.user.findMany({
       where: {
         email: {
@@ -53,6 +53,20 @@ export default async function BroadcastEmailPage({
         name: true,
       },
       take: 100,
+    }),
+    prisma.subscriptionPlan.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        isActive: true,
+        _count: {
+          select: {
+            subscriptions: true,
+          },
+        },
+      },
     }),
     prisma.emailCampaign.findMany({
       orderBy: {
@@ -154,10 +168,55 @@ export default async function BroadcastEmailPage({
                   className="size-4 border-slate-300 text-blue-600 focus:ring-blue-500"
                   name="recipientMode"
                   type="radio"
+                  value="plan"
+                />
+                Send by package/plan
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                  className="size-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                  name="recipientMode"
+                  type="radio"
                   value="specific"
                 />
                 Send only to selected users/emails
               </label>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <CreditCard className="size-4" />
+                  Packages / plans
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {plans.map((plan) => (
+                    <label
+                      className="flex items-start gap-2 rounded-lg border border-slate-100 px-2 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      key={plan.id}
+                    >
+                      <input
+                        className="mt-0.5 size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        name="recipientPlanIds"
+                        type="checkbox"
+                        value={plan.id}
+                      />
+                      <span>
+                        <span className="block font-semibold text-slate-900">
+                          {plan.name}
+                          {!plan.isActive ? (
+                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                              Inactive
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="block text-xs text-slate-500">
+                          {plan.slug.toLowerCase() === "free"
+                            ? "Includes users without a paid subscription"
+                            : `${plan._count.subscriptions} assigned users`}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -189,14 +248,15 @@ export default async function BroadcastEmailPage({
                   </div>
                 </div>
                 <label className={labelClass}>
-                  Or paste email addresses
+                  Add email addresses
                   <textarea
                     className={`${inputClass} min-h-40`}
                     name="recipientEmails"
                     placeholder="one@example.com, two@example.com"
                   />
                   <span className="text-xs font-normal text-slate-500">
-                    Only existing, active FormOS users will receive the broadcast.
+                    These can be existing users or external prospects. They are
+                    added to whichever recipient mode you choose.
                   </span>
                 </label>
               </div>

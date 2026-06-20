@@ -67,6 +67,40 @@ function parseEmailList(value: FormDataEntryValue | null) {
   );
 }
 
+type BroadcastRecipient = {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+};
+
+function dedupeRecipients(recipients: BroadcastRecipient[]) {
+  const seenEmails = new Set<string>();
+
+  return recipients.filter((recipient) => {
+    const email = recipient.email.trim().toLowerCase();
+
+    if (!email || seenEmails.has(email)) {
+      return false;
+    }
+
+    seenEmails.add(email);
+    recipient.email = email;
+    return true;
+  });
+}
+
+function rawEmailRecipient(email: string): BroadcastRecipient {
+  const localPart = email.split("@")[0] || email;
+
+  return {
+    email,
+    firstName: null,
+    lastName: null,
+    name: localPart,
+  };
+}
+
 export async function seedDefaultEmailTemplatesAction() {
   const user = await requireSuperAdmin();
   await seedDefaultEmailTemplatesIfMissing(user.id);
@@ -246,25 +280,17 @@ export async function sendBroadcastEmailAction(formData: FormData) {
     .getAll("recipientUserIds")
     .map((value) => String(value))
     .filter(Boolean);
+  const selectedPlanIds = formData
+    .getAll("recipientPlanIds")
+    .map((value) => String(value))
+    .filter(Boolean);
   const selectedEmails = parseEmailList(formData.get("recipientEmails"));
-  const recipientOrFilters = [
-    selectedUserIds.length > 0
-      ? {
-          id: {
-            in: selectedUserIds,
-          },
-        }
-      : null,
-    selectedEmails.length > 0
-      ? {
-          email: {
-            in: selectedEmails,
-          },
-        }
-      : null,
-  ].filter((filter): filter is NonNullable<typeof filter> => filter !== null);
 
-  if (recipientMode === "specific" && recipientOrFilters.length === 0) {
+  if (
+    recipientMode === "specific" &&
+    selectedUserIds.length === 0 &&
+    selectedEmails.length === 0
+  ) {
     redirectWith(
       "error",
       "Choose at least one user or enter at least one valid email address.",
@@ -272,25 +298,96 @@ export async function sendBroadcastEmailAction(formData: FormData) {
     );
   }
 
-  const recipients = await prisma.user.findMany({
-    where: {
-      email: {
-        not: "",
-      },
-      suspendedAt: null,
-      ...(recipientMode === "specific"
-        ? {
-            OR: recipientOrFilters,
-          }
-        : {}),
-    },
-    select: {
-      email: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-    },
-  });
+  if (recipientMode === "plan" && selectedPlanIds.length === 0) {
+    redirectWith(
+      "error",
+      "Choose at least one package/plan for this broadcast.",
+      ADMIN_EMAIL_BROADCAST_PATH,
+    );
+  }
+
+  const selectedPlans =
+    recipientMode === "plan"
+      ? await prisma.subscriptionPlan.findMany({
+          where: {
+            id: {
+              in: selectedPlanIds,
+            },
+          },
+          select: {
+            id: true,
+            slug: true,
+          },
+        })
+      : [];
+  const includeFreeFallback = selectedPlans.some(
+    (plan) => plan.slug.toLowerCase() === "free",
+  );
+  const userSelect = {
+    email: true,
+    firstName: true,
+    lastName: true,
+    name: true,
+  } as const;
+  const registeredRecipients =
+    recipientMode === "all"
+      ? await prisma.user.findMany({
+          where: {
+            email: {
+              not: "",
+            },
+            suspendedAt: null,
+          },
+          select: userSelect,
+        })
+      : recipientMode === "plan"
+        ? await prisma.user.findMany({
+            where: {
+              email: {
+                not: "",
+              },
+              suspendedAt: null,
+              OR: [
+                {
+                  subscription: {
+                    is: {
+                      planId: {
+                        in: selectedPlanIds,
+                      },
+                    },
+                  },
+                },
+                ...(includeFreeFallback
+                  ? [
+                      {
+                        subscription: {
+                          is: null,
+                        },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+            select: userSelect,
+          })
+        : selectedUserIds.length > 0
+          ? await prisma.user.findMany({
+              where: {
+                email: {
+                  not: "",
+                },
+                suspendedAt: null,
+                id: {
+                  in: selectedUserIds,
+                },
+              },
+              select: userSelect,
+            })
+          : [];
+  const recipients = dedupeRecipients([
+    ...registeredRecipients,
+    ...selectedEmails.map(rawEmailRecipient),
+  ]);
 
   if (recipients.length === 0) {
     redirectWith("error", "No eligible users found for this broadcast.", ADMIN_EMAIL_BROADCAST_PATH);
