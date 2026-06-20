@@ -83,9 +83,11 @@ function clampHeight(value: number) {
 
 function CodeBlock({ code }: { code: string }) {
   return (
-    <pre className="max-h-44 overflow-auto rounded-2xl border border-slate-200 bg-slate-950 p-4 text-xs leading-5 text-slate-50">
-      <code>{code}</code>
-    </pre>
+    <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+      <pre className="max-h-44 max-w-full overflow-x-auto overflow-y-auto p-4 text-xs leading-5 text-slate-50">
+        <code className="block w-max whitespace-pre">{code}</code>
+      </pre>
+    </div>
   );
 }
 
@@ -184,7 +186,7 @@ export function FormEmbedCard({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">
@@ -217,8 +219,8 @@ export function FormEmbedCard({
         </p>
       ) : null}
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center gap-2">
             <Palette className="size-4 text-blue-600" />
             <h3 className="text-sm font-semibold text-slate-950">
@@ -347,8 +349,8 @@ export function FormEmbedCard({
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="grid min-w-0 gap-4">
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="size-4 text-blue-600" />
@@ -392,7 +394,7 @@ export function FormEmbedCard({
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <Code2 className="size-4 text-blue-600" />
@@ -414,7 +416,7 @@ export function FormEmbedCard({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <Code2 className="size-4 text-blue-600" />

@@ -37,8 +37,8 @@ export default async function WidgetsPage({ searchParams }: WidgetsPageProps) {
   const appUrl = getAppUrl();
 
   return (
-    <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden px-4 py-6 lg:px-8 lg:py-8">
+      <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-5">
         <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -83,8 +83,8 @@ export default async function WidgetsPage({ searchParams }: WidgetsPageProps) {
             </Link>
           </section>
         ) : (
-          <div className="grid gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
-            <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:self-start">
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
+            <aside className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:self-start">
               <div className="flex items-center gap-2">
                 <Code2 className="h-4 w-4 text-blue-600" />
                 <h2 className="text-sm font-semibold text-slate-950">
@@ -124,7 +124,7 @@ export default async function WidgetsPage({ searchParams }: WidgetsPageProps) {
               </div>
             </aside>
 
-            <section className="min-w-0">
+            <section className="min-w-0 overflow-hidden">
               {selectedForm ? (
                 <FormEmbedCard
                   allowEmbeds={limits.allowEmbeds}
