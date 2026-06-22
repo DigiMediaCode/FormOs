@@ -21,14 +21,32 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function errorRedirect(path: "/login" | "/signup", message: string): never {
-  redirect(`${path}?error=${encodeURIComponent(message)}`);
+function errorRedirect(
+  path: "/login" | "/signup",
+  message: string,
+  extras?: Record<string, string>,
+): never {
+  const params = new URLSearchParams({
+    error: message,
+    ...(extras ?? {}),
+  });
+  redirect(`${path}?${params.toString()}`);
 }
 
 function safeTemplateParam(value: FormDataEntryValue | null) {
   const template = String(value ?? "").trim();
 
   return /^[a-z0-9-]+$/.test(template) ? template : "";
+}
+
+function safePlanParam(value: FormDataEntryValue | null) {
+  const plan = String(value ?? "").trim().toLowerCase();
+
+  return /^[a-z0-9-]+$/.test(plan) ? plan : "";
+}
+
+function checkoutPathForPlan(plan: string) {
+  return `/api/billing/start-trial?plan=${encodeURIComponent(plan)}&interval=monthly`;
 }
 
 function isUniqueConstraintError(error: unknown) {
@@ -47,13 +65,18 @@ export async function signupAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const template = safeTemplateParam(formData.get("template"));
+  const plan = safePlanParam(formData.get("plan"));
+  const redirectParams = {
+    ...(template ? { template } : {}),
+    ...(plan ? { plan } : {}),
+  };
 
   if (!email || !password) {
-    errorRedirect("/signup", "Email and password are required.");
+    errorRedirect("/signup", "Email and password are required.", redirectParams);
   }
 
   if (password.length < 8) {
-    errorRedirect("/signup", "Password must be at least 8 characters.");
+    errorRedirect("/signup", "Password must be at least 8 characters.", redirectParams);
   }
 
   try {
@@ -85,10 +108,10 @@ export async function signupAction(formData: FormData) {
     });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      errorRedirect("/signup", "An account already exists for that email.");
+      errorRedirect("/signup", "An account already exists for that email.", redirectParams);
     }
 
-    errorRedirect("/signup", "Unable to create your account right now.");
+    errorRedirect("/signup", "Unable to create your account right now.", redirectParams);
   }
 
   const loginParams = new URLSearchParams({
@@ -99,6 +122,10 @@ export async function signupAction(formData: FormData) {
     loginParams.set("template", template);
   }
 
+  if (plan) {
+    loginParams.set("plan", plan);
+  }
+
   redirect(`/login?${loginParams.toString()}`);
 }
 
@@ -106,9 +133,14 @@ export async function loginAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const template = safeTemplateParam(formData.get("template"));
+  const plan = safePlanParam(formData.get("plan"));
+  const redirectParams = {
+    ...(template ? { template } : {}),
+    ...(plan ? { plan } : {}),
+  };
 
   if (!email || !password) {
-    errorRedirect("/login", "Email and password are required.");
+    errorRedirect("/login", "Email and password are required.", redirectParams);
   }
 
   const rateLimit = checkRateLimit({
@@ -121,6 +153,7 @@ export async function loginAction(formData: FormData) {
     errorRedirect(
       "/login",
       `Too many login attempts. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
+      redirectParams,
     );
   }
 
@@ -137,22 +170,26 @@ export async function loginAction(formData: FormData) {
   });
 
   if (!user || !user.passwordHash) {
-    errorRedirect("/login", "Invalid email or password.");
+    errorRedirect("/login", "Invalid email or password.", redirectParams);
   }
 
   const isValidPassword = await verifyPassword(password, user.passwordHash);
 
   if (!isValidPassword) {
-    errorRedirect("/login", "Invalid email or password.");
+    errorRedirect("/login", "Invalid email or password.", redirectParams);
   }
 
   const verification = await startLoginVerification({
     user,
-    nextPath: template ? `/dashboard?template=${template}` : "/dashboard",
+    nextPath: plan
+      ? checkoutPathForPlan(plan)
+      : template
+        ? `/dashboard?template=${template}`
+        : "/dashboard",
   });
 
   if (!verification.ok) {
-    errorRedirect("/login", verification.message);
+    errorRedirect("/login", verification.message, redirectParams);
   }
 
   redirect(

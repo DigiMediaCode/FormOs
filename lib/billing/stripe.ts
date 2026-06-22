@@ -520,6 +520,7 @@ export async function createCheckoutSession({
     const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
+    payment_method_collection: eligibleForTrial ? "always" : "if_required",
     line_items: [
       {
         price: priceId,

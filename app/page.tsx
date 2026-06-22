@@ -335,6 +335,10 @@ export default async function HomePage() {
   ]);
   const isLoggedIn = Boolean(userId);
   const packageHref = isLoggedIn ? "/dashboard/settings/billing" : "/signup";
+  const packageTrialHref = (slug: string) =>
+    isLoggedIn
+      ? `/api/billing/start-trial?plan=${encodeURIComponent(slug)}&interval=monthly`
+      : `/signup?plan=${encodeURIComponent(slug)}`;
   const paidTrialLabel = settings.trialEnabled
     ? `${settings.trialDays}-day free trial`
     : null;
@@ -752,6 +756,7 @@ export default async function HomePage() {
                 .filter((feature) => feature.allowed)
                 .slice(0, 4);
               const isHighlighted = plan.slug === "pro";
+              const isPaidPlan = Number(plan.priceMonthly) > 0;
               const featureList = presentation?.highlights ?? [
                 `${limitLabel(limits.maxForms)} forms`,
                 `${limitLabel(limits.maxMonthlySubmissions)} submissions / month`,
@@ -819,11 +824,17 @@ export default async function HomePage() {
                         ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "border border-blue-100 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50"
                     }`}
-                    href={packageHref}
+                    href={isPaidPlan ? packageTrialHref(plan.slug) : packageHref}
                     icon="rocket"
                     pendingText={isLoggedIn ? "Opening billing..." : "Opening signup..."}
                   >
-                    {isLoggedIn ? "Manage Package" : "Get Started"}
+                    {isPaidPlan
+                      ? isLoggedIn
+                        ? "Start Trial"
+                        : "Start Free Trial"
+                      : isLoggedIn
+                        ? "Manage Package"
+                        : "Get Started"}
                   </LandingActionLink>
                 </article>
               );

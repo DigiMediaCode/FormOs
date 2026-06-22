@@ -44,10 +44,13 @@ function splitName(name: string | null | undefined) {
   };
 }
 
-async function requireLoginVerification(user: LoginVerificationUser) {
+async function requireLoginVerification(
+  user: LoginVerificationUser,
+  nextPath?: string | null,
+) {
   const verification = await startLoginVerification({
     user,
-    nextPath: "/dashboard",
+    nextPath: nextPath || "/dashboard",
   });
 
   if (!verification.ok) {
@@ -63,7 +66,10 @@ type LoginVerificationUser = {
   name?: string | null;
 };
 
-export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
+export async function loginWithOAuthProfile(
+  profile: NormalizedOAuthProfile,
+  nextPath?: string | null,
+) {
   const email = normalizeEmail(profile.email);
 
   if (!email || !profile.providerUserId) {
@@ -91,7 +97,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
   });
 
   if (linkedAccount) {
-    await requireLoginVerification(linkedAccount.user);
+    await requireLoginVerification(linkedAccount.user, nextPath);
 
     return {
       userId: linkedAccount.user.id,
@@ -141,7 +147,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
       },
     });
 
-    await requireLoginVerification(user);
+    await requireLoginVerification(user, nextPath);
 
     return {
       userId: user.id,
@@ -177,7 +183,7 @@ export async function loginWithOAuthProfile(profile: NormalizedOAuthProfile) {
   });
 
   await sendSignupNotification(user);
-  await requireLoginVerification(user);
+  await requireLoginVerification(user, nextPath);
 
   return {
     userId: user.id,

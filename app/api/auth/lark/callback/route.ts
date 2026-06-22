@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   try {
     const accessToken = await exchangeLarkSsoCode(code);
     const profile = await getLarkProfile(accessToken);
-    await loginWithOAuthProfile(profile);
+    await loginWithOAuthProfile(profile, statePayload.nextPath);
   } catch (error) {
     return redirectToLogin(
       error instanceof Error && error.message.includes("email")

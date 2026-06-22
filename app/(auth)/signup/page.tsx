@@ -11,6 +11,7 @@ type SignupPageProps = {
   searchParams: Promise<{
     error?: string;
     template?: string;
+    plan?: string;
   }>;
 };
 
@@ -18,9 +19,26 @@ function safeTemplateParam(value: string | undefined) {
   return value && /^[a-z0-9-]+$/.test(value) ? value : "";
 }
 
+function safePlanParam(value: string | undefined) {
+  return value && /^[a-z0-9-]+$/.test(value) ? value.toLowerCase() : "";
+}
+
 export default async function SignupPage({ searchParams }: SignupPageProps) {
-  const { error, template } = await searchParams;
+  const { error, template, plan } = await searchParams;
   const templateParam = safeTemplateParam(template);
+  const planParam = safePlanParam(plan);
+  const contextQuery = new URLSearchParams();
+
+  if (templateParam) {
+    contextQuery.set("template", templateParam);
+  }
+
+  if (planParam) {
+    contextQuery.set("plan", planParam);
+  }
+
+  const contextQueryString = contextQuery.toString();
+  const contextSuffix = contextQueryString ? `?${contextQueryString}` : "";
   const settings = await getPlatformSettings();
 
   return (
@@ -33,7 +51,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           textClassName="text-2xl font-bold tracking-tight text-zinc-950"
         />
         <p className="mt-3 text-sm leading-5 text-zinc-500">
-          Create your free account
+          {planParam ? "Create your account to start your trial" : "Create your free account"}
         </p>
 
         <div className="mt-10 w-full rounded-2xl bg-white p-8 shadow-lg shadow-blue-950/5">
@@ -59,7 +77,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <div className="mt-6 grid gap-3">
             <PendingLink
               className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href="/api/auth/google/login"
+              href={`/api/auth/google/login${contextSuffix}`}
               pendingText="Redirecting to Google..."
             >
               <GoogleLogo />
@@ -67,7 +85,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             </PendingLink>
             <PendingLink
               className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href="/api/auth/lark/login"
+              href={`/api/auth/lark/login${contextSuffix}`}
               pendingText="Redirecting to Lark..."
             >
               <LarkLogo />
@@ -86,6 +104,9 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <form action={signupAction} className="grid gap-4">
             {templateParam ? (
               <input name="template" type="hidden" value={templateParam} />
+            ) : null}
+            {planParam ? (
+              <input name="plan" type="hidden" value={planParam} />
             ) : null}
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-sm font-medium text-zinc-950">
@@ -146,14 +167,16 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs leading-5 text-zinc-500">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            No credit card required. Free to get started.
+            {planParam
+              ? "Stripe will authorize your payment method. No charge is made today when trialing."
+              : "No credit card required. Free to get started."}
           </p>
 
           <p className="mt-4 text-center text-sm leading-6 text-zinc-500">
             Already have an account?{" "}
             <Link
               className="font-semibold text-blue-600 hover:text-blue-700"
-              href={templateParam ? `/login?template=${templateParam}` : "/login"}
+              href={`/login${contextSuffix}`}
             >
               Log in
             </Link>

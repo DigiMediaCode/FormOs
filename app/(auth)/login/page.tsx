@@ -12,6 +12,7 @@ type LoginPageProps = {
     error?: string;
     success?: string;
     template?: string;
+    plan?: string;
   }>;
 };
 
@@ -19,9 +20,26 @@ function safeTemplateParam(value: string | undefined) {
   return value && /^[a-z0-9-]+$/.test(value) ? value : "";
 }
 
+function safePlanParam(value: string | undefined) {
+  return value && /^[a-z0-9-]+$/.test(value) ? value.toLowerCase() : "";
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error, success, template } = await searchParams;
+  const { error, success, template, plan } = await searchParams;
   const templateParam = safeTemplateParam(template);
+  const planParam = safePlanParam(plan);
+  const contextQuery = new URLSearchParams();
+
+  if (templateParam) {
+    contextQuery.set("template", templateParam);
+  }
+
+  if (planParam) {
+    contextQuery.set("plan", planParam);
+  }
+
+  const contextQueryString = contextQuery.toString();
+  const contextSuffix = contextQueryString ? `?${contextQueryString}` : "";
   const settings = await getPlatformSettings();
 
   return (
@@ -70,7 +88,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="mt-6 grid gap-3">
             <PendingLink
               className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href="/api/auth/google/login"
+              href={`/api/auth/google/login${contextSuffix}`}
               pendingText="Redirecting to Google..."
             >
               <GoogleLogo />
@@ -78,7 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </PendingLink>
             <PendingLink
               className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href="/api/auth/lark/login"
+              href={`/api/auth/lark/login${contextSuffix}`}
               pendingText="Redirecting to Lark..."
             >
               <LarkLogo />
@@ -97,6 +115,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <form action={loginAction} className="grid gap-4">
             {templateParam ? (
               <input name="template" type="hidden" value={templateParam} />
+            ) : null}
+            {planParam ? (
+              <input name="plan" type="hidden" value={planParam} />
             ) : null}
             <label className="grid gap-2 text-sm font-medium text-zinc-950">
               Email
@@ -144,7 +165,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Don&apos;t have an account?{" "}
             <Link
               className="font-semibold text-blue-600 hover:text-blue-700"
-              href={templateParam ? `/signup?template=${templateParam}` : "/signup"}
+              href={`/signup${contextSuffix}`}
             >
               Sign up
             </Link>

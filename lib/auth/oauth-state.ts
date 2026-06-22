@@ -10,6 +10,7 @@ type OAuthStatePayload = {
   provider: OAuthLoginProvider;
   nonce: string;
   expiresAt: number;
+  nextPath?: string;
 };
 
 function getStateSecret() {
@@ -28,11 +29,22 @@ function sign(value: string) {
   return createHmac("sha256", getStateSecret()).update(value).digest("base64url");
 }
 
-export function createOAuthState(provider: OAuthLoginProvider) {
+function normalizeNextPath(value?: string | null) {
+  const path = String(value ?? "").trim();
+
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return undefined;
+  }
+
+  return path;
+}
+
+export function createOAuthState(provider: OAuthLoginProvider, nextPath?: string | null) {
   const payload: OAuthStatePayload = {
     provider,
     nonce: randomBytes(16).toString("base64url"),
     expiresAt: Date.now() + STATE_MAX_AGE_MS,
+    ...(normalizeNextPath(nextPath) ? { nextPath: normalizeNextPath(nextPath) } : {}),
   };
   const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 

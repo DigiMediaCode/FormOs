@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 const plans = [
   {
     name: "Free",
+    slug: "free",
     price: "$0/month",
     description: "For testing one simple workflow.",
     trialEligible: false,
@@ -30,6 +31,7 @@ const plans = [
   },
   {
     name: "Starter",
+    slug: "starter",
     price: "AUD $19/month",
     description: "For small businesses moving away from paper forms.",
     trialEligible: true,
@@ -44,6 +46,7 @@ const plans = [
   },
   {
     name: "Pro",
+    slug: "pro",
     price: "AUD $45/month",
     description:
       "For businesses that need signatures, uploads, office review, and completed PDFs.",
@@ -63,6 +66,7 @@ const plans = [
   },
   {
     name: "Business",
+    slug: "business",
     price: "AUD $89/month",
     description: "For teams managing higher-volume form workflows.",
     trialEligible: true,
@@ -77,6 +81,7 @@ const plans = [
   },
   {
     name: "Enterprise",
+    slug: "enterprise",
     price: "From AUD $199/month",
     description: "For custom workflows and white-label requirements.",
     trialEligible: false,
@@ -126,6 +131,10 @@ export default async function PricingPage() {
     getPlatformSettings(),
   ]);
   const planHref = userId ? "/dashboard/settings/billing" : "/signup";
+  const paidPlanHref = (slug: string) =>
+    userId
+      ? `/api/billing/start-trial?plan=${encodeURIComponent(slug)}&interval=monthly`
+      : `/signup?plan=${encodeURIComponent(slug)}`;
   const trialLabel = platformSettings.trialEnabled
     ? `${platformSettings.trialDays}-day free trial`
     : undefined;
@@ -153,7 +162,10 @@ export default async function PricingPage() {
       <section className="mx-auto grid max-w-7xl gap-6 px-5 pb-16 sm:px-6 lg:grid-cols-5">
         {plans.map((plan) => (
           <PricingCard
-            href={plan.href ?? planHref}
+            href={
+              plan.href ??
+              (plan.trialEligible ? paidPlanHref(plan.slug) : planHref)
+            }
             key={plan.name}
             trialLabel={plan.trialEligible ? trialLabel : undefined}
             {...plan}
