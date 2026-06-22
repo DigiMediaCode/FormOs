@@ -102,7 +102,9 @@ export default async function TemplateLandingPage({
   const isLoggedIn = Boolean(userId);
   const primaryHref = isLoggedIn
     ? "/dashboard/forms/new"
-    : `/signup?template=${encodeURIComponent(page.routeSlug)}`;
+    : settings.trialEnabled
+      ? `/api/billing/public-checkout?plan=pro&interval=monthly&source=template_page&template=${encodeURIComponent(page.routeSlug)}`
+      : `/signup?template=${encodeURIComponent(page.routeSlug)}`;
   const primaryLabel = isLoggedIn
     ? "Use this template"
     : settings.trialEnabled

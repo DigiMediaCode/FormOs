@@ -334,11 +334,11 @@ export default async function HomePage() {
     getLandingPlans(),
   ]);
   const isLoggedIn = Boolean(userId);
-  const packageHref = isLoggedIn ? "/dashboard/settings/billing" : "/signup";
+  const packageHref = isLoggedIn ? "/dashboard/settings/billing" : "/signup?plan=free";
   const packageTrialHref = (slug: string) =>
     isLoggedIn
       ? `/api/billing/start-trial?plan=${encodeURIComponent(slug)}&interval=monthly`
-      : `/signup?plan=${encodeURIComponent(slug)}`;
+      : `/api/billing/public-checkout?plan=${encodeURIComponent(slug)}&interval=monthly&source=homepage_packages`;
   const paidTrialLabel = settings.trialEnabled
     ? `${settings.trialDays}-day free trial`
     : null;
@@ -472,9 +472,9 @@ export default async function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LandingActionLink
                 className="inline-flex rounded-md bg-blue-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                href="/signup"
+                href="/pricing"
                 icon="rocket"
-                pendingText="Opening signup..."
+                pendingText="Opening pricing..."
               >
                 Start free trial
               </LandingActionLink>
@@ -824,14 +824,20 @@ export default async function HomePage() {
                         ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "border border-blue-100 bg-white text-slate-800 hover:border-blue-200 hover:bg-blue-50"
                     }`}
-                    href={isPaidPlan ? packageTrialHref(plan.slug) : packageHref}
+                    href={
+                      isPaidPlan && settings.trialEnabled
+                        ? packageTrialHref(plan.slug)
+                        : packageHref
+                    }
                     icon="rocket"
                     pendingText={isLoggedIn ? "Opening billing..." : "Opening signup..."}
                   >
                     {isPaidPlan
-                      ? isLoggedIn
-                        ? "Start Trial"
-                        : "Start Free Trial"
+                      ? settings.trialEnabled
+                        ? isLoggedIn
+                          ? "Start Trial"
+                          : "Start Free Trial"
+                        : "Get Started"
                       : isLoggedIn
                         ? "Manage Package"
                         : "Get Started"}

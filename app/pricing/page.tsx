@@ -130,11 +130,11 @@ export default async function PricingPage() {
     getSessionUserId(),
     getPlatformSettings(),
   ]);
-  const planHref = userId ? "/dashboard/settings/billing" : "/signup";
+  const planHref = userId ? "/dashboard/settings/billing" : "/signup?plan=free";
   const paidPlanHref = (slug: string) =>
     userId
       ? `/api/billing/start-trial?plan=${encodeURIComponent(slug)}&interval=monthly`
-      : `/signup?plan=${encodeURIComponent(slug)}`;
+      : `/api/billing/public-checkout?plan=${encodeURIComponent(slug)}&interval=monthly&source=public_pricing`;
   const trialLabel = platformSettings.trialEnabled
     ? `${platformSettings.trialDays}-day free trial`
     : undefined;
@@ -164,7 +164,9 @@ export default async function PricingPage() {
           <PricingCard
             href={
               plan.href ??
-              (plan.trialEligible ? paidPlanHref(plan.slug) : planHref)
+              (plan.trialEligible && platformSettings.trialEnabled
+                ? paidPlanHref(plan.slug)
+                : planHref)
             }
             key={plan.name}
             trialLabel={plan.trialEligible ? trialLabel : undefined}

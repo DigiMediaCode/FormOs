@@ -14,7 +14,7 @@ function nextPathFromRequest(request: NextRequest) {
   const plan = safeSlug(request.nextUrl.searchParams.get("plan"));
   const template = safeSlug(request.nextUrl.searchParams.get("template"));
 
-  if (plan) {
+  if (plan && plan !== "free") {
     return `/api/billing/start-trial?plan=${encodeURIComponent(plan)}&interval=monthly`;
   }
 

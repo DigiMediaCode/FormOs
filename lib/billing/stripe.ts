@@ -588,6 +588,142 @@ export async function createCheckoutSession({
   }
 }
 
+function safeMetadataValue(value: string | null | undefined) {
+  return String(value ?? "").slice(0, 200);
+}
+
+export async function createPublicTrialCheckoutSession({
+  planSlug,
+  interval,
+  templateSlug,
+  source,
+}: {
+  planSlug: string;
+  interval: BillingInterval;
+  templateSlug?: string | null;
+  source?: string | null;
+}) {
+  const plan = await prisma.subscriptionPlan.findFirst({
+    where: {
+      slug: planSlug,
+      isActive: true,
+      isPublic: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      priceMonthly: true,
+      priceYearly: true,
+      stripeMonthlyPriceId: true,
+      stripeYearlyPriceId: true,
+    },
+  });
+
+  if (!plan || plan.slug === "free") {
+    throw new Error("Choose a valid paid plan to start a trial.");
+  }
+
+  const selectedAmount = interval === "monthly" ? plan.priceMonthly : plan.priceYearly;
+  const selectedCents = moneyToCents(selectedAmount);
+
+  if (!selectedCents || selectedCents <= 0) {
+    throw new Error("Free plans do not use Stripe Checkout.");
+  }
+
+  const priceId =
+    interval === "monthly" ? plan.stripeMonthlyPriceId : plan.stripeYearlyPriceId;
+
+  if (!priceId) {
+    throw new Error("This plan is not configured for Stripe Checkout yet.");
+  }
+
+  const platformSettings = await getPlatformSettings();
+
+  if (!platformSettings.trialEnabled) {
+    throw new Error("Paid plan trials are not enabled right now.");
+  }
+
+  const appUrl = getAppUrl();
+  const stripe = getStripeClient();
+  const metadata = {
+    planId: plan.id,
+    planSlug: plan.slug,
+    planName: plan.name,
+    interval,
+    trialDays: String(platformSettings.trialDays),
+    source: safeMetadataValue(source) || "public_pricing",
+    templateSlug: safeMetadataValue(templateSlug),
+    trialEligible: "true",
+  };
+
+  try {
+    const cancelParams = new URLSearchParams({
+      plan: "free",
+      checkout_cancelled: "1",
+    });
+
+    if (metadata.templateSlug) {
+      cancelParams.set("template", metadata.templateSlug);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_collection: "always",
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: `${appUrl}/signup/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/signup?${cancelParams.toString()}`,
+      metadata,
+      subscription_data: {
+        trial_period_days: platformSettings.trialDays,
+        metadata,
+      },
+    });
+
+    await createBillingEvent({
+      eventType: "public_trial_checkout_session_created",
+      status: "PROCESSED",
+      message: "Public Stripe trial Checkout session created.",
+      metadata: {
+        planId: plan.id,
+        planSlug: plan.slug,
+        interval,
+        priceId,
+        checkoutSessionId: session.id,
+        trialDays: platformSettings.trialDays,
+        source: metadata.source,
+        templateSlug: metadata.templateSlug || null,
+      },
+      processedAt: new Date(),
+    });
+
+    return session;
+  } catch (error) {
+    await createBillingEvent({
+      eventType: "public_trial_checkout_session_failed",
+      status: "FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unable to create public trial Checkout session.",
+      metadata: {
+        planId: plan.id,
+        planSlug: plan.slug,
+        interval,
+        priceId,
+      },
+      processedAt: new Date(),
+    });
+
+    throw error;
+  }
+}
+
 export async function cancelStripeSubscriptionAtPeriodEnd(userId: string) {
   const subscription = await prisma.userSubscription.findUnique({
     where: { userId },

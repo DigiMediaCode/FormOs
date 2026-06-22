@@ -66,9 +66,10 @@ export async function signupAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const template = safeTemplateParam(formData.get("template"));
   const plan = safePlanParam(formData.get("plan"));
+  const paidTrialPlan = plan && plan !== "free" ? plan : "";
   const redirectParams = {
     ...(template ? { template } : {}),
-    ...(plan ? { plan } : {}),
+    ...(paidTrialPlan ? { plan: paidTrialPlan } : {}),
   };
 
   if (!email || !password) {
@@ -122,8 +123,8 @@ export async function signupAction(formData: FormData) {
     loginParams.set("template", template);
   }
 
-  if (plan) {
-    loginParams.set("plan", plan);
+  if (paidTrialPlan) {
+    loginParams.set("plan", paidTrialPlan);
   }
 
   redirect(`/login?${loginParams.toString()}`);
@@ -134,9 +135,10 @@ export async function loginAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const template = safeTemplateParam(formData.get("template"));
   const plan = safePlanParam(formData.get("plan"));
+  const paidTrialPlan = plan && plan !== "free" ? plan : "";
   const redirectParams = {
     ...(template ? { template } : {}),
-    ...(plan ? { plan } : {}),
+    ...(paidTrialPlan ? { plan: paidTrialPlan } : {}),
   };
 
   if (!email || !password) {
@@ -181,8 +183,8 @@ export async function loginAction(formData: FormData) {
 
   const verification = await startLoginVerification({
     user,
-    nextPath: plan
-      ? checkoutPathForPlan(plan)
+    nextPath: paidTrialPlan
+      ? checkoutPathForPlan(paidTrialPlan)
       : template
         ? `/dashboard?template=${template}`
         : "/dashboard",

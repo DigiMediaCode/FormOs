@@ -28,14 +28,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error, success, template, plan } = await searchParams;
   const templateParam = safeTemplateParam(template);
   const planParam = safePlanParam(plan);
+  const paidTrialPlan = planParam && planParam !== "free" ? planParam : "";
   const contextQuery = new URLSearchParams();
 
   if (templateParam) {
     contextQuery.set("template", templateParam);
   }
 
-  if (planParam) {
-    contextQuery.set("plan", planParam);
+  if (paidTrialPlan) {
+    contextQuery.set("plan", paidTrialPlan);
   }
 
   const contextQueryString = contextQuery.toString();
@@ -116,8 +117,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             {templateParam ? (
               <input name="template" type="hidden" value={templateParam} />
             ) : null}
-            {planParam ? (
-              <input name="plan" type="hidden" value={planParam} />
+            {paidTrialPlan ? (
+              <input name="plan" type="hidden" value={paidTrialPlan} />
             ) : null}
             <label className="grid gap-2 text-sm font-medium text-zinc-950">
               Email

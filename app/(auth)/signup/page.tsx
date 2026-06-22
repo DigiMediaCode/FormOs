@@ -10,8 +10,10 @@ import { getPlatformSettings } from "@/lib/platform/settings";
 type SignupPageProps = {
   searchParams: Promise<{
     error?: string;
+    success?: string;
     template?: string;
     plan?: string;
+    checkout_cancelled?: string;
   }>;
 };
 
@@ -24,17 +26,19 @@ function safePlanParam(value: string | undefined) {
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
-  const { error, template, plan } = await searchParams;
+  const { error, success, template, plan, checkout_cancelled } = await searchParams;
   const templateParam = safeTemplateParam(template);
   const planParam = safePlanParam(plan);
+  const isFreeSignup = !planParam || planParam === "free";
+  const paidPlanParam = planParam && planParam !== "free" ? planParam : "";
   const contextQuery = new URLSearchParams();
 
   if (templateParam) {
     contextQuery.set("template", templateParam);
   }
 
-  if (planParam) {
-    contextQuery.set("plan", planParam);
+  if (planParam === "free") {
+    contextQuery.set("plan", "free");
   }
 
   const contextQueryString = contextQuery.toString();
@@ -51,7 +55,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           textClassName="text-2xl font-bold tracking-tight text-zinc-950"
         />
         <p className="mt-3 text-sm leading-5 text-zinc-500">
-          {planParam ? "Create your account to start your trial" : "Create your free account"}
+          {isFreeSignup ? "Create your free account" : "Start your paid trial with Stripe first"}
         </p>
 
         <div className="mt-10 w-full rounded-2xl bg-white p-8 shadow-lg shadow-blue-950/5">
@@ -71,6 +75,40 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
                 <p className="text-sm font-semibold">Signup failed</p>
                 <p className="mt-0.5 text-xs leading-5">{error}</p>
               </div>
+            </div>
+          ) : null}
+
+          {checkout_cancelled ? (
+            <div className="mt-6 flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-800">
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">Checkout was cancelled</p>
+                <p className="mt-0.5 text-xs leading-5">
+                  You can still start with the Free plan.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {success ? (
+            <div className="mt-6 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm leading-5 text-emerald-800">
+              {success}
+            </div>
+          ) : null}
+
+          {paidPlanParam ? (
+            <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+              Paid trials start in Stripe so your payment method can be
+              authorized for billing after the trial.
+              <PendingLink
+                className="mt-3 inline-flex rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                href={`/api/billing/public-checkout?plan=${encodeURIComponent(paidPlanParam)}&interval=monthly&source=signup_context${
+                  templateParam ? `&template=${encodeURIComponent(templateParam)}` : ""
+                }`}
+                pendingText="Opening Stripe..."
+              >
+                Continue to Stripe Checkout
+              </PendingLink>
             </div>
           ) : null}
 
@@ -105,8 +143,8 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             {templateParam ? (
               <input name="template" type="hidden" value={templateParam} />
             ) : null}
-            {planParam ? (
-              <input name="plan" type="hidden" value={planParam} />
+            {planParam === "free" ? (
+              <input name="plan" type="hidden" value="free" />
             ) : null}
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-sm font-medium text-zinc-950">
@@ -167,9 +205,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
 
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs leading-5 text-zinc-500">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            {planParam
-              ? "Stripe will authorize your payment method. No charge is made today when trialing."
-              : "No credit card required. Free to get started."}
+            No credit card required. Free to get started.
           </p>
 
           <p className="mt-4 text-center text-sm leading-6 text-zinc-500">

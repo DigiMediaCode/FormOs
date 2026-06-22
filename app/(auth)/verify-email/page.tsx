@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { verifyEmailToken } from "@/app/(auth)/verification-actions";
+import { getSessionUserId } from "@/lib/auth/session";
 
 type VerifyEmailPageProps = {
   searchParams: Promise<{
@@ -17,6 +18,7 @@ export default async function VerifyEmailPage({
         ok: false,
         message: "Verification token is missing.",
       };
+  const userId = await getSessionUserId();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10">
@@ -31,17 +33,19 @@ export default async function VerifyEmailPage({
           {result.message}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
-            href="/dashboard"
-          >
-            Dashboard
-          </Link>
+          {userId ? (
+            <Link
+              className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+              href="/dashboard"
+            >
+              Dashboard
+            </Link>
+          ) : null}
           <Link
             className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
             href="/login"
           >
-            Login
+            Log in
           </Link>
         </div>
       </section>
