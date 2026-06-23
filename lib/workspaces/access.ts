@@ -1,7 +1,8 @@
 import "server-only";
 
-import { WorkspaceRole } from "@prisma/client";
+import { Prisma, WorkspaceRole } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 import { getCurrentUser, type CurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 
@@ -46,24 +47,7 @@ export async function getOrCreateUserWorkspace(ownerId: string) {
   });
 
   if (existingWorkspace) {
-    await prisma.workspaceMember.upsert({
-      where: {
-        workspaceId_userId: {
-          workspaceId: existingWorkspace.id,
-          userId: ownerId,
-        },
-      },
-      create: {
-        workspaceId: existingWorkspace.id,
-        userId: ownerId,
-        role: WorkspaceRole.OWNER,
-        status: "ACTIVE",
-      },
-      update: {
-        role: WorkspaceRole.OWNER,
-        status: "ACTIVE",
-      },
-    });
+    await ensureOwnerWorkspaceMember(existingWorkspace.id, ownerId);
 
     return existingWorkspace;
   }
@@ -85,94 +69,154 @@ export async function getOrCreateUserWorkspace(ownerId: string) {
     notFound();
   }
 
-  const workspace = await prisma.workspace.create({
-    data: {
-      ownerId,
-      name: workspaceNameFrom(owner),
-      members: {
-        create: {
-          userId: ownerId,
-          role: WorkspaceRole.OWNER,
-          status: "ACTIVE",
+  try {
+    const workspace = await prisma.workspace.create({
+      data: {
+        ownerId,
+        name: workspaceNameFrom(owner),
+        members: {
+          create: {
+            userId: ownerId,
+            role: WorkspaceRole.OWNER,
+            status: "ACTIVE",
+          },
         },
       },
+      select: {
+        id: true,
+        ownerId: true,
+        name: true,
+      },
+    });
+
+    return workspace;
+  } catch (error) {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    ) {
+      throw error;
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { ownerId },
+      select: {
+        id: true,
+        ownerId: true,
+        name: true,
+      },
+    });
+
+    if (!workspace) {
+      throw error;
+    }
+
+    await ensureOwnerWorkspaceMember(workspace.id, ownerId);
+
+    return workspace;
+  }
+}
+
+async function ensureOwnerWorkspaceMember(workspaceId: string, ownerId: string) {
+  await prisma.workspaceMember.upsert({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: ownerId,
+      },
     },
-    select: {
-      id: true,
-      ownerId: true,
-      name: true,
+    create: {
+      workspaceId,
+      userId: ownerId,
+      role: WorkspaceRole.OWNER,
+      status: "ACTIVE",
+    },
+    update: {
+      role: WorkspaceRole.OWNER,
+      status: "ACTIVE",
     },
   });
-
-  return workspace;
 }
 
 export async function getCurrentWorkspaceContext(): Promise<WorkspaceContext | null> {
   return getWorkspaceContextForCurrentUser();
 }
 
-export async function getWorkspaceContextForCurrentUser(): Promise<WorkspaceContext | null> {
-  const user = await getCurrentUser();
+export const getWorkspaceContextForCurrentUser = cache(
+  async (): Promise<WorkspaceContext | null> => {
+    const user = await getCurrentUser();
 
-  if (!user) {
-    return null;
-  }
+    if (!user) {
+      return null;
+    }
 
-  const staffMembership = await prisma.workspaceMember.findFirst({
-    where: {
-      userId: user.id,
-      status: "ACTIVE",
-      workspace: {
-        ownerId: {
-          not: user.id,
+    const staffMembership = await prisma.workspaceMember.findFirst({
+      where: {
+        userId: user.id,
+        status: "ACTIVE",
+        workspace: {
+          ownerId: {
+            not: user.id,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: "asc",
-    },
-    select: {
-      role: true,
-      workspace: {
-        select: {
-          id: true,
-          ownerId: true,
-          name: true,
+      orderBy: {
+        createdAt: "asc",
+      },
+      select: {
+        role: true,
+        workspace: {
+          select: {
+            id: true,
+            ownerId: true,
+            name: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (staffMembership) {
-    const isAdmin = staffMembership.role === WorkspaceRole.ADMIN;
+    if (staffMembership) {
+      const isAdmin = staffMembership.role === WorkspaceRole.ADMIN;
+
+      return {
+        user,
+        workspace: staffMembership.workspace,
+        role: staffMembership.role,
+        ownerId: staffMembership.workspace.ownerId,
+        isOwner: false,
+        isAdmin,
+        canManageOwnerSettings: false,
+        canManageTeam: false,
+      };
+    }
+
+    const ownedWorkspace = await prisma.workspace.findUnique({
+      where: { ownerId: user.id },
+      select: {
+        id: true,
+        ownerId: true,
+        name: true,
+      },
+    });
+
+    if (!ownedWorkspace) {
+      const workspace = await getOrCreateUserWorkspace(user.id);
+
+      return {
+        user,
+        workspace,
+        role: WorkspaceRole.OWNER,
+        ownerId: user.id,
+        isOwner: true,
+        isAdmin: true,
+        canManageOwnerSettings: true,
+        canManageTeam: true,
+      };
+    }
 
     return {
       user,
-      workspace: staffMembership.workspace,
-      role: staffMembership.role,
-      ownerId: staffMembership.workspace.ownerId,
-      isOwner: false,
-      isAdmin,
-      canManageOwnerSettings: false,
-      canManageTeam: false,
-    };
-  }
-
-  const ownedWorkspace = await prisma.workspace.findUnique({
-    where: { ownerId: user.id },
-    select: {
-      id: true,
-      ownerId: true,
-      name: true,
-    },
-  });
-
-  if (!ownedWorkspace) {
-    const workspace = await getOrCreateUserWorkspace(user.id);
-
-    return {
-      user,
-      workspace,
+      workspace: ownedWorkspace,
       role: WorkspaceRole.OWNER,
       ownerId: user.id,
       isOwner: true,
@@ -180,19 +224,8 @@ export async function getWorkspaceContextForCurrentUser(): Promise<WorkspaceCont
       canManageOwnerSettings: true,
       canManageTeam: true,
     };
-  }
-
-  return {
-    user,
-    workspace: ownedWorkspace,
-    role: WorkspaceRole.OWNER,
-    ownerId: user.id,
-    isOwner: true,
-    isAdmin: true,
-    canManageOwnerSettings: true,
-    canManageTeam: true,
-  };
-}
+  },
+);
 
 export async function requireWorkspaceMember() {
   const context = await getWorkspaceContextForCurrentUser();
