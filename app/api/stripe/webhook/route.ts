@@ -5,11 +5,16 @@ import {
   syncStripeSubscription,
 } from "@/lib/billing/stripe";
 import {
+  clearPaymentFailureRestoreWindow,
+  markPaymentFailureRestoreWindow,
+} from "@/lib/billing/payment-failure";
+import {
   createBillingEvent,
   findBillingEventByStripeEventId,
   markBillingEventFailed,
   markBillingEventProcessed,
 } from "@/lib/billing/events";
+import { sendPaymentFailedNotification } from "@/lib/notifications/billing-notifications";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -80,6 +85,22 @@ async function handleInvoiceStatus(
         billingProvider: "stripe",
       },
     });
+    const restore = await markPaymentFailureRestoreWindow({
+      userId: synced.userId,
+      invoiceId: invoice.id,
+      hostedInvoiceUrl:
+        typeof invoice.hosted_invoice_url === "string"
+          ? invoice.hosted_invoice_url
+          : null,
+    });
+
+    if (restore) {
+      await sendPaymentFailedNotification(restore);
+    }
+  }
+
+  if (synced && status === "ACTIVE") {
+    await clearPaymentFailureRestoreWindow(synced.userId);
   }
 }
 

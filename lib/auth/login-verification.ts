@@ -5,6 +5,7 @@ import { randomInt, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { createSession } from "@/lib/auth/session";
 import { hashAuthToken, invalidateUnusedAuthTokens } from "@/lib/auth/tokens";
+import { setRestorePlanPromptCookieForUser } from "@/lib/billing/payment-failure";
 import { sendLoginNotification, sendLoginVerificationCode } from "@/lib/notifications/auth-notifications";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
@@ -265,6 +266,7 @@ export async function verifyPendingLoginCode(rawCode: string) {
     data: { usedAt: new Date() },
   });
   await createSession(token.user.id);
+  await setRestorePlanPromptCookieForUser(token.user.id);
   await clearPendingLoginVerification();
   await sendLoginNotification(token.user);
 

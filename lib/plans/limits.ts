@@ -289,7 +289,7 @@ function shouldUseSubscriptionPlan(subscription: {
 }) {
   const status = subscription.status?.toUpperCase() ?? "ACTIVE";
 
-  if (["ACTIVE", "TRIALING", "MANUAL", "PAST_DUE", "INCOMPLETE"].includes(status)) {
+  if (["ACTIVE", "TRIALING", "MANUAL"].includes(status)) {
     return true;
   }
 

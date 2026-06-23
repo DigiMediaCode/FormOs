@@ -19,8 +19,11 @@ import {
   OnboardingStepper,
   type OnboardingStepperItem,
 } from "@/components/dashboard/onboarding-stepper";
+import { RestorePlanModal } from "@/components/dashboard/restore-plan-modal";
 import { resendVerificationEmailAction } from "@/app/(auth)/verification-actions";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { shouldShowRestorePlanPrompt } from "@/lib/billing/payment-failure";
+import { RESTORE_PLAN_PROMPT_COOKIE } from "@/lib/billing/restore-plan-cookie";
 import { getOwnerAnalyticsSummary } from "@/lib/forms/analytics";
 import { inferSubmitterIdentityFromSnapshot } from "@/lib/forms/submissions";
 import { getTemplateLandingPage } from "@/lib/forms/templates/template-landing-pages";
@@ -187,6 +190,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const isTrialing = subscription?.status?.toUpperCase() === "TRIALING";
   const trialPlanName = subscription?.plan?.name ?? access?.plan.name ?? "paid plan";
   const trialEndDate = subscription?.trialEndsAt ?? subscription?.currentPeriodEnd;
+  const restorePlanPrompt =
+    workspaceContext?.isOwner && ownerId
+      ? await shouldShowRestorePlanPrompt(ownerId)
+      : null;
   const checklistItems: OnboardingStepperItem[] =
     user && access && uploadProvider
       ? [
@@ -330,6 +337,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        {restorePlanPrompt ? (
+          <RestorePlanModal
+            billingHref="/dashboard/settings/billing"
+            cookieName={RESTORE_PLAN_PROMPT_COOKIE}
+            planName={restorePlanPrompt.planName}
+            restoreUntilLabel={formatDate(restorePlanPrompt.restoreUntil)}
+          />
+        ) : null}
+
         {workspaceContext && !workspaceContext.isOwner ? (
           <p className="w-fit rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
             Workspace: {workspaceContext.workspace.name || "My Workspace"} - Role:{" "}

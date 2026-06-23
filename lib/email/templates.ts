@@ -15,6 +15,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "completed_pdf_owner",
   "completed_pdf_submitter",
   "workspace_invite",
+  "payment_failed",
 ] as const;
 
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
@@ -164,6 +165,17 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
     htmlBody:
       "<p>You have been invited to join <strong>{{workspaceName}}</strong> on FormOS.</p><p><a href=\"{{inviteUrl}}\">Accept Invite</a></p><p>This invite expires in 7 days.</p>",
     variables: ["workspaceName", "inviteUrl"],
+  },
+  payment_failed: {
+    name: "Payment failed",
+    description:
+      "Sent when Stripe reports that a paid plan payment could not be collected.",
+    subject: "Action needed: update your FormOS billing details",
+    textBody:
+      "Hi {{userName}},\n\nWe could not collect payment for your {{planName}} plan. Your account has been moved to Free plan limits until billing is restored.\n\nRestore your plan here:\n{{billingLink}}\n\nPlease update your billing details by {{restoreUntil}} to continue using paid features. Your existing forms and submissions have not been deleted.",
+    htmlBody:
+      "<p>Hi {{userName}},</p><p>We could not collect payment for your <strong>{{planName}}</strong> plan. Your account has been moved to Free plan limits until billing is restored.</p><p><a href=\"{{billingLink}}\">Restore your plan</a></p><p>Please update your billing details by {{restoreUntil}} to continue using paid features. Your existing forms and submissions have not been deleted.</p>",
+    variables: ["userName", "userEmail", "planName", "billingLink", "restoreUntil"],
   },
 };
 
