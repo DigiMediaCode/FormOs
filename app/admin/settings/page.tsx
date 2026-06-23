@@ -290,6 +290,9 @@ export default async function AdminSettingsPage({
           <Section icon={BadgeDollarSign} title="Google AdSense">
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
               Store only AdSense IDs and slot IDs. Do not paste script tags or HTML.
+              Keep ads disabled until AdSense approval. Google may reject new
+              SaaS/product sites for low-value content until enough unique
+              public content is available.
             </p>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <Toggle checked={settings.adsEnabled} label="Ads Enabled" name="adsEnabled" />

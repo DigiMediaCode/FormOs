@@ -71,3 +71,14 @@ Any new public marketing/content page should include public ad slot support
 where appropriate. Use the existing FormOS public ads components/settings,
 avoid dashboard/admin pages, avoid public form submit controls, and keep ads
 away from primary conversion CTAs.
+
+## AdSense Approval Mode
+
+FormOS has the Google AdSense integration and platform settings implemented,
+but ads should remain disabled until Google approves the site. Keep
+`adsEnabled`, `showLandingPageAds`, and `showPublicFormAds` off by default.
+
+Before requesting another review, add more unique public content such as
+help articles, blog posts, template pages, and product education pages. Google
+may reject new SaaS or product sites for low-value content until there is
+enough original public content available.
