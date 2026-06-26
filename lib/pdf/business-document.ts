@@ -322,15 +322,20 @@ function drawWrappedText(
   const lineHeight = options.lineHeight ?? size + 5;
   const lines = wrapText(text || "Not set", font, size, maxWidth);
 
-  ensureSpace(ctx, lines.length * lineHeight + 4);
-
   for (const line of lines) {
-    drawRawText(ctx, line, x, ctx.y, {
-      font,
-      size,
-      color: options.color ?? COLORS.ink,
-    });
-    ctx.y -= lineHeight;
+    const advance = line ? lineHeight : lineHeight * 0.65;
+
+    ensureSpace(ctx, advance + 2);
+
+    if (line) {
+      drawRawText(ctx, line, x, ctx.y, {
+        font,
+        size,
+        color: options.color ?? COLORS.ink,
+      });
+    }
+
+    ctx.y -= advance;
   }
 }
 
