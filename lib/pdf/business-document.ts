@@ -357,16 +357,30 @@ function drawSectionTitle(ctx: PdfContext, title: string) {
   ctx.y -= 20;
 }
 
-function drawInfoRow(ctx: PdfContext, label: string, value: string, x: number, y: number) {
+function drawInfoRow(
+  ctx: PdfContext,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+) {
   drawRawText(ctx, label, x, y, {
     font: ctx.bold,
     size: 7.8,
     color: COLORS.muted,
   });
-  drawRawText(ctx, value || "Not set", x, y - 13, {
-    size: 10,
-    color: COLORS.ink,
-  });
+
+  const valueLines = wrapText(value || "Not set", ctx.regular, 10, maxWidth);
+  let valueY = y - 13;
+
+  for (const line of valueLines) {
+    drawRawText(ctx, line, x, valueY, {
+      size: 10,
+      color: COLORS.ink,
+    });
+    valueY -= 12;
+  }
 }
 
 function drawInfoCard(
@@ -376,9 +390,20 @@ function drawInfoCard(
 ) {
   const columns = options.columns ?? 3;
   const columnWidth = TEXT_WIDTH / columns;
+  const cellPaddingX = 14;
+  const cellTextWidth = columnWidth - cellPaddingX * 2;
   const rows = Math.ceil(items.length / columns);
-  const rowHeight = 42;
-  const height = rows * rowHeight + 20;
+  const rowHeights = Array.from({ length: rows }, (_, row) => {
+    const rowItems = items.slice(row * columns, row * columns + columns);
+    const maxValueLines = Math.max(
+      1,
+      ...rowItems.map((item) =>
+        wrapText(item.value || "Not set", ctx.regular, 10, cellTextWidth).length,
+      ),
+    );
+    return Math.max(42, 26 + maxValueLines * 12);
+  });
+  const height = rowHeights.reduce((total, rowHeight) => total + rowHeight, 0) + 20;
 
   ensureSpace(ctx, height + 10);
   ctx.page.drawRectangle({
@@ -394,12 +419,16 @@ function drawInfoCard(
   items.forEach((item, index) => {
     const column = index % columns;
     const row = Math.floor(index / columns);
+    const rowOffset = rowHeights
+      .slice(0, row)
+      .reduce((total, rowHeight) => total + rowHeight, 0);
     drawInfoRow(
       ctx,
       item.label,
       item.value,
-      MARGIN_X + 14 + columnWidth * column,
-      ctx.y - 22 - rowHeight * row,
+      MARGIN_X + cellPaddingX + columnWidth * column,
+      ctx.y - 22 - rowOffset,
+      cellTextWidth,
     );
   });
 

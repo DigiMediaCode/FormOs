@@ -3,7 +3,10 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { assertCanCreateBusinessDocument } from "@/lib/plans/limits";
+import {
+  assertCanCreateBusinessDocument,
+  assertCanUseBusinessDocumentType,
+} from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceMember } from "@/lib/workspaces/access";
 import { getPublicWorkspaceBranding } from "@/lib/workspaces/branding";
@@ -315,4 +318,91 @@ export async function createBusinessDocumentAction(formData: FormData) {
   revalidatePath(basePath);
   revalidatePath("/dashboard/clients");
   redirectWith(type, "success", "Document draft created.", `${basePath}/${documentId}`);
+}
+
+export async function updateBusinessDocumentAction(formData: FormData) {
+  const context = await requireWorkspaceMember();
+  const type = normalizeDocumentType(readString(formData, "type"));
+  const documentId = readString(formData, "documentId");
+  const basePath = documentBasePath(type);
+  const detailPath = `${basePath}/${documentId}`;
+
+  try {
+    await assertCanUseBusinessDocumentType(context.ownerId, type);
+  } catch (error) {
+    redirectWith(
+      type,
+      "error",
+      error instanceof Error ? error.message : "Documents are not available.",
+      detailPath,
+    );
+  }
+
+  const document = await prisma.businessDocument.findFirst({
+    where: {
+      id: documentId,
+      ownerId: context.ownerId,
+      type,
+    },
+    select: {
+      id: true,
+      finalPdfSentAt: true,
+    },
+  });
+
+  if (!document) {
+    redirectWith(type, "error", "Document not found.", basePath);
+  }
+
+  if (document.finalPdfSentAt) {
+    redirectWith(
+      type,
+      "error",
+      "This document has already been signed and sent. Create a new version before editing the content.",
+      detailPath,
+    );
+  }
+
+  const title = readString(formData, "title");
+  const scopeOfWork = readString(formData, "scopeOfWork");
+  const terms = readString(formData, "terms");
+
+  if (!title) {
+    redirectWith(type, "error", "Document title is required.", detailPath);
+  }
+
+  if (!scopeOfWork) {
+    redirectWith(type, "error", "Work scope is required.", detailPath);
+  }
+
+  if (!terms) {
+    redirectWith(type, "error", "Terms are required.", detailPath);
+  }
+
+  try {
+    await prisma.businessDocument.update({
+      where: { id: document.id },
+      data: {
+        title,
+        scopeOfWork,
+        terms,
+        paymentTerms: readString(formData, "paymentTerms") || null,
+        startDate: readOptionalDate(formData, "startDate"),
+        endDate: readOptionalDate(formData, "endDate"),
+        totalAmount: readOptionalMoney(formData, "totalAmount"),
+        currency: readString(formData, "currency") || "AUD",
+      },
+    });
+  } catch (error) {
+    redirectWith(
+      type,
+      "error",
+      error instanceof Error ? error.message : "Unable to update document.",
+      detailPath,
+    );
+  }
+
+  revalidatePath(basePath);
+  revalidatePath(detailPath);
+  redirectWith(type, "success", "Document content updated.", detailPath);
 }

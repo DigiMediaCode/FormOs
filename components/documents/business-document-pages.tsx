@@ -15,7 +15,10 @@ import {
   UserRound,
 } from "lucide-react";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
-import { createBusinessDocumentAction } from "@/lib/documents/actions";
+import {
+  createBusinessDocumentAction,
+  updateBusinessDocumentAction,
+} from "@/lib/documents/actions";
 import {
   sendBusinessDocumentForSigningAction,
   signBusinessDocumentAsOwnerAction,
@@ -48,6 +51,14 @@ function formatDate(date: Date | null | undefined) {
   return new Intl.DateTimeFormat("en-AU", {
     dateStyle: "medium",
   }).format(date);
+}
+
+function formatDateInput(date: Date | null | undefined) {
+  if (!date) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
 }
 
 function formatAmount(value: unknown, currency: string | null | undefined) {
@@ -750,6 +761,125 @@ export async function BusinessDocumentDetailPage({
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid gap-5">
+            <details className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-700">
+                    Edit
+                  </span>
+                  <span className="mt-1 block text-base font-semibold text-slate-950">
+                    Document content
+                  </span>
+                </span>
+                <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                  Open
+                </span>
+              </summary>
+
+              {document.finalPdfSentAt ? (
+                <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                  This document has already been signed and sent. Create a new version
+                  before changing the content.
+                </p>
+              ) : (
+                <form action={updateBusinessDocumentAction} className="mt-5 grid gap-4">
+                  <input name="documentId" type="hidden" value={document.id} />
+                  <input name="type" type="hidden" value={type} />
+
+                  <label className={labelClass()}>
+                    Title
+                    <input
+                      className={inputClass()}
+                      defaultValue={document.title}
+                      name="title"
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass()}>
+                    Scope of work
+                    <textarea
+                      className={`${inputClass()} min-h-56 font-mono leading-6`}
+                      defaultValue={document.scopeOfWork ?? ""}
+                      name="scopeOfWork"
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass()}>
+                    Terms
+                    <textarea
+                      className={`${inputClass()} min-h-56 font-mono leading-6`}
+                      defaultValue={document.terms ?? ""}
+                      name="terms"
+                      required
+                    />
+                  </label>
+
+                  <label className={labelClass()}>
+                    Payment terms
+                    <textarea
+                      className={`${inputClass()} min-h-28`}
+                      defaultValue={document.paymentTerms ?? ""}
+                      name="paymentTerms"
+                    />
+                  </label>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className={labelClass()}>
+                      Start date
+                      <input
+                        className={inputClass()}
+                        defaultValue={formatDateInput(document.startDate)}
+                        name="startDate"
+                        type="date"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      End date
+                      <input
+                        className={inputClass()}
+                        defaultValue={formatDateInput(document.endDate)}
+                        name="endDate"
+                        type="date"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Total amount
+                      <input
+                        className={inputClass()}
+                        defaultValue={
+                          document.totalAmount === null || document.totalAmount === undefined
+                            ? ""
+                            : String(document.totalAmount)
+                        }
+                        min="0"
+                        name="totalAmount"
+                        step="0.01"
+                        type="number"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Currency
+                      <input
+                        className={inputClass()}
+                        defaultValue={document.currency || "AUD"}
+                        maxLength={3}
+                        name="currency"
+                      />
+                    </label>
+                  </div>
+
+                  <button
+                    className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                    type="submit"
+                  >
+                    Save document content
+                  </button>
+                </form>
+              )}
+            </details>
+
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-600" />
@@ -840,7 +970,7 @@ export async function BusinessDocumentDetailPage({
                     Signing
                   </dt>
                   <dd className="mt-1 text-slate-600">
-                    Client: {document.clientSignedAt ? "signed" : "pending"} · Business:{" "}
+                    Client: {document.clientSignedAt ? "signed" : "pending"} - Business:{" "}
                     {document.ownerSignedAt ? "signed" : "pending"}
                   </dd>
                 </div>
