@@ -356,6 +356,12 @@ model BusinessDocument {
   signatures         Json?
   pdfFileId          String?
   pdfUrl             String?
+  signingTokenHash   String?   @unique
+  signingTokenExpiresAt DateTime?
+  sentForSigningAt   DateTime?
+  ownerSignedAt      DateTime?
+  clientSignedAt     DateTime?
+  finalPdfSentAt     DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   completedAt        DateTime?

@@ -4,14 +4,22 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
+  CheckCircle2,
   Download,
   FileSignature,
   FileText,
   LockKeyhole,
+  Mail,
   Plus,
+  Send,
   UserRound,
 } from "lucide-react";
+import { SignaturePadField } from "@/components/forms/signature-pad-field";
 import { createBusinessDocumentAction } from "@/lib/documents/actions";
+import {
+  sendBusinessDocumentForSigningAction,
+  signBusinessDocumentAsOwnerAction,
+} from "@/lib/documents/signing-actions";
 import {
   BUSINESS_DOCUMENT_TEMPLATES,
   documentBasePath,
@@ -643,9 +651,15 @@ export async function BusinessDocumentDetailPage({
       endDate: true,
       totalAmount: true,
       currency: true,
+      signatures: true,
       createdAt: true,
       updatedAt: true,
       completedAt: true,
+      sentForSigningAt: true,
+      signingTokenExpiresAt: true,
+      ownerSignedAt: true,
+      clientSignedAt: true,
+      finalPdfSentAt: true,
       client: {
         select: {
           id: true,
@@ -823,11 +837,11 @@ export async function BusinessDocumentDetailPage({
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Future sending/signing
+                    Signing
                   </dt>
                   <dd className="mt-1 text-slate-600">
-                    Sending and external signing are planned future steps. For now,
-                    generate the PDF and manage signatures manually.
+                    Client: {document.clientSignedAt ? "signed" : "pending"} · Business:{" "}
+                    {document.ownerSignedAt ? "signed" : "pending"}
                   </dd>
                 </div>
               </dl>
@@ -839,6 +853,101 @@ export async function BusinessDocumentDetailPage({
                   View source submission
                 </Link>
               ) : null}
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <FileSignature className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-950">Digital signing</h2>
+              </div>
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-start gap-3">
+                    <Mail className="mt-0.5 h-4 w-4 text-blue-600" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-950">Client signing link</p>
+                      <p className="mt-1 text-slate-600">
+                        Send a secure signing link to{" "}
+                        {snapshotValue(document.clientSnapshot, "email") || "the client"}.
+                      </p>
+                      {document.sentForSigningAt ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Last sent {formatDate(document.sentForSigningAt)}. Link expires{" "}
+                          {formatDate(document.signingTokenExpiresAt)}.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  {limits.allowPdfGeneration ? (
+                    <form action={sendBusinessDocumentForSigningAction} className="mt-3">
+                      <input name="documentId" type="hidden" value={document.id} />
+                      <input name="type" type="hidden" value={type} />
+                      <button
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                        type="submit"
+                      >
+                        <Send className="h-4 w-4" />
+                        {document.sentForSigningAt ? "Resend signing link" : "Send to client"}
+                      </button>
+                    </form>
+                  ) : (
+                    <Link
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800"
+                      href="/dashboard/settings/billing"
+                    >
+                      <LockKeyhole className="h-4 w-4" />
+                      Upgrade for signing PDFs
+                    </Link>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2
+                      className={`mt-0.5 h-4 w-4 ${
+                        document.ownerSignedAt ? "text-emerald-600" : "text-slate-400"
+                      }`}
+                    />
+                    <div>
+                      <p className="font-semibold text-slate-950">Business signature</p>
+                      <p className="mt-1 text-slate-600">
+                        {document.ownerSignedAt
+                          ? `Signed ${formatDate(document.ownerSignedAt)}`
+                          : "Add your signature so the final PDF can be completed after the client signs."}
+                      </p>
+                    </div>
+                  </div>
+                  {!document.ownerSignedAt && limits.allowPdfGeneration ? (
+                    <form action={signBusinessDocumentAsOwnerAction} className="mt-4 grid gap-3">
+                      <input name="documentId" type="hidden" value={document.id} />
+                      <input name="type" type="hidden" value={type} />
+                      <SignaturePadField
+                        fieldId="ownerSignature"
+                        label="Business signature"
+                        required
+                        variant="signature"
+                      />
+                      <button
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                        type="submit"
+                      >
+                        Save business signature
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="font-semibold text-slate-950">Final PDF delivery</p>
+                  <p className="mt-1 text-slate-600">
+                    {document.finalPdfSentAt
+                      ? `Signed PDF sent to both parties ${formatDate(document.finalPdfSentAt)}.`
+                      : document.clientSignedAt && document.ownerSignedAt
+                        ? "Both signatures are saved. PDF delivery will run automatically."
+                        : "The signed PDF will be emailed to both parties after the client and business signatures are saved."}
+                  </p>
+                </div>
+              </div>
             </section>
           </aside>
         </div>
