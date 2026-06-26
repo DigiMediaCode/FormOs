@@ -78,6 +78,11 @@ function readQuotaOverride(formData: FormData) {
     formData,
     "maxConditionalRules",
   );
+  const maxClients = readOverrideNumericLimit(formData, "maxClients");
+  const maxDocumentsPerMonth = readOverrideNumericLimit(
+    formData,
+    "maxDocumentsPerMonth",
+  );
 
   if (maxForms !== undefined) {
     limits.maxForms = maxForms;
@@ -95,6 +100,14 @@ function readQuotaOverride(formData: FormData) {
     limits.maxConditionalRules = maxConditionalRules;
   }
 
+  if (maxClients !== undefined) {
+    limits.maxClients = maxClients;
+  }
+
+  if (maxDocumentsPerMonth !== undefined) {
+    limits.maxDocumentsPerMonth = maxDocumentsPerMonth;
+  }
+
   for (const key of [
     "allowGoogleDrive",
     "allowDropbox",
@@ -109,6 +122,11 @@ function readQuotaOverride(formData: FormData) {
     "allowApiAccess",
     "allowConditionalLogic",
     "allowCustomSubmissionNotifications",
+    "allowClients",
+    "allowConvertSubmissionToClient",
+    "allowContracts",
+    "allowAgreements",
+    "allowDocumentTemplates",
   ] as const) {
     const value = readOverrideBoolean(formData, key);
 

@@ -39,6 +39,8 @@ const numericOverrideFields = [
   ["maxMonthlySubmissions", "Monthly submissions"],
   ["maxTeamMembers", "Team members"],
   ["maxConditionalRules", "Conditional rules"],
+  ["maxClients", "Clients"],
+  ["maxDocumentsPerMonth", "Documents / month"],
 ] as const;
 
 const booleanOverrideFields = [
@@ -55,6 +57,11 @@ const booleanOverrideFields = [
   ["allowApiAccess", "API access"],
   ["allowConditionalLogic", "Conditional logic"],
   ["allowCustomSubmissionNotifications", "Custom submission notification email"],
+  ["allowClients", "Clients"],
+  ["allowConvertSubmissionToClient", "Convert submissions to clients"],
+  ["allowContracts", "Contracts"],
+  ["allowAgreements", "Agreements"],
+  ["allowDocumentTemplates", "Document templates"],
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

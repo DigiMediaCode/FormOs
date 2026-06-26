@@ -18,6 +18,11 @@ export const booleanLimitFields = [
   ["allowConditionalLogic", "Conditional logic"],
   ["allowBasicAnalytics", "Basic analytics"],
   ["allowCustomSubmissionNotifications", "Custom submission notification email"],
+  ["allowClients", "Clients"],
+  ["allowConvertSubmissionToClient", "Convert submissions to clients"],
+  ["allowContracts", "Contracts"],
+  ["allowAgreements", "Agreements"],
+  ["allowDocumentTemplates", "Document templates"],
 ] as const;
 
 type PlanFormDefaults = {
@@ -65,7 +70,7 @@ function tinyLabelClass() {
 function LimitInputs({ limits }: { limits: PlanLimits }) {
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <label className={tinyLabelClass()}>
           Max forms
           <input
@@ -137,6 +142,44 @@ function LimitInputs({ limits }: { limits: PlanLimits }) {
               className="size-3.5"
               defaultChecked={limits.maxConditionalRules === null}
               name="maxConditionalRulesUnlimited"
+              type="checkbox"
+            />
+            Unlimited
+          </span>
+        </label>
+        <label className={tinyLabelClass()}>
+          Clients
+          <input
+            className={inputClass()}
+            defaultValue={limits.maxClients ?? ""}
+            min={0}
+            name="maxClients"
+            type="number"
+          />
+          <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500">
+            <input
+              className="size-3.5"
+              defaultChecked={limits.maxClients === null}
+              name="maxClientsUnlimited"
+              type="checkbox"
+            />
+            Unlimited
+          </span>
+        </label>
+        <label className={tinyLabelClass()}>
+          Documents / month
+          <input
+            className={inputClass()}
+            defaultValue={limits.maxDocumentsPerMonth ?? ""}
+            min={0}
+            name="maxDocumentsPerMonth"
+            type="number"
+          />
+          <span className="flex items-center gap-2 text-[11px] font-normal text-slate-500">
+            <input
+              className="size-3.5"
+              defaultChecked={limits.maxDocumentsPerMonth === null}
+              name="maxDocumentsPerMonthUnlimited"
               type="checkbox"
             />
             Unlimited

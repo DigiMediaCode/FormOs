@@ -7,13 +7,19 @@ import {
   FileUp,
   Lock,
   PenLine,
+  UserRound,
 } from "lucide-react";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { convertSubmissionToClientAction } from "@/lib/clients/actions";
+import { inferClientFromSubmissionAnswers } from "@/lib/clients/inference";
 import { markOfficeCompleted, saveOfficeFields } from "@/lib/forms/office-actions";
 import { getSubmissionEvents } from "@/lib/forms/submission-events";
 import { getFormSubmissionById } from "@/lib/forms/submissions";
 import type { FormBuilderField } from "@/lib/forms/fields";
+import { getUserEffectiveLimits } from "@/lib/plans/limits";
+import { prisma } from "@/lib/prisma";
+import { requireWorkspaceMember } from "@/lib/workspaces/access";
 
 type SubmissionDetailPageProps = {
   params: Promise<{
@@ -163,16 +169,29 @@ function renderOfficeInput(field: FormBuilderField, value: string | boolean | st
   );
 }
 
+function compactInputClass() {
+  return "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+}
+
 export default async function SubmissionDetailPage({
   params,
   searchParams,
 }: SubmissionDetailPageProps) {
+  const context = await requireWorkspaceMember();
   const { formId, submissionId } = await params;
   const { error, success } = await searchParams;
-  const { form, submission } = await getFormSubmissionById(formId, submissionId);
-  const events = await getSubmissionEvents(formId, submissionId);
+  const [{ form, submission }, events, limits] = await Promise.all([
+    getFormSubmissionById(formId, submissionId),
+    getSubmissionEvents(formId, submissionId),
+    getUserEffectiveLimits(context.ownerId),
+  ]);
   const saveOfficeAction = saveOfficeFields.bind(null, form.id, submission.id);
   const finalizeAction = markOfficeCompleted.bind(null, form.id, submission.id);
+  const convertToClientAction = convertSubmissionToClientAction.bind(
+    null,
+    form.id,
+    submission.id,
+  );
   const publicAnswers = submission.answers.filter(
     (answer) => !answer.imageDataUrl && !answer.files,
   );
@@ -184,6 +203,40 @@ export default async function SubmissionDetailPage({
     })),
   );
   const signatureAnswers = submission.answers.filter((answer) => answer.imageDataUrl);
+  const inferredClient = inferClientFromSubmissionAnswers(submission.answers);
+  const [sourceClient, existingEmailClient] = await Promise.all([
+    prisma.client.findFirst({
+      where: {
+        ownerId: context.ownerId,
+        sourceSubmissionId: submission.id,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    }),
+    inferredClient.email
+      ? prisma.client.findFirst({
+          where: {
+            ownerId: context.ownerId,
+            email: {
+              equals: inferredClient.email,
+              mode: "insensitive",
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+  const duplicateClient =
+    existingEmailClient && existingEmailClient.id !== sourceClient?.id
+      ? existingEmailClient
+      : null;
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
@@ -465,6 +518,150 @@ export default async function SubmissionDetailPage({
           </div>
 
           <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <section className="mb-5 rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-950">Client</h2>
+              </div>
+              {sourceClient ? (
+                <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-950">
+                    This submission is linked to {sourceClient.name}.
+                  </p>
+                  <Link
+                    className="mt-3 inline-flex rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    href={`/dashboard/clients/${sourceClient.id}`}
+                  >
+                    View Client
+                  </Link>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    <Link
+                      className="inline-flex justify-center rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                      href={`/dashboard/contracts/new?clientId=${sourceClient.id}&sourceSubmissionId=${submission.id}`}
+                    >
+                      New Contract
+                    </Link>
+                    <Link
+                      className="inline-flex justify-center rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                      href={`/dashboard/agreements/new?clientId=${sourceClient.id}&sourceSubmissionId=${submission.id}`}
+                    >
+                      New Agreement
+                    </Link>
+                  </div>
+                </div>
+              ) : duplicateClient ? (
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-sm font-semibold text-blue-950">
+                    A client with this email already exists.
+                  </p>
+                  <p className="mt-1 text-xs text-blue-800">
+                    {duplicateClient.email}
+                  </p>
+                  <Link
+                    className="mt-3 inline-flex rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    href={`/dashboard/clients/${duplicateClient.id}`}
+                  >
+                    View existing client
+                  </Link>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    <Link
+                      className="inline-flex justify-center rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-800 transition hover:bg-blue-50"
+                      href={`/dashboard/contracts/new?clientId=${duplicateClient.id}&sourceSubmissionId=${submission.id}`}
+                    >
+                      New Contract
+                    </Link>
+                    <Link
+                      className="inline-flex justify-center rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-800 transition hover:bg-blue-50"
+                      href={`/dashboard/agreements/new?clientId=${duplicateClient.id}&sourceSubmissionId=${submission.id}`}
+                    >
+                      New Agreement
+                    </Link>
+                  </div>
+                </div>
+              ) : limits.allowClients && limits.allowConvertSubmissionToClient ? (
+                <form action={convertToClientAction} className="mt-4 grid gap-3">
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Type
+                    <select
+                      className={compactInputClass()}
+                      defaultValue={inferredClient.type}
+                      name="type"
+                    >
+                      <option value="PERSON">Person</option>
+                      <option value="BUSINESS">Business</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Name
+                    <input
+                      className={compactInputClass()}
+                      defaultValue={inferredClient.name}
+                      name="name"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Email
+                    <input
+                      className={compactInputClass()}
+                      defaultValue={inferredClient.email}
+                      name="email"
+                      type="email"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Phone
+                    <input
+                      className={compactInputClass()}
+                      defaultValue={inferredClient.phone}
+                      name="phone"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Company
+                    <input
+                      className={compactInputClass()}
+                      defaultValue={inferredClient.companyName}
+                      name="companyName"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Address
+                    <textarea
+                      className={`${compactInputClass()} min-h-20`}
+                      defaultValue={inferredClient.address}
+                      name="address"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-slate-600">
+                    Notes
+                    <textarea
+                      className={`${compactInputClass()} min-h-20`}
+                      name="notes"
+                      placeholder="Optional client notes"
+                    />
+                  </label>
+                  <SubmitButton
+                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                    pendingText="Creating client..."
+                  >
+                    Convert to Client
+                  </SubmitButton>
+                </form>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-sm font-semibold text-blue-950">
+                    Client conversion is available on Pro and Business plans.
+                  </p>
+                  <Link
+                    className="mt-3 inline-flex rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    href="/dashboard/settings/billing"
+                  >
+                    View plans
+                  </Link>
+                </div>
+              )}
+            </section>
+
             <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-950/5">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-blue-600" />

@@ -8,9 +8,12 @@ import {
   Code2,
   KeyRound,
   FileText,
+  FileSignature,
   Gauge,
   HelpCircle,
   Plug,
+  ScrollText,
+  UserRound,
   Users,
 } from "lucide-react";
 
@@ -29,6 +32,21 @@ const NAV_ITEMS = [
     href: "/dashboard/widgets",
     label: "Widget",
     icon: Code2,
+  },
+  {
+    href: "/dashboard/clients",
+    label: "Clients",
+    icon: UserRound,
+  },
+  {
+    href: "/dashboard/contracts",
+    label: "Contracts",
+    icon: FileSignature,
+  },
+  {
+    href: "/dashboard/agreements",
+    label: "Agreements",
+    icon: ScrollText,
   },
   {
     href: "/dashboard/settings/integrations",
@@ -74,6 +92,18 @@ function isActivePath(pathname: string, href: string) {
 
   if (href === "/dashboard/forms") {
     return pathname === href || pathname.startsWith("/dashboard/forms/");
+  }
+
+  if (href === "/dashboard/clients") {
+    return pathname === href || pathname.startsWith("/dashboard/clients/");
+  }
+
+  if (href === "/dashboard/contracts") {
+    return pathname === href || pathname.startsWith("/dashboard/contracts/");
+  }
+
+  if (href === "/dashboard/agreements") {
+    return pathname === href || pathname.startsWith("/dashboard/agreements/");
   }
 
   return pathname === href;

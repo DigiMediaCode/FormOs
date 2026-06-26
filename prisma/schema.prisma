@@ -64,8 +64,10 @@ model User {
     emailVerifiedAt DateTime?
     suspendedAt    DateTime?
     suspendedReason String?
-    role           UserRole           @default(USER)
+  role           UserRole           @default(USER)
   forms          Form[]
+  clients        Client[]
+  businessDocuments BusinessDocument[]
   analyticsEvents FormAnalyticsEvent[]
   integrations   UserIntegration[]
   uploadSettings UserUploadSettings?
@@ -153,6 +155,8 @@ model Workspace {
   owner   User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members WorkspaceMember[]
   invites WorkspaceInvite[]
+  clients Client[]
+  businessDocuments BusinessDocument[]
 }
 
 model WorkspaceMember {
@@ -294,9 +298,78 @@ model FormSubmission {
   updatedAt           DateTime         @updatedAt
   form                Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
   events              SubmissionEvent[]
+  sourceClients       Client[]
+  businessDocuments   BusinessDocument[]
 
   @@index([ownerId])
   @@index([formId])
+}
+
+model Client {
+  id                 String   @id @default(cuid())
+  ownerId            String
+  workspaceId         String?
+  sourceSubmissionId  String?
+  type               String   @default("PERSON")
+  name               String
+  email              String?
+  phone              String?
+  companyName        String?
+  abnOrBusinessId    String?
+  address            String?
+  notes              String?
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  owner            User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspace        Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  sourceSubmission FormSubmission? @relation(fields: [sourceSubmissionId], references: [id], onDelete: SetNull)
+  businessDocuments BusinessDocument[]
+
+  @@index([ownerId])
+  @@index([workspaceId])
+  @@index([email])
+  @@index([sourceSubmissionId])
+}
+
+model BusinessDocument {
+  id                 String    @id @default(cuid())
+  ownerId            String
+  workspaceId         String?
+  clientId           String?
+  sourceSubmissionId String?
+  type               String
+  status             String    @default("DRAFT")
+  title              String
+  documentNumber     String?
+  clientSnapshot     Json?
+  ownerSnapshot      Json?
+  scopeOfWork        String?
+  terms              String?
+  paymentTerms       String?
+  startDate          DateTime?
+  endDate            DateTime?
+  totalAmount        Decimal?
+  currency           String?
+  content            Json?
+  signatures         Json?
+  pdfFileId          String?
+  pdfUrl             String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  completedAt        DateTime?
+
+  owner            User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspace        Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  client           Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  sourceSubmission FormSubmission? @relation(fields: [sourceSubmissionId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([sourceSubmissionId])
+  @@index([type, status])
 }
 
 model SubmissionEvent {

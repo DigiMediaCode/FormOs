@@ -29,14 +29,23 @@ export type PlanLimits = {
   allowConditionalLogic: boolean;
   allowBasicAnalytics: boolean;
   allowCustomSubmissionNotifications: boolean;
+  allowClients: boolean;
+  allowConvertSubmissionToClient: boolean;
+  allowContracts: boolean;
+  allowAgreements: boolean;
+  allowDocumentTemplates: boolean;
   maxTeamMembers: NumericLimit;
   maxConditionalRules: NumericLimit;
+  maxClients: NumericLimit;
+  maxDocumentsPerMonth: NumericLimit;
   allowedFieldTypes: FormFieldType[] | null;
 };
 
 export type UserUsage = {
   formsUsed: number;
   monthlySubmissionsUsed: number;
+  clientsUsed: number;
+  documentsUsedThisMonth: number;
 };
 
 export type UserPlanSummary = {
@@ -62,6 +71,8 @@ const NUMERIC_LIMIT_KEYS = [
   "maxMonthlySubmissions",
   "maxTeamMembers",
   "maxConditionalRules",
+  "maxClients",
+  "maxDocumentsPerMonth",
 ] as const;
 const BOOLEAN_LIMIT_KEYS = [
   "allowGoogleDrive",
@@ -78,6 +89,11 @@ const BOOLEAN_LIMIT_KEYS = [
   "allowConditionalLogic",
   "allowBasicAnalytics",
   "allowCustomSubmissionNotifications",
+  "allowClients",
+  "allowConvertSubmissionToClient",
+  "allowContracts",
+  "allowAgreements",
+  "allowDocumentTemplates",
 ] as const;
 
 export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
@@ -97,8 +113,15 @@ export const UNLIMITED_EVERYTHING_LIMITS: PlanLimits = {
   allowConditionalLogic: true,
   allowBasicAnalytics: true,
   allowCustomSubmissionNotifications: true,
+  allowClients: true,
+  allowConvertSubmissionToClient: true,
+  allowContracts: true,
+  allowAgreements: true,
+  allowDocumentTemplates: true,
   maxTeamMembers: null,
   maxConditionalRules: null,
+  maxClients: null,
+  maxDocumentsPerMonth: null,
   allowedFieldTypes: null,
 };
 
@@ -150,8 +173,15 @@ export function getDefaultFreeLimits(): PlanLimits {
     allowConditionalLogic: false,
     allowBasicAnalytics: true,
     allowCustomSubmissionNotifications: false,
+    allowClients: false,
+    allowConvertSubmissionToClient: false,
+    allowContracts: false,
+    allowAgreements: false,
+    allowDocumentTemplates: false,
     maxTeamMembers: 0,
     maxConditionalRules: 0,
+    maxClients: 0,
+    maxDocumentsPerMonth: 0,
     allowedFieldTypes: FREE_ALLOWED_FIELD_TYPES,
   };
 }
@@ -196,8 +226,15 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowConditionalLogic: false,
       allowBasicAnalytics: true,
       allowCustomSubmissionNotifications: true,
+      allowClients: false,
+      allowConvertSubmissionToClient: false,
+      allowContracts: false,
+      allowAgreements: false,
+      allowDocumentTemplates: false,
       maxTeamMembers: 0,
       maxConditionalRules: 0,
+      maxClients: 0,
+      maxDocumentsPerMonth: 0,
       allowedFieldTypes: STARTER_ALLOWED_FIELD_TYPES,
     },
   },
@@ -229,8 +266,15 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowConditionalLogic: true,
       allowBasicAnalytics: true,
       allowCustomSubmissionNotifications: true,
+      allowClients: true,
+      allowConvertSubmissionToClient: true,
+      allowContracts: true,
+      allowAgreements: true,
+      allowDocumentTemplates: true,
       maxTeamMembers: 0,
       maxConditionalRules: null,
+      maxClients: 250,
+      maxDocumentsPerMonth: 50,
       allowedFieldTypes: null,
     },
   },
@@ -261,8 +305,15 @@ export const DEFAULT_PLAN_DEFINITIONS = [
       allowConditionalLogic: true,
       allowBasicAnalytics: true,
       allowCustomSubmissionNotifications: true,
+      allowClients: true,
+      allowConvertSubmissionToClient: true,
+      allowContracts: true,
+      allowAgreements: true,
+      allowDocumentTemplates: true,
       maxTeamMembers: 5,
       maxConditionalRules: null,
+      maxClients: null,
+      maxDocumentsPerMonth: null,
       allowedFieldTypes: null,
     },
   },
@@ -420,7 +471,14 @@ export async function seedDefaultPlansIfMissing() {
           "allowConditionalLogic" in plan.limits &&
           "allowBasicAnalytics" in plan.limits &&
           "allowCustomSubmissionNotifications" in plan.limits &&
-          "maxConditionalRules" in plan.limits
+          "allowClients" in plan.limits &&
+          "allowConvertSubmissionToClient" in plan.limits &&
+          "allowContracts" in plan.limits &&
+          "allowAgreements" in plan.limits &&
+          "allowDocumentTemplates" in plan.limits &&
+          "maxConditionalRules" in plan.limits &&
+          "maxClients" in plan.limits &&
+          "maxDocumentsPerMonth" in plan.limits
         ) {
           return Promise.resolve();
         }
@@ -448,7 +506,15 @@ export async function seedDefaultPlansIfMissing() {
               allowBasicAnalytics: defaults.limits.allowBasicAnalytics,
               allowCustomSubmissionNotifications:
                 defaults.limits.allowCustomSubmissionNotifications,
+              allowClients: defaults.limits.allowClients,
+              allowConvertSubmissionToClient:
+                defaults.limits.allowConvertSubmissionToClient,
+              allowContracts: defaults.limits.allowContracts,
+              allowAgreements: defaults.limits.allowAgreements,
+              allowDocumentTemplates: defaults.limits.allowDocumentTemplates,
               maxConditionalRules: defaults.limits.maxConditionalRules,
+              maxClients: defaults.limits.maxClients,
+              maxDocumentsPerMonth: defaults.limits.maxDocumentsPerMonth,
             } as unknown as Prisma.InputJsonValue,
           },
         });
@@ -560,11 +626,28 @@ function monthRange(date = new Date()) {
 
 export async function getUserUsage(userId: string): Promise<UserUsage> {
   const { start, end } = monthRange();
-  const [formsUsed, monthlySubmissionsUsed] = await Promise.all([
+  const [
+    formsUsed,
+    monthlySubmissionsUsed,
+    clientsUsed,
+    documentsUsedThisMonth,
+  ] = await Promise.all([
     prisma.form.count({
       where: { ownerId: userId },
     }),
     prisma.formSubmission.count({
+      where: {
+        ownerId: userId,
+        createdAt: {
+          gte: start,
+          lt: end,
+        },
+      },
+    }),
+    prisma.client.count({
+      where: { ownerId: userId },
+    }),
+    prisma.businessDocument.count({
       where: {
         ownerId: userId,
         createdAt: {
@@ -578,6 +661,8 @@ export async function getUserUsage(userId: string): Promise<UserUsage> {
   return {
     formsUsed,
     monthlySubmissionsUsed,
+    clientsUsed,
+    documentsUsedThisMonth,
   };
 }
 
@@ -684,6 +769,85 @@ export async function assertCanUseQrCode(userId: string) {
   }
 }
 
+export async function assertCanUseClients(userId: string) {
+  const limits = await getUserEffectiveLimits(userId);
+
+  if (!limits.allowClients) {
+    throw new Error("Clients are available on Pro and Business plans.");
+  }
+}
+
+export async function assertCanCreateClient(userId: string) {
+  const [limits, usage] = await Promise.all([
+    getUserEffectiveLimits(userId),
+    getUserUsage(userId),
+  ]);
+
+  if (!limits.allowClients) {
+    throw new Error("Clients are available on Pro and Business plans.");
+  }
+
+  if (limits.maxClients !== null && usage.clientsUsed >= limits.maxClients) {
+    throw new Error(
+      `Your current plan allows up to ${formatLimit(limits.maxClients)} clients. Upgrade your plan to add more clients.`,
+    );
+  }
+}
+
+export async function assertCanConvertSubmissionToClient(userId: string) {
+  const limits = await getUserEffectiveLimits(userId);
+
+  if (!limits.allowConvertSubmissionToClient) {
+    throw new Error(
+      "Converting submissions into clients is available on Pro and Business plans.",
+    );
+  }
+
+  await assertCanCreateClient(userId);
+}
+
+export async function assertCanUseBusinessDocumentType(
+  userId: string,
+  documentType: "CONTRACT" | "AGREEMENT",
+) {
+  const limits = await getUserEffectiveLimits(userId);
+
+  if (documentType === "CONTRACT" && !limits.allowContracts) {
+    throw new Error("Contracts are available on Pro and Business plans.");
+  }
+
+  if (documentType === "AGREEMENT" && !limits.allowAgreements) {
+    throw new Error("Agreements are available on Pro and Business plans.");
+  }
+}
+
+export async function assertCanCreateBusinessDocument(
+  userId: string,
+  documentType: "CONTRACT" | "AGREEMENT",
+) {
+  const [limits, usage] = await Promise.all([
+    getUserEffectiveLimits(userId),
+    getUserUsage(userId),
+  ]);
+
+  if (documentType === "CONTRACT" && !limits.allowContracts) {
+    throw new Error("Contracts are available on Pro and Business plans.");
+  }
+
+  if (documentType === "AGREEMENT" && !limits.allowAgreements) {
+    throw new Error("Agreements are available on Pro and Business plans.");
+  }
+
+  if (
+    limits.maxDocumentsPerMonth !== null &&
+    usage.documentsUsedThisMonth >= limits.maxDocumentsPerMonth
+  ) {
+    throw new Error(
+      `Your current plan allows up to ${formatLimit(limits.maxDocumentsPerMonth)} contracts or agreements per month. Upgrade your plan to create more documents.`,
+    );
+  }
+}
+
 export function limitLabel(limit: NumericLimit) {
   return limit === null ? "Unlimited" : String(limit);
 }
@@ -707,6 +871,14 @@ export function featureLabels(limits: PlanLimits) {
       label: "Custom submission notification email",
       allowed: limits.allowCustomSubmissionNotifications,
     },
+    { label: "Clients", allowed: limits.allowClients },
+    {
+      label: "Convert submissions to clients",
+      allowed: limits.allowConvertSubmissionToClient,
+    },
+    { label: "Contracts", allowed: limits.allowContracts },
+    { label: "Agreements", allowed: limits.allowAgreements },
+    { label: "Document templates", allowed: limits.allowDocumentTemplates },
   ];
 }
 
