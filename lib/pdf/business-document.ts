@@ -635,10 +635,9 @@ function drawHeader(ctx: PdfContext, document: BusinessDocumentPdfInput) {
   ctx.y -= 8;
   drawInfoCard(ctx, [
     { label: "DOCUMENT NUMBER", value: document.documentNumber || document.id },
-    { label: "DATE", value: formatDate(document.completedAt || document.createdAt) },
     { label: "START DATE", value: formatDate(document.startDate) },
     { label: "END DATE", value: formatDate(document.endDate) },
-  ], { columns: 4 });
+  ], { columns: 3 });
 }
 
 function drawParties(ctx: PdfContext, document: BusinessDocumentPdfInput) {
