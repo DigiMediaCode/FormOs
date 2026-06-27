@@ -5,6 +5,11 @@ import {
   PRIVACY_POLICY_EXCERPT,
   PRIVACY_POLICY_HTML,
 } from "@/lib/legal/privacy-policy";
+import {
+  HEALTHCARE_DATA_SECURITY_NOTICE_HTML,
+  HEALTHCARE_PRIVACY_NOTICE_HTML,
+  HEALTHCARE_TERMS_NOTICE_HTML,
+} from "@/lib/legal/healthcare-notices";
 import { prisma } from "@/lib/prisma";
 
 export const CMS_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
@@ -175,7 +180,7 @@ export async function seedDefaultCmsPagesIfMissing(createdById?: string) {
       title: "Privacy Policy",
       slug: "privacy-policy",
       excerpt: PRIVACY_POLICY_EXCERPT,
-      content: PRIVACY_POLICY_HTML,
+      content: `${PRIVACY_POLICY_HTML}\n${HEALTHCARE_PRIVACY_NOTICE_HTML}`,
       showInFooter: true,
       sortOrder: 10,
     },
@@ -183,8 +188,8 @@ export async function seedDefaultCmsPagesIfMissing(createdById?: string) {
       title: "Terms of Service",
       slug: "terms-of-service",
       excerpt: "The terms that apply when using FormOS.",
-      content:
-        "This editable terms of service placeholder should be reviewed before publishing. FormOS provides software tools and templates, but does not provide legal advice.",
+      content: `<p>This editable terms of service placeholder should be reviewed before publishing. FormOS provides software tools and templates, but does not provide legal advice.</p>
+${HEALTHCARE_TERMS_NOTICE_HTML}`,
       showInFooter: true,
       sortOrder: 20,
     },
@@ -192,8 +197,8 @@ export async function seedDefaultCmsPagesIfMissing(createdById?: string) {
       title: "Data Security",
       slug: "data-security",
       excerpt: "How FormOS approaches submissions, connected storage, and access control.",
-      content:
-        "This editable data security placeholder should be reviewed before publishing. FormOS routes uploaded files to connected owner storage and protects dashboard access with authentication and permission checks.",
+      content: `<p>This editable data security placeholder should be reviewed before publishing. FormOS routes uploaded files to connected owner storage and protects dashboard access with authentication and permission checks.</p>
+${HEALTHCARE_DATA_SECURITY_NOTICE_HTML}`,
       showInFooter: true,
       sortOrder: 30,
     },

@@ -9,16 +9,21 @@ import { getPlatformSettings } from "@/lib/platform/settings";
 export const metadata: Metadata = {
   title: "Workflow Templates | FormOS",
   description:
-    "Explore FormOS workflow templates for rentals, contractors, service bookings, and event agreements with signatures, uploads, office fields, and PDFs.",
+    "Explore FormOS workflow templates for healthcare clinics, rentals, contractors, service bookings, and event agreements with signatures, uploads, office fields, and PDFs.",
   openGraph: {
     title: "Workflow Templates | FormOS",
     description:
-      "Start with complete workflow templates for signed forms, uploads, office processing, and finalized PDFs.",
+      "Start with complete workflow templates for healthcare admin, signed forms, uploads, office processing, and finalized PDFs.",
     type: "website",
   },
 };
 
-const categories = ["Rental & Hire", "Trades & Services", "Booking & Events"] as const;
+const categories = [
+  "Healthcare & Clinics",
+  "Rental & Hire",
+  "Trades & Services",
+  "Booking & Events",
+] as const;
 
 export default async function TemplatesPage() {
   const [settings, pages] = await Promise.all([
@@ -41,8 +46,9 @@ export default async function TemplatesPage() {
             Workflow templates for businesses that need the job finished.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-            Start from proven vertical workflows with customer intake, signatures,
-            uploads, Office Use Only processing, and PDF-ready records.
+            Start from proven vertical workflows with healthcare admin intake,
+            customer requests, signatures, uploads, Office Use Only processing,
+            and PDF-ready records.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

@@ -185,6 +185,18 @@ export default async function TemplateLandingPage({
         </div>
       </section>
 
+      {page.safetyDisclaimer ? (
+        <section className="mx-auto max-w-7xl px-6 pb-16">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
+            <p className="font-semibold">Healthcare safety note</p>
+            <p className="mt-2">{page.safetyDisclaimer}</p>
+            {page.emergencyDisclaimer ? (
+              <p className="mt-2 font-semibold">{page.emergencyDisclaimer}</p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       <section className="bg-slate-50">
         <div className="mx-auto max-w-7xl px-6 py-16">
           <SectionTitle
@@ -240,6 +252,13 @@ export default async function TemplateLandingPage({
             <strong>Template disclaimer:</strong> FormOS templates are starting
             points for operational workflows and are not legal advice. Review
             wording for your business, location, and use case before publishing.
+            {page.safetyDisclaimer ? (
+              <span>
+                {" "}
+                Templates are starting points and should be reviewed and
+                configured by the healthcare provider before use.
+              </span>
+            ) : null}
           </div>
         </div>
       </section>

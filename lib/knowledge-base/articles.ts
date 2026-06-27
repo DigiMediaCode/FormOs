@@ -9,6 +9,7 @@ export type KbStatus = (typeof KB_STATUSES)[number];
 export const DEFAULT_KB_CATEGORIES = [
   "Getting Started",
   "Forms & Builder",
+  "Healthcare Admin",
   "File Uploads",
   "Signatures & PDFs",
   "Billing & Plans",
@@ -39,6 +40,11 @@ const DEFAULT_KB_CATEGORY_DETAILS: Record<
     description:
       "Learn how to add fields, arrange forms, use templates, and control public and office-only fields.",
     sortOrder: 20,
+  },
+  "Healthcare Admin": {
+    description:
+      "Use FormOS safely for healthcare administrative workflows such as appointment requests, intake, consent acknowledgements, and office review.",
+    sortOrder: 25,
   },
   "File Uploads": {
     description:
@@ -202,6 +208,32 @@ export const DEFAULT_KB_ARTICLES: DefaultKbArticle[] = [
 <p>Templates help you start faster by creating a draft form with prebuilt fields and settings.</p>
 <p>For example, the Vehicle Hire Agreement template includes customer details, file upload fields, agreement content, signatures, initials, and office-use fields.</p>
 <p>After creating a form from a template, you can edit it in the builder before publishing.</p>`,
+  },
+  {
+    category: "Healthcare Admin",
+    title: "Using FormOS for healthcare admin workflows",
+    slug: "using-formos-for-healthcare-admin-workflows",
+    excerpt:
+      "How healthcare providers can use FormOS for appointment requests, intake forms, consent acknowledgements, uploads, signatures, and PDF workflows safely.",
+    isFeatured: true,
+    sortOrder: 10,
+    content: `<h2>What FormOS can support</h2>
+<p>FormOS supports administrative workflow forms for healthcare and service businesses. Examples include GP appointment requests, new patient intake forms, consent acknowledgements, document uploads, signatures, office review fields, and completed PDF records.</p>
+<h2>Important limitations</h2>
+<p>FormOS is not an emergency medical service, electronic medical record system, practice management system, Medicare billing system, or substitute for professional clinical advice.</p>
+<p>If this is an emergency in Australia, call 000.</p>
+<h2>Privacy responsibilities</h2>
+<p>Form owners decide what information their forms collect. Healthcare providers should review each form before publishing and make sure they have the required consent, authority, and legal basis for the information they request.</p>
+<p>Templates are starting points and should be reviewed and configured by the healthcare provider before use.</p>
+<h2>Storage and PDF workflows</h2>
+<p>Where the owner's plan and integration settings allow it, uploaded files can be routed to Google Drive or Dropbox. FormOS can also generate completed PDFs for administrative follow-up workflows where PDF generation is available.</p>
+<h2>Safe setup tips</h2>
+<ul>
+  <li>Use clear emergency wording on appointment request forms.</li>
+  <li>Avoid collecting unnecessary clinical detail in general admin forms.</li>
+  <li>Use Office Use Only fields for staff review notes that should not appear publicly.</li>
+  <li>Review consent and privacy wording with the healthcare provider before publishing.</li>
+</ul>`,
   },
   {
     category: "File Uploads",

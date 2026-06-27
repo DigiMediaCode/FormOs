@@ -35,13 +35,13 @@ import { prisma } from "@/lib/prisma";
 import { getTemplateLandingPages } from "@/lib/forms/templates/template-landing-pages";
 
 export const metadata: Metadata = {
-  title: "FormOS - Forms, Signatures, Uploads & PDF Workflows",
+  title: "FormOS - Healthcare, Service & Contract Workflow Forms",
   description:
-    "Create online forms that collect signatures, file uploads, office-only details, and completed PDFs. Built for rental, service, contractor, and booking workflows.",
+    "Create online workflow forms for healthcare administration, service businesses, contractors, rentals, signatures, uploads, office notes, and completed PDFs.",
   openGraph: {
-    title: "FormOS - Forms, Signatures, Uploads & PDF Workflows",
+    title: "FormOS - Healthcare, Service & Contract Workflow Forms",
     description:
-      "Create online forms that collect signatures, file uploads, office-only details, and completed PDFs.",
+      "Create workflow forms that collect signatures, uploads, office notes, and completed PDFs for healthcare, service, contractor, and rental businesses.",
     type: "website",
   },
 };
@@ -93,36 +93,49 @@ const useCases: Array<{
   icon: LucideIcon;
   title: string;
   description: string;
+  href?: string;
 }> = [
   {
-    icon: Car,
-    title: "Vehicle hire agreements",
-    description: "Signed rentals with file uploads",
+    icon: Activity,
+    title: "GP & Clinic Bookings",
+    description: "Administrative appointment requests",
+    href: "/use-cases/healthcare-forms",
   },
   {
     icon: UserPlus,
-    title: "Client intake forms",
-    description: "Onboard clients smoothly",
+    title: "Patient Intake",
+    description: "Basic admin details before visits",
+    href: "/templates/new-patient-intake",
   },
   {
     icon: ClipboardCheck,
-    title: "Consent forms",
-    description: "Capture clear permissions",
+    title: "Consent Forms",
+    description: "Acknowledgements and signatures",
+    href: "/templates/patient-consent-form",
+  },
+  {
+    icon: Car,
+    title: "Vehicle Hire Agreements",
+    description: "Signed rentals with file uploads",
+    href: "/templates/vehicle-hire-agreement",
   },
   {
     icon: Handshake,
-    title: "Service agreements",
-    description: "Lock in terms with signatures",
-  },
-  {
-    icon: Users,
-    title: "Onboarding forms",
-    description: "Collect details and documents",
+    title: "Contractor Job Intake",
+    description: "Photos, access, and office review",
+    href: "/templates/contractor-job-intake-waiver",
   },
   {
     icon: FolderInput,
-    title: "Document collection forms",
-    description: "Gather files in one place",
+    title: "Service Booking",
+    description: "Bookings, consent, and staff notes",
+    href: "/templates/service-booking-consent-form",
+  },
+  {
+    icon: FileSignature,
+    title: "Contracts & Agreements",
+    description: "Signed documents and PDFs",
+    href: "/pricing",
   },
 ];
 
@@ -395,6 +408,9 @@ export default async function HomePage() {
             <a className="hover:text-blue-600" href="#use-cases">
               Use Cases
             </a>
+            <Link className="hover:text-blue-600" href="/use-cases/healthcare-forms">
+              Healthcare
+            </Link>
             <a className="hover:text-blue-600" href="#how-it-works">
               Workflow
             </a>
@@ -445,15 +461,17 @@ export default async function HomePage() {
               The form builder that finishes the job
             </p>
             <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-tight text-[#071124] sm:text-6xl">
-              Forms that collect, sign, file, and finish the job.
+              Workflow forms for healthcare, service, and contract-based businesses.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700">
-              FormOS helps businesses turn intake forms, agreements, file
-              uploads, signatures, and internal office checks into completed PDF
-              workflows.
+              Built by Health TechKnowlogic Pty Ltd, FormOS helps clinics,
+              service providers, contractors, and rental businesses collect
+              details, signatures, uploads, office notes, and completed PDFs in
+              one workflow.
             </p>
             <div className="mt-6 flex max-w-3xl flex-wrap gap-2">
               {[
+                "Healthcare admin workflows",
                 "Signatures",
                 "File uploads",
                 "Office Use Only fields",
@@ -472,6 +490,14 @@ export default async function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <LandingActionLink
                 className="inline-flex rounded-md bg-blue-600 px-5 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                href="/use-cases/healthcare-forms"
+                icon="rocket"
+                pendingText="Opening healthcare templates..."
+              >
+                Explore healthcare templates
+              </LandingActionLink>
+              <LandingActionLink
+                className="inline-flex rounded-md border border-blue-100 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
                 href="/pricing"
                 icon="rocket"
                 pendingText="Opening pricing..."
@@ -497,7 +523,7 @@ export default async function HomePage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-[#071124]">
-                    Vehicle Hire Agreement
+                    GP Appointment Request
                   </p>
                   <p className="mt-1 text-xs text-slate-500">Published form</p>
                 </div>
@@ -506,7 +532,13 @@ export default async function HomePage() {
                 </span>
               </div>
               <div className="mt-5 grid gap-3">
-                {["Driver details", "ID uploads", "Signature", "Office fields", "Completed PDF"].map((item) => (
+                {[
+                  "Patient contact details",
+                  "Preferred appointment",
+                  "Emergency acknowledgement",
+                  "Office review",
+                  "Completed PDF",
+                ].map((item) => (
                   <div
                     className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
                     key={item}
@@ -616,25 +648,47 @@ export default async function HomePage() {
             </h2>
           </div>
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {useCases.map((useCase) => (
-              <div
-                className="flex items-center gap-4 rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-950/5"
-                key={useCase.title}
-              >
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <useCase.icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold text-slate-900">
-                    {useCase.title}
+            {useCases.map((useCase) => {
+              const content = (
+                <>
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <useCase.icon className="h-5 w-5" aria-hidden="true" />
                   </span>
-                  <span className="mt-1 block text-xs font-medium text-slate-500">
-                    {useCase.description}
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-900">
+                      {useCase.title}
+                    </span>
+                    <span className="mt-1 block text-xs font-medium text-slate-500">
+                      {useCase.description}
+                    </span>
                   </span>
-                </span>
-              </div>
-            ))}
+                </>
+              );
+
+              return useCase.href ? (
+                <Link
+                  className="flex items-center gap-4 rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-950/5 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                  href={useCase.href}
+                  key={useCase.title}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div
+                  className="flex items-center gap-4 rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm shadow-blue-950/5"
+                  key={useCase.title}
+                >
+                  {content}
+                </div>
+              );
+            })}
           </div>
+          <p className="mt-5 max-w-3xl text-xs leading-5 text-slate-500">
+            Healthcare workflows in FormOS are for administrative use. FormOS is
+            not an emergency medical service, electronic medical record system,
+            practice management system, Medicare billing system, or substitute
+            for professional clinical advice.
+          </p>
         </div>
       </section>
 
@@ -675,8 +729,8 @@ export default async function HomePage() {
                 Start with real workflow templates.
               </h2>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Launch faster with templates for rental, contractor, service,
-                and event workflows.
+                Launch faster with templates for healthcare admin, rental,
+                contractor, service, and event workflows.
               </p>
             </div>
             <Link

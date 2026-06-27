@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
 import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
+import { HEALTHCARE_TERMS_NOTICE_HTML } from "@/lib/legal/healthcare-notices";
 
 export const metadata: Metadata = {
   title: "Terms of Service | FormOS",
 };
+
+function hasHealthcareNotice(html: string) {
+  return html.toLowerCase().includes("healthcare administrative use");
+}
 
 export default async function TermsOfServicePage() {
   const cmsPage = await getPublishedCmsPage("terms-of-service");
@@ -22,9 +27,18 @@ export default async function TermsOfServicePage() {
         ) : (
           <p>This page is being updated.</p>
         )}
+        {!hasHealthcareNotice(html) ? (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: renderCmsContent(HEALTHCARE_TERMS_NOTICE_HTML),
+            }}
+          />
+        ) : null}
       </LegalPageLayout>
     );
   }
+
+  const healthcareNoticeHtml = renderCmsContent(HEALTHCARE_TERMS_NOTICE_HTML);
 
   return (
     <LegalPageLayout
@@ -51,6 +65,7 @@ export default async function TermsOfServicePage() {
         <h2 className="text-lg font-semibold text-slate-950">Limitation of liability</h2>
         <p className="mt-2">FormOS is provided as a workflow tool. To the maximum extent permitted by law, liability is limited for indirect losses, misuse, or content provided by users.</p>
       </section>
+      <div dangerouslySetInnerHTML={{ __html: healthcareNoticeHtml }} />
     </LegalPageLayout>
   );
 }

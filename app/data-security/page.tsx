@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { LegalPageLayout } from "@/components/public/legal-page-layout";
 import { getPublishedCmsPage, renderCmsContent } from "@/lib/cms/pages";
+import { HEALTHCARE_DATA_SECURITY_NOTICE_HTML } from "@/lib/legal/healthcare-notices";
 
 export const metadata: Metadata = {
   title: "Data Security | FormOS",
 };
+
+function hasHealthcareNotice(html: string) {
+  return html.toLowerCase().includes("healthcare and sensitive information");
+}
 
 export default async function DataSecurityPage() {
   const cmsPage = await getPublishedCmsPage("data-security");
@@ -22,9 +27,20 @@ export default async function DataSecurityPage() {
         ) : (
           <p>This page is being updated.</p>
         )}
+        {!hasHealthcareNotice(html) ? (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: renderCmsContent(HEALTHCARE_DATA_SECURITY_NOTICE_HTML),
+            }}
+          />
+        ) : null}
       </LegalPageLayout>
     );
   }
+
+  const healthcareNoticeHtml = renderCmsContent(
+    HEALTHCARE_DATA_SECURITY_NOTICE_HTML,
+  );
 
   return (
     <LegalPageLayout
@@ -51,6 +67,7 @@ export default async function DataSecurityPage() {
         <h2 className="text-lg font-semibold text-slate-950">File exposure</h2>
         <p className="mt-2">FormOS does not create public Dropbox share links and does not expose storage provider tokens. Google Drive and Dropbox access remains server-side.</p>
       </section>
+      <div dangerouslySetInnerHTML={{ __html: healthcareNoticeHtml }} />
     </LegalPageLayout>
   );
 }

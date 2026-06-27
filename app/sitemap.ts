@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAppUrl } from "@/lib/app-url";
+import { getTemplateLandingPages } from "@/lib/forms/templates/template-landing-pages";
 import { prisma } from "@/lib/prisma";
 
 function safeAppUrl() {
@@ -56,6 +57,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const publicRoutes = [
     "",
     "/pricing",
+    "/templates",
+    "/use-cases/healthcare-forms",
     "/privacy-policy",
     "/terms-of-service",
     "/data-security",
@@ -82,6 +85,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogPosts.map((post) => ({
       url: `${appUrl}/blog/${post.slug}`,
       lastModified: post.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...getTemplateLandingPages().map((page) => ({
+      url: `${appUrl}/templates/${page.routeSlug}`,
+      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

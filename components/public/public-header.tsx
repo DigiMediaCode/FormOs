@@ -6,6 +6,7 @@ import { PlatformBrand } from "@/components/ui/platform-brand";
 const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#use-cases", label: "Use Cases" },
+  { href: "/use-cases/healthcare-forms", label: "Healthcare" },
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/templates", label: "Templates" },
   { href: "/blog", label: "Blog" },

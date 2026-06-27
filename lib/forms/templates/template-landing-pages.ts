@@ -12,6 +12,8 @@ export type TemplateLandingPage = {
   workflowSteps: string[];
   includes: string[];
   audience: string[];
+  safetyDisclaimer?: string;
+  emergencyDisclaimer?: string;
   faqs: Array<{
     question: string;
     answer: string;
@@ -46,6 +48,35 @@ const COMMON_FAQS = [
     question: "Is this legal advice?",
     answer:
       "No. These templates are operational starting points. You should review wording and legal suitability for your business and jurisdiction.",
+  },
+];
+
+const HEALTHCARE_SAFETY_DISCLAIMER =
+  "FormOS supports administrative workflow forms for healthcare and service businesses. It is not an emergency medical service, electronic medical record system, practice management system, or substitute for professional clinical advice.";
+
+const AUSTRALIA_EMERGENCY_DISCLAIMER =
+  "If this is an emergency in Australia, call 000.";
+
+const HEALTHCARE_FAQS = [
+  {
+    question: "Is FormOS an EMR or practice management system?",
+    answer:
+      "No. FormOS supports administrative workflows such as appointment requests, intake forms, consent acknowledgements, uploads, signatures, staff review, and PDFs. It is not an electronic medical record system, practice management system, Medicare billing system, or clinical advice tool.",
+  },
+  {
+    question: "Can I edit the healthcare wording?",
+    answer:
+      "Yes. Healthcare templates create normal FormOS forms. Templates are starting points and should be reviewed and configured by the healthcare provider before use.",
+  },
+  {
+    question: "Can patients sign on mobile?",
+    answer:
+      "Yes. Signature fields are designed for touch screens, phones, tablets, and desktop devices.",
+  },
+  {
+    question: "Should patients use these forms for emergencies?",
+    answer:
+      "No. These templates are for administrative workflows only. If this is an emergency in Australia, call 000.",
   },
 ];
 
@@ -209,6 +240,124 @@ export const TEMPLATE_LANDING_PAGES: TemplateLandingPage[] = [
       "creative studios",
     ],
     faqs: COMMON_FAQS,
+  },
+  {
+    routeSlug: "gp-appointment-request",
+    templateSlug: "gp-appointment-request",
+    seoTitle: "GP Appointment Request Form Template | FormOS",
+    seoDescription:
+      "Create a GP appointment request form for clinic administrative workflows with patient contact details, appointment preferences, urgency acknowledgement, and staff review fields.",
+    heroTitle: "GP appointment request forms for clinic admin workflows.",
+    heroSubtitle:
+      "Let patients request appointments online while staff review urgency, assign practitioners, and confirm appointment details inside FormOS.",
+    problemTitle: "Appointment requests need structure before staff can respond.",
+    problemPoints: [
+      "Phone and email requests can miss preferred dates, contact details, or urgency context.",
+      "New-patient requests often need a simple way to capture referral source or clinic discovery.",
+      "Urgent requests need clear emergency guidance without turning the form into a clinical triage system.",
+      "Staff need internal fields for appointment status, assigned practitioner, notes, and follow-up.",
+    ],
+    workflowSteps: [
+      "Patient submits contact details and appointment preferences",
+      "Urgency acknowledgement and emergency guidance are shown where needed",
+      "Staff reviews the request and assigns a practitioner",
+      "Confirmed appointment details and staff notes are saved internally",
+      "FormOS keeps a PDF-ready administrative record",
+    ],
+    includes: [
+      "Patient full name, date of birth, phone, and email",
+      "Preferred appointment date and time",
+      "New/existing patient question with conditional referral source field",
+      "Urgent request question with emergency warning text",
+      "Office fields for appointment status, practitioner, confirmed date/time, notes, and follow-up",
+    ],
+    audience: [
+      "GP clinics",
+      "medical reception teams",
+      "allied health practices",
+      "small healthcare administration teams",
+    ],
+    safetyDisclaimer: HEALTHCARE_SAFETY_DISCLAIMER,
+    emergencyDisclaimer: AUSTRALIA_EMERGENCY_DISCLAIMER,
+    faqs: HEALTHCARE_FAQS,
+  },
+  {
+    routeSlug: "new-patient-intake",
+    templateSlug: "new-patient-intake",
+    seoTitle: "New Patient Intake Form Template | FormOS",
+    seoDescription:
+      "Create a new patient intake form for clinic administration with contact details, emergency contact, optional referral upload, privacy acknowledgement, and office review fields.",
+    heroTitle: "New patient intake forms that keep admin details organized.",
+    heroSubtitle:
+      "Collect basic patient details, emergency contact information, optional documents, and internal review notes without building a clinical record system.",
+    problemTitle: "New patient admin details should arrive before the appointment.",
+    problemPoints: [
+      "Front desk teams often chase missing contact, address, and emergency contact details.",
+      "Referral documents can arrive separately from the intake record.",
+      "Private insurance details and preferred pharmacy information may be optional and conditional.",
+      "Staff need a simple way to mark ID checked, referral received, file created, and intake reviewed.",
+    ],
+    workflowSteps: [
+      "Patient completes basic administrative details",
+      "Optional referral or document upload appears only when needed",
+      "Patient accepts contact and privacy acknowledgements",
+      "Staff completes internal intake review fields",
+      "FormOS keeps the intake organized for follow-up and PDF records",
+    ],
+    includes: [
+      "Patient contact details and address",
+      "Emergency contact name and phone",
+      "Optional Medicare, private insurance, and pharmacy fields",
+      "Referral/document upload conditional logic",
+      "Office fields for file creation, ID check, referral status, reviewer, and notes",
+    ],
+    audience: [
+      "GP clinics",
+      "allied health practices",
+      "specialist rooms",
+      "clinic administration teams",
+    ],
+    safetyDisclaimer: HEALTHCARE_SAFETY_DISCLAIMER,
+    faqs: HEALTHCARE_FAQS,
+  },
+  {
+    routeSlug: "patient-consent-form",
+    templateSlug: "patient-consent-procedure-acknowledgement",
+    seoTitle: "Patient Consent Form Template | FormOS",
+    seoDescription:
+      "Create a patient consent acknowledgement form for clinic administrative workflows with service details, acknowledgement text, questions, signature, and practitioner review fields.",
+    heroTitle: "Patient consent acknowledgements with signatures and staff review.",
+    heroSubtitle:
+      "Capture administrative consent acknowledgements, patient questions, signatures, and internal practitioner review fields in one PDF-ready workflow.",
+    problemTitle: "Consent acknowledgement records need to be clear and easy to review.",
+    problemPoints: [
+      "Paper acknowledgement forms can be hard to find when staff need them.",
+      "Patients may need a structured place to note questions or concerns.",
+      "Signature capture should work on mobile without a separate tool.",
+      "Practitioners need internal review fields without exposing office notes publicly.",
+    ],
+    workflowSteps: [
+      "Patient reviews acknowledgement wording",
+      "Patient enters questions or concerns where needed",
+      "Patient signs on mobile or desktop",
+      "Staff/practitioner completes internal review fields",
+      "FormOS creates a PDF-ready acknowledgement record",
+    ],
+    includes: [
+      "Patient contact and date of birth fields",
+      "Service/procedure name",
+      "Consent statement and information acknowledgement",
+      "Questions/concerns field and patient signature",
+      "Office fields for practitioner review, consent status, practitioner name, and notes",
+    ],
+    audience: [
+      "GP clinics",
+      "allied health providers",
+      "minor procedure rooms",
+      "administrative consent workflows",
+    ],
+    safetyDisclaimer: HEALTHCARE_SAFETY_DISCLAIMER,
+    faqs: HEALTHCARE_FAQS,
   },
 ];
 
