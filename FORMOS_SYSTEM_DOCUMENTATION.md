@@ -1,6 +1,6 @@
 # FormOS System Documentation
 
-Last updated: 27 June 2026
+Last updated: 28 June 2026
 
 ## 1. Product Overview
 
@@ -12,7 +12,7 @@ It is not designed only for simple surveys or generic contact forms. FormOS is b
 
 ### Main Customer Problem
 
-Many vertical service businesses still rely on disconnected tools:
+Many vertical healthcare, service, rental, and contract-based businesses still rely on disconnected tools:
 
 - Web forms for intake
 - Email for files
@@ -34,6 +34,14 @@ FormOS turns business forms into complete workflows:
 4. FormOS finalizes a PDF record.
 5. Files and documents are organized in connected storage.
 6. The owner can track submissions, clients, contracts, agreements, and follow-up actions.
+
+Current primary vertical positioning:
+
+- Healthcare administrative workflows
+- Service and trade workflows
+- Rental and hire workflows
+- Contracts and agreements
+- Booking and event workflows
 
 ## 2. User Roles
 
@@ -430,9 +438,13 @@ Current vertical templates:
 3. Contractor Job Intake + Waiver
 4. Service Booking + Consent Form
 5. Photography/Event Booking Agreement
+6. GP Appointment Request Form
+7. New Patient Intake Form
+8. Patient Consent / Procedure Acknowledgement Form
 
 Template categories:
 
+- Healthcare & Clinics
 - Rental & Hire
 - Trades & Services
 - Booking & Events
@@ -446,6 +458,16 @@ Templates include combinations of:
 - Office Use Only fields
 - Agreement text
 - Workflow-specific internal processing fields
+
+Healthcare template safety:
+
+- Healthcare templates are for administrative workflows.
+- They are not emergency medical services.
+- They are not EMR/EHR or practice management systems.
+- They are not Medicare billing systems.
+- They are not a substitute for professional clinical advice.
+- Emergency wording directs Australian users to call `000`.
+- Templates are starting points and should be reviewed/configured by the healthcare provider before use.
 
 Plan key:
 
@@ -643,6 +665,7 @@ Knowledge Base features include:
 - Featured/popular articles
 - Contact support CTA
 - Sanitized content rendering
+- Healthcare Admin category and default healthcare admin workflow article
 - Super Admin management
 
 Routes:
@@ -848,11 +871,15 @@ Public pages include:
 - Homepage
 - Pricing
 - Templates index
+- Healthcare forms use-case page
 - Vehicle Hire Agreement landing page
 - Equipment Rental Agreement landing page
 - Contractor Job Intake + Waiver landing page
 - Service Booking + Consent Form landing page
 - Photography/Event Booking Agreement landing page
+- GP Appointment Request landing page
+- New Patient Intake landing page
+- Patient Consent Form landing page
 - Blog
 - Help Center
 - Legal/CMS pages
@@ -860,7 +887,14 @@ Public pages include:
 
 Positioning:
 
+- Workflow forms for healthcare, service, and contract-based businesses.
 - Forms that collect, sign, file, and finish the job.
+
+Healthcare public page safety:
+
+- Healthcare pages avoid EMR/EHR, clinical compliance, Medicare billing, emergency, and clinical advice claims.
+- Healthcare copy says FormOS supports administrative workflow forms only.
+- Appointment and GP pages include: `If this is an emergency in Australia, call 000.`
 
 ### 3.34 WordPress Plugin
 
@@ -907,6 +941,36 @@ Features:
 Important limitation:
 
 - Shopify App Store submission, Shopify billing, product/customer/order sync, and full marketplace readiness are not part of the current scope.
+
+### 3.36 Healthcare Safety Positioning
+
+Healthcare support is a public positioning and template layer for administrative workflows.
+
+Healthcare use cases currently include:
+
+- GP appointment request forms
+- New patient intake forms
+- Patient consent / procedure acknowledgement forms
+- Administrative uploads
+- Patient or client signatures
+- Office review fields
+- PDF-ready administrative records
+
+Safety boundaries:
+
+- FormOS is not an emergency medical service.
+- FormOS is not an electronic medical record system.
+- FormOS is not a practice management system.
+- FormOS is not a Medicare billing system.
+- FormOS is not a substitute for professional clinical advice.
+- FormOS does not claim HIPAA, SOC 2, ISO 27001, or healthcare compliance certification.
+
+Privacy positioning:
+
+- Form owners decide what information to collect.
+- Form owners are responsible for consent, authority, legal basis, and appropriate use.
+- FormOS provides workflow, access control, storage integration, and PDF tools.
+- FormOS does not guarantee compliance with every healthcare regulation, privacy law, professional obligation, or industry requirement.
 
 ## 4. Permission and Limit Keys
 
@@ -1058,6 +1122,8 @@ Implemented security and privacy controls include:
 - Security checklist documentation
 - Privacy Policy with Google Drive data disclosure
 - Data Security and Terms pages
+- Healthcare/sensitive-information notices in Privacy Policy, Terms, and Data Security
+- Healthcare pages avoid unsupported EMR/EHR, HIPAA, Medicare billing, clinical advice, or certification claims
 
 ## 9. Customer Workflow Examples
 
@@ -1129,6 +1195,16 @@ Implemented security and privacy controls include:
 5. If payment succeeds after trial, plan continues.
 6. If payment fails, user is moved to Free limits and prompted to restore billing.
 
+### Workflow 8: Healthcare Admin Intake
+
+1. Clinic owner starts from GP Appointment Request, New Patient Intake, or Patient Consent template.
+2. Owner reviews and configures wording, consent text, and fields before publishing.
+3. Public user completes administrative details and sees emergency guidance where appropriate.
+4. Public user uploads documents or signs if the template requires it.
+5. Staff complete Office Use Only review fields.
+6. FormOS stores the workflow record and can generate a PDF where the plan allows it.
+7. FormOS remains an administrative workflow tool, not an EMR/EHR, practice management, Medicare billing, emergency, or clinical advice system.
+
 ## 10. Current Limitations and Roadmap
 
 The following are not fully built or are intentionally deferred:
@@ -1175,12 +1251,21 @@ npm run build
 - `/`
 - `/pricing`
 - `/templates`
+- `/templates/vehicle-hire-agreement`
+- `/templates/equipment-rental-agreement`
+- `/templates/contractor-job-intake-waiver`
+- `/templates/service-booking-consent-form`
+- `/templates/photography-event-booking-agreement`
+- `/templates/gp-appointment-request`
+- `/templates/new-patient-intake`
+- `/templates/patient-consent-form`
+- `/use-cases/healthcare-forms`
 - `/blog`
 - `/help`
 - `/contact`
 - `/privacy-policy`
-- `/p/terms-of-service`
-- `/p/data-security`
+- `/terms-of-service`
+- `/data-security`
 - `/f/[formSlug]`
 - `/embed/forms/[formId]`
 - `/sign/[token]`
@@ -1189,14 +1274,14 @@ npm run build
 
 - `/dashboard`
 - `/dashboard/forms`
-- `/dashboard/widget`
+- `/dashboard/widgets`
 - `/dashboard/clients`
 - `/dashboard/contracts`
 - `/dashboard/agreements`
 - `/dashboard/settings/integrations`
 - `/dashboard/settings/billing`
 - `/dashboard/settings/branding`
-- `/dashboard/api-tokens`
+- `/dashboard/settings/api-tokens`
 
 ### Important Admin URLs
 
@@ -1229,6 +1314,13 @@ The strongest product pillars are:
 8. Website embeds, WordPress, and Shopify integration
 9. Plan-based SaaS billing and trials
 10. Super Admin control over plans, content, settings, emails, support, and users
+
+Healthcare positioning should be handled carefully:
+
+- FormOS can be sold for healthcare administrative workflows.
+- Good examples are appointment requests, intake forms, consent acknowledgements, uploads, signatures, office review, and PDFs.
+- FormOS should not be sold as an EMR/EHR, practice management system, emergency system, Medicare billing system, or clinical advice tool.
+- FormOS should not claim HIPAA, SOC 2, ISO 27001, or healthcare compliance certification unless that is separately implemented, reviewed, and approved.
 
 The best market positioning is:
 
