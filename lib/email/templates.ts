@@ -50,6 +50,8 @@ export const SHARED_EMAIL_TEMPLATE_VARIABLES = [
   "firstName",
   "lastName",
   "userEmail",
+  "emailHeader",
+  "emailFooter",
 ] as const;
 
 export function normalizeEmailTemplateKey(input: string) {
@@ -260,19 +262,19 @@ export async function renderEmailTemplate(input: EmailTemplateRenderInput) {
 
   if (!template?.isActive) {
     return {
-      subject: renderTemplateString(input.fallback.subject, variables),
-      text: renderTemplateString(input.fallback.text, variables),
+      subject: renderTemplateString(input.fallback.subject, variables.subject),
+      text: renderTemplateString(input.fallback.text, variables.text),
       html: input.fallback.html
-        ? sanitizeEmailHtml(renderTemplateString(input.fallback.html, variables))
+        ? sanitizeEmailHtml(renderTemplateString(input.fallback.html, variables.html))
         : undefined,
     };
   }
 
   return {
-    subject: renderTemplateString(template.subject, variables),
-    text: renderTemplateString(template.textBody, variables),
+    subject: renderTemplateString(template.subject, variables.subject),
+    text: renderTemplateString(template.textBody, variables.text),
     html: template.htmlBody
-      ? sanitizeEmailHtml(renderTemplateString(template.htmlBody, variables))
+      ? sanitizeEmailHtml(renderTemplateString(template.htmlBody, variables.html))
       : undefined,
   };
 }
@@ -294,7 +296,7 @@ async function buildEmailTemplateVariables(
     [firstName, lastName].filter(Boolean).join(" ") ||
     (userEmail ? userEmail.split("@")[0] : "");
 
-  return {
+  const baseVariables = {
     ...emptyVariables,
     siteName: settings.siteName || "FormOS",
     companyName: settings.companyName || "",
@@ -315,6 +317,38 @@ async function buildEmailTemplateVariables(
     userEmail,
     userName,
   };
+  const emailHeaderText = renderTemplateString(
+    settings.emailHeaderText,
+    baseVariables,
+  );
+  const emailFooterText = renderTemplateString(
+    settings.emailFooterText,
+    baseVariables,
+  );
+  const emailHeaderHtml = settings.emailHeaderHtml
+    ? sanitizeEmailHtml(renderTemplateString(settings.emailHeaderHtml, baseVariables))
+    : textToEmailHtml(emailHeaderText);
+  const emailFooterHtml = settings.emailFooterHtml
+    ? sanitizeEmailHtml(renderTemplateString(settings.emailFooterHtml, baseVariables))
+    : textToEmailHtml(emailFooterText);
+
+  return {
+    subject: {
+      ...baseVariables,
+      emailHeader: "",
+      emailFooter: "",
+    },
+    text: {
+      ...baseVariables,
+      emailHeader: emailHeaderText,
+      emailFooter: emailFooterText,
+    },
+    html: {
+      ...baseVariables,
+      emailHeader: emailHeaderHtml,
+      emailFooter: emailFooterHtml,
+    },
+  };
 }
 
 export function renderTemplateString(
@@ -324,6 +358,25 @@ export function renderTemplateString(
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) =>
     String(variables[key] ?? ""),
   );
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function textToEmailHtml(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  return `<p>${escapeHtml(trimmed).replace(/\r?\n/g, "<br>")}</p>`;
 }
 
 export function sanitizeEmailHtml(html: string) {

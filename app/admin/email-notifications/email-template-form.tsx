@@ -52,7 +52,10 @@ export function EmailTemplateForm({
       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
         Use variables such as <code>{"{{userName}}"}</code>,{" "}
         <code>{"{{userEmail}}"}</code>, <code>{"{{formTitle}}"}</code>, and{" "}
-        <code>{"{{dashboardLink}}"}</code>. HTML is sanitized before sending.
+        <code>{"{{dashboardLink}}"}</code>. Use <code>{"{{emailHeader}}"}</code>{" "}
+        and <code>{"{{emailFooter}}"}</code> to insert the global email header
+        or footer only in templates that need them. HTML is sanitized before
+        sending.
       </div>
 
       <div className="flex flex-wrap gap-2">

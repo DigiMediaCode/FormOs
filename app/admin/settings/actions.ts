@@ -85,6 +85,10 @@ export async function savePlatformSettingsAction(formData: FormData) {
       publicFormAdLabel: String(formData.get("publicFormAdLabel") ?? ""),
       trialEnabled: formData.get("trialEnabled") === "on",
       trialDays: Number(formData.get("trialDays") ?? 14),
+      emailHeaderText: String(formData.get("emailHeaderText") ?? ""),
+      emailFooterText: String(formData.get("emailFooterText") ?? ""),
+      emailHeaderHtml: String(formData.get("emailHeaderHtml") ?? ""),
+      emailFooterHtml: String(formData.get("emailFooterHtml") ?? ""),
     });
   } catch (error) {
     redirectToSettings(

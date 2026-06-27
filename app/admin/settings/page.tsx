@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RichContentEditor } from "@/components/admin/rich-content-editor";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import {
@@ -6,6 +7,7 @@ import {
   Building2,
   Globe,
   LifeBuoy,
+  Mail,
   Palette,
   Save,
   Search,
@@ -241,6 +243,48 @@ export default async function AdminSettingsPage({
             <div className="grid gap-3 md:grid-cols-2">
               <TextField defaultValue={settings.supportEmail} label="Support Email" name="supportEmail" />
               <TextField defaultValue={settings.contactEmail} label="Contact Email" name="contactEmail" />
+            </div>
+          </Section>
+
+          <Section icon={Mail} title="Email Header / Footer">
+            <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+              Add <code>{"{{emailHeader}}"}</code> and{" "}
+              <code>{"{{emailFooter}}"}</code> inside any email template to insert
+              these global sections only where that template needs them.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Text Email Header
+                <textarea
+                  className={`${inputClass()} min-h-24 font-mono text-xs leading-6`}
+                  defaultValue={settings.emailHeaderText}
+                  name="emailHeaderText"
+                  placeholder="Plain-text header used by {{emailHeader}} in text emails."
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                Text Email Footer
+                <textarea
+                  className={`${inputClass()} min-h-24 font-mono text-xs leading-6`}
+                  defaultValue={settings.emailFooterText}
+                  name="emailFooterText"
+                  placeholder="Plain-text footer used by {{emailFooter}} in text emails."
+                />
+              </label>
+            </div>
+            <div className="grid gap-3">
+              <RichContentEditor
+                help="Rich HTML header used by {{emailHeader}} in HTML emails. HTML is sanitized before saving/sending."
+                initialHtml={settings.emailHeaderHtml}
+                label="HTML Email Header"
+                name="emailHeaderHtml"
+              />
+              <RichContentEditor
+                help="Rich HTML footer used by {{emailFooter}} in HTML emails. HTML is sanitized before saving/sending."
+                initialHtml={settings.emailFooterHtml}
+                label="HTML Email Footer"
+                name="emailFooterHtml"
+              />
             </div>
           </Section>
 

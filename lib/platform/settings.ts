@@ -33,6 +33,10 @@ export type PlatformSettings = {
   publicFormAdLabel: string;
   trialEnabled: boolean;
   trialDays: number;
+  emailHeaderText: string;
+  emailFooterText: string;
+  emailHeaderHtml: string;
+  emailFooterHtml: string;
 };
 
 const PLATFORM_SETTING_KEYS = [
@@ -63,6 +67,10 @@ const PLATFORM_SETTING_KEYS = [
   "publicFormAdLabel",
   "trialEnabled",
   "trialDays",
+  "emailHeaderText",
+  "emailFooterText",
+  "emailHeaderHtml",
+  "emailFooterHtml",
 ] as const;
 
 type PlatformSettingKey = (typeof PLATFORM_SETTING_KEYS)[number];
@@ -120,6 +128,10 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   publicFormAdLabel: "Sponsored",
   trialEnabled: true,
   trialDays: 14,
+  emailHeaderText: "",
+  emailFooterText: "",
+  emailHeaderHtml: "",
+  emailFooterHtml: "",
 };
 
 function isPlatformSettingKey(key: string): key is PlatformSettingKey {
@@ -147,12 +159,26 @@ function isSafeSettingText(value: string) {
   return !hasHtmlOrScript(value);
 }
 
+function sanitizeEmailPartialHtml(html: string) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, "")
+    .replace(/<embed\b[^>]*\/?>/gi, "")
+    .replace(/<form\b[^>]*>[\s\S]*?<\/form>/gi, "")
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/\s+(href|src)\s*=\s*(['"])\s*javascript:[\s\S]*?\2/gi, "")
+    .replace(/\s+(href|src)\s*=\s*javascript:[^\s>]*/gi, "");
+}
+
 function validatePlainTextSettings(settings: PlatformSettings) {
   const textFields: Array<[keyof PlatformSettings, string]> = [
     ["companyName", "Company name"],
     ["footerProjectText", "Footer project text"],
     ["supportEmail", "Support email"],
     ["contactEmail", "Contact email"],
+    ["emailHeaderText", "Email header text"],
+    ["emailFooterText", "Email footer text"],
     ["adsenseClientId", "AdSense client ID"],
     ["landingTopAdSlot", "Landing top ad slot"],
     ["landingMiddleAdSlot", "Landing middle ad slot"],
@@ -269,6 +295,10 @@ export async function updatePlatformSettings(input: PlatformSettings) {
       input.publicFormAdLabel.trim() || DEFAULT_PLATFORM_SETTINGS.publicFormAdLabel,
     trialEnabled: Boolean(input.trialEnabled),
     trialDays: Math.min(365, Math.max(1, Number(input.trialDays) || 14)),
+    emailHeaderText: input.emailHeaderText.trim(),
+    emailFooterText: input.emailFooterText.trim(),
+    emailHeaderHtml: sanitizeEmailPartialHtml(input.emailHeaderHtml.trim()),
+    emailFooterHtml: sanitizeEmailPartialHtml(input.emailFooterHtml.trim()),
   };
 
   if (!isSafePublicUrlOrPath(nextSettings.logoUrl)) {
