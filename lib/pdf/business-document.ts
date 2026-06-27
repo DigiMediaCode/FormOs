@@ -435,6 +435,101 @@ function drawInfoCard(
   ctx.y -= height + 12;
 }
 
+function drawPartyColumn(
+  ctx: PdfContext,
+  x: number,
+  y: number,
+  width: number,
+  title: string,
+  displayName: string,
+  lines: string[],
+) {
+  drawRawText(ctx, title.toUpperCase(), x, y, {
+    font: ctx.bold,
+    size: 7.8,
+    color: COLORS.blue,
+  });
+
+  let nameY = y - 15;
+
+  for (const line of wrapText(displayName || "Not set", ctx.bold, 10.5, width)) {
+    drawRawText(ctx, line, x, nameY, {
+      font: ctx.bold,
+      size: 10.5,
+      color: COLORS.ink,
+    });
+    nameY -= 13;
+  }
+
+  let currentY = nameY - 8;
+
+  for (const line of lines) {
+    const wrapped = wrapText(line, ctx.regular, 9.4, width);
+
+    for (const wrappedLine of wrapped) {
+      drawRawText(ctx, wrappedLine, x, currentY, {
+        size: 9.4,
+        color: COLORS.muted,
+      });
+      currentY -= 12;
+    }
+
+    currentY -= 2;
+  }
+}
+
+function partyLineCount(ctx: PdfContext, displayName: string, lines: string[], width: number) {
+  const nameLines = wrapText(displayName || "Not set", ctx.bold, 10.5, width).length;
+  const detailLines = lines.reduce(
+    (count, line) => count + wrapText(line, ctx.regular, 9.4, width).length,
+    0,
+  );
+
+  return nameLines + detailLines + lines.length;
+}
+
+function drawPartySummaryCard(
+  ctx: PdfContext,
+  owner: { displayName: string; lines: string[] },
+  client: { displayName: string; lines: string[] },
+) {
+  const columnGap = 28;
+  const columnWidth = (TEXT_WIDTH - columnGap) / 2;
+  const ownerLineCount = partyLineCount(ctx, owner.displayName, owner.lines, columnWidth);
+  const clientLineCount = partyLineCount(ctx, client.displayName, client.lines, columnWidth);
+  const height = Math.max(118, 46 + Math.max(ownerLineCount, clientLineCount) * 12);
+
+  ensureSpace(ctx, height + 10);
+  ctx.page.drawRectangle({
+    x: MARGIN_X,
+    y: ctx.y - height,
+    width: TEXT_WIDTH,
+    height,
+    color: COLORS.soft,
+    borderColor: COLORS.line,
+    borderWidth: 0.6,
+  });
+  ctx.page.drawLine({
+    start: { x: MARGIN_X + columnWidth + columnGap / 2, y: ctx.y - 18 },
+    end: { x: MARGIN_X + columnWidth + columnGap / 2, y: ctx.y - height + 18 },
+    thickness: 0.6,
+    color: COLORS.line,
+  });
+
+  drawPartyColumn(ctx, MARGIN_X + 16, ctx.y - 24, columnWidth - 16, "Business", owner.displayName, owner.lines);
+  drawPartyColumn(
+    ctx,
+    MARGIN_X + columnWidth + columnGap,
+    ctx.y - 24,
+    columnWidth - 16,
+    "Client",
+    client.displayName,
+    client.lines,
+  );
+
+  ctx.y -= height + 12;
+}
+
 function drawParagraphSection(
   ctx: PdfContext,
   title: string,
@@ -540,53 +635,56 @@ function drawHeader(ctx: PdfContext, document: BusinessDocumentPdfInput) {
   ctx.y -= 8;
   drawInfoCard(ctx, [
     { label: "DOCUMENT NUMBER", value: document.documentNumber || document.id },
-    { label: "STATUS", value: document.status },
     { label: "DATE", value: formatDate(document.completedAt || document.createdAt) },
-    { label: "TYPE", value: document.type === "CONTRACT" ? "Contract" : "Agreement" },
     { label: "START DATE", value: formatDate(document.startDate) },
     { label: "END DATE", value: formatDate(document.endDate) },
-  ]);
+  ], { columns: 4 });
 }
 
 function drawParties(ctx: PdfContext, document: BusinessDocumentPdfInput) {
   drawSectionTitle(ctx, "Parties");
-  drawInfoCard(
+  const ownerEmail =
+    snapshotValue(document.ownerSnapshot, "billingEmail") ||
+    snapshotValue(document.ownerSnapshot, "email");
+  const ownerContact = snapshotValue(document.ownerSnapshot, "name");
+  const clientContact = snapshotValue(document.clientSnapshot, "name");
+
+  drawPartySummaryCard(
     ctx,
-    [
-      { label: "BUSINESS", value: ownerDisplayName(document.ownerSnapshot) },
-      {
-        label: "EMAIL",
-        value:
-          snapshotValue(document.ownerSnapshot, "billingEmail") ||
-          snapshotValue(document.ownerSnapshot, "email"),
-      },
-      { label: "PHONE", value: snapshotValue(document.ownerSnapshot, "phone") },
-      { label: "ADDRESS", value: snapshotValue(document.ownerSnapshot, "address") },
-      { label: "TAX / BUSINESS ID", value: snapshotValue(document.ownerSnapshot, "taxId") },
-      {
-        label: "CONTACT NAME",
-        value: snapshotValue(document.ownerSnapshot, "name") || ownerDisplayName(document.ownerSnapshot),
-      },
-    ],
-    { columns: 2 },
-  );
-  drawInfoCard(
-    ctx,
-    [
-      { label: "CLIENT", value: clientDisplayName(document.clientSnapshot) },
-      { label: "EMAIL", value: snapshotValue(document.clientSnapshot, "email") },
-      { label: "PHONE", value: snapshotValue(document.clientSnapshot, "phone") },
-      { label: "ADDRESS", value: snapshotValue(document.clientSnapshot, "address") },
-      {
-        label: "BUSINESS ID",
-        value: snapshotValue(document.clientSnapshot, "abnOrBusinessId"),
-      },
-      {
-        label: "CONTACT NAME",
-        value: snapshotValue(document.clientSnapshot, "name") || clientDisplayName(document.clientSnapshot),
-      },
-    ],
-    { columns: 2 },
+    {
+      displayName: ownerDisplayName(document.ownerSnapshot),
+      lines: [
+        ownerContact ? `Contact: ${ownerContact}` : "",
+        ownerEmail ? `Email: ${ownerEmail}` : "",
+        snapshotValue(document.ownerSnapshot, "phone")
+          ? `Phone: ${snapshotValue(document.ownerSnapshot, "phone")}`
+          : "",
+        snapshotValue(document.ownerSnapshot, "address")
+          ? `Address: ${snapshotValue(document.ownerSnapshot, "address")}`
+          : "",
+        snapshotValue(document.ownerSnapshot, "taxId")
+          ? `Tax / Business ID: ${snapshotValue(document.ownerSnapshot, "taxId")}`
+          : "",
+      ].filter(Boolean),
+    },
+    {
+      displayName: clientDisplayName(document.clientSnapshot),
+      lines: [
+        clientContact ? `Contact: ${clientContact}` : "",
+        snapshotValue(document.clientSnapshot, "email")
+          ? `Email: ${snapshotValue(document.clientSnapshot, "email")}`
+          : "",
+        snapshotValue(document.clientSnapshot, "phone")
+          ? `Phone: ${snapshotValue(document.clientSnapshot, "phone")}`
+          : "",
+        snapshotValue(document.clientSnapshot, "address")
+          ? `Address: ${snapshotValue(document.clientSnapshot, "address")}`
+          : "",
+        snapshotValue(document.clientSnapshot, "abnOrBusinessId")
+          ? `Business ID: ${snapshotValue(document.clientSnapshot, "abnOrBusinessId")}`
+          : "",
+      ].filter(Boolean),
+    },
   );
 }
 
