@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import { getAppUrl } from "@/lib/app-url";
 import { documentBasePath, type BusinessDocumentType } from "@/lib/documents/templates";
 import {
-  escapeHtml,
   generateDocumentSigningToken,
   hashDocumentSigningToken,
   isRecord,
@@ -17,6 +16,7 @@ import {
   snapshotString,
 } from "@/lib/documents/signing";
 import { sendEmail } from "@/lib/email/send-email";
+import { renderEmailTemplate } from "@/lib/email/templates";
 import { assertCanGeneratePdf, assertCanUseBusinessDocumentType } from "@/lib/plans/limits";
 import { generateBusinessDocumentPdf } from "@/lib/pdf/business-document";
 import { prisma } from "@/lib/prisma";
@@ -158,34 +158,66 @@ async function finalizeAndEmailSignedPdf(documentId: string) {
     content: pdf.buffer,
   };
 
-  const subject = `Signed document: ${document.title}`;
-  const text = [
-    `${document.title} has been signed by both parties.`,
-    "",
-    `Document number: ${document.documentNumber || document.id}`,
-    `Client: ${clientName}`,
-    `Business: ${ownerName}`,
-    "",
-    "The signed PDF is attached.",
-  ].join("\n");
-  const html = `<p><strong>${escapeHtml(document.title)}</strong> has been signed by both parties.</p><p>The signed PDF is attached.</p>`;
+  const commonVariables = {
+    documentTitle: document.title,
+    documentNumber: document.documentNumber || document.id,
+    documentType: String(document.type).toLowerCase(),
+    clientName,
+    clientEmail,
+    ownerName,
+    ownerEmail,
+  };
+
+  const ownerTemplate = await renderEmailTemplate({
+    key: "business_document_signed_pdf",
+    variables: {
+      ...commonVariables,
+      userName: ownerName,
+      userEmail: ownerEmail,
+      recipientRole: "business",
+    },
+    fallback: {
+      subject: "Signed document: {{documentTitle}}",
+      text:
+        "{{documentTitle}} has been signed by both parties.\n\nDocument number: {{documentNumber}}\nClient: {{clientName}}\nBusiness: {{ownerName}}\n\nThe signed PDF is attached.",
+      html:
+        "<p><strong>{{documentTitle}}</strong> has been signed by both parties.</p><p>The signed PDF is attached.</p>",
+    },
+  });
+
+  const clientTemplate = await renderEmailTemplate({
+    key: "business_document_signed_pdf",
+    variables: {
+      ...commonVariables,
+      userName: clientName,
+      userEmail: clientEmail,
+      recipientRole: "client",
+    },
+    fallback: {
+      subject: "Signed document: {{documentTitle}}",
+      text:
+        "{{documentTitle}} has been signed by both parties.\n\nDocument number: {{documentNumber}}\nClient: {{clientName}}\nBusiness: {{ownerName}}\n\nThe signed PDF is attached.",
+      html:
+        "<p><strong>{{documentTitle}}</strong> has been signed by both parties.</p><p>The signed PDF is attached.</p>",
+    },
+  });
 
   const [ownerResult, clientResult] = await Promise.all([
     ownerEmail
       ? sendEmail({
           to: ownerEmail,
-          subject,
-          text,
-          html,
+          subject: ownerTemplate.subject,
+          text: ownerTemplate.text,
+          html: ownerTemplate.html,
           attachments: [attachment],
         })
       : Promise.resolve({ ok: false, provider: "none", error: "Missing owner email." }),
     clientEmail
       ? sendEmail({
           to: clientEmail,
-          subject,
-          text,
-          html,
+          subject: clientTemplate.subject,
+          text: clientTemplate.text,
+          html: clientTemplate.html,
           attachments: [attachment],
         })
       : Promise.resolve({ ok: false, provider: "none", error: "Missing client email." }),
@@ -253,25 +285,37 @@ export async function sendBusinessDocumentForSigningAction(formData: FormData) {
   const ownerName =
     snapshotString(document.ownerSnapshot, "companyName") ||
     snapshotDisplayName(document.ownerSnapshot, "FormOS user");
+  const ownerEmail = snapshotEmail(document.ownerSnapshot) || document.owner.email;
+
+  const template = await renderEmailTemplate({
+    key: "business_document_signing_request",
+    variables: {
+      userName: clientName,
+      userEmail: clientEmail,
+      clientName,
+      clientEmail,
+      ownerName,
+      ownerEmail,
+      documentTitle: document.title,
+      documentNumber: document.documentNumber || document.id,
+      documentType: type.toLowerCase(),
+      signingUrl,
+      expiresAt: expiresAt.toISOString(),
+    },
+    fallback: {
+      subject: "Signature requested: {{documentTitle}}",
+      text:
+        "Hi {{clientName}},\n\n{{ownerName}} has sent you a {{documentType}} to review and sign.\n\nOpen and sign: {{signingUrl}}\n\nThis link expires on {{expiresAt}}.",
+      html:
+        "<p>Hi {{clientName}},</p><p>{{ownerName}} has sent you a {{documentType}} to review and sign.</p><p><a href=\"{{signingUrl}}\">Open and sign the document</a></p><p>This link expires on {{expiresAt}}.</p>",
+    },
+  });
 
   const result = await sendEmail({
     to: clientEmail,
-    subject: `Signature requested: ${document.title}`,
-    text: [
-      `Hi ${clientName},`,
-      "",
-      `${ownerName} has sent you a ${type.toLowerCase()} to review and sign.`,
-      "",
-      `Open and sign: ${signingUrl}`,
-      "",
-      `This link expires on ${expiresAt.toISOString()}.`,
-    ].join("\n"),
-    html: [
-      `<p>Hi ${escapeHtml(clientName)},</p>`,
-      `<p>${escapeHtml(ownerName)} has sent you a ${escapeHtml(type.toLowerCase())} to review and sign.</p>`,
-      `<p><a href="${escapeHtml(signingUrl)}">Open and sign the document</a></p>`,
-      `<p>This link expires on ${escapeHtml(expiresAt.toISOString())}.</p>`,
-    ].join(""),
+    subject: template.subject,
+    text: template.text,
+    html: template.html,
   });
 
   revalidatePath(documentBasePath(type));

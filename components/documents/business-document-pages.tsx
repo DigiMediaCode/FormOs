@@ -12,11 +12,14 @@ import {
   Mail,
   Plus,
   Send,
+  Trash2,
   UserRound,
 } from "lucide-react";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import {
   createBusinessDocumentAction,
+  deleteBusinessDocumentAction,
   updateBusinessDocumentAction,
 } from "@/lib/documents/actions";
 import {
@@ -695,6 +698,12 @@ export async function BusinessDocumentDetailPage({
     notFound();
   }
 
+  const canDeleteDraft =
+    !document.sentForSigningAt &&
+    !document.ownerSignedAt &&
+    !document.clientSignedAt &&
+    !document.finalPdfSentAt;
+
   return (
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
@@ -725,23 +734,39 @@ export async function BusinessDocumentDetailPage({
                 {formatDate(document.updatedAt)}
               </p>
             </div>
-            {limits.allowPdfGeneration ? (
-              <Link
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                href={`${basePath}/${document.id}/pdf`}
-              >
-                <Download className="h-4 w-4" />
-                Generate / Download PDF
-              </Link>
-            ) : (
-              <Link
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100"
-                href="/dashboard/settings/billing"
-              >
-                <LockKeyhole className="h-4 w-4" />
-                Upgrade for PDF
-              </Link>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {limits.allowPdfGeneration ? (
+                <Link
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                  href={`${basePath}/${document.id}/pdf`}
+                >
+                  <Download className="h-4 w-4" />
+                  Generate / Download PDF
+                </Link>
+              ) : (
+                <Link
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100"
+                  href="/dashboard/settings/billing"
+                >
+                  <LockKeyhole className="h-4 w-4" />
+                  Upgrade for PDF
+                </Link>
+              )}
+              {canDeleteDraft ? (
+                <form action={deleteBusinessDocumentAction}>
+                  <input name="documentId" type="hidden" value={document.id} />
+                  <input name="type" type="hidden" value={type} />
+                  <ConfirmSubmitButton
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-50"
+                    confirmMessage="Delete this draft document? This cannot be undone."
+                    pendingText="Deleting..."
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete draft
+                  </ConfirmSubmitButton>
+                </form>
+              ) : null}
+            </div>
           </div>
         </header>
 
@@ -785,6 +810,11 @@ export async function BusinessDocumentDetailPage({
                 <form action={updateBusinessDocumentAction} className="mt-5 grid gap-4">
                   <input name="documentId" type="hidden" value={document.id} />
                   <input name="type" type="hidden" value={type} />
+                  <input
+                    name="clientSnapshotId"
+                    type="hidden"
+                    value={snapshotValue(document.clientSnapshot, "id")}
+                  />
 
                   <label className={labelClass()}>
                     Title
@@ -795,6 +825,70 @@ export async function BusinessDocumentDetailPage({
                       required
                     />
                   </label>
+
+                  <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+                        Client snapshot
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">
+                        These details appear on this document and its PDF. Editing
+                        them here does not overwrite the master client record.
+                      </p>
+                    </div>
+                    <label className={labelClass()}>
+                      Client name
+                      <input
+                        className={inputClass()}
+                        defaultValue={snapshotValue(document.clientSnapshot, "name")}
+                        name="clientName"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Client email
+                      <input
+                        className={inputClass()}
+                        defaultValue={snapshotValue(document.clientSnapshot, "email")}
+                        name="clientEmail"
+                        type="email"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Phone
+                      <input
+                        className={inputClass()}
+                        defaultValue={snapshotValue(document.clientSnapshot, "phone")}
+                        name="clientPhone"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      Company
+                      <input
+                        className={inputClass()}
+                        defaultValue={snapshotValue(document.clientSnapshot, "companyName")}
+                        name="clientCompanyName"
+                      />
+                    </label>
+                    <label className={labelClass()}>
+                      ABN / Business ID
+                      <input
+                        className={inputClass()}
+                        defaultValue={snapshotValue(
+                          document.clientSnapshot,
+                          "abnOrBusinessId",
+                        )}
+                        name="clientAbnOrBusinessId"
+                      />
+                    </label>
+                    <label className={`${labelClass()} md:col-span-2`}>
+                      Address
+                      <textarea
+                        className={`${inputClass()} min-h-20`}
+                        defaultValue={snapshotValue(document.clientSnapshot, "address")}
+                        name="clientAddress"
+                      />
+                    </label>
+                  </div>
 
                   <label className={labelClass()}>
                     Scope of work

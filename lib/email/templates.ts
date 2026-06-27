@@ -16,6 +16,8 @@ export const EMAIL_TEMPLATE_KEYS = [
   "completed_pdf_submitter",
   "workspace_invite",
   "payment_failed",
+  "business_document_signing_request",
+  "business_document_signed_pdf",
 ] as const;
 
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
@@ -176,6 +178,47 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<
     htmlBody:
       "<p>Hi {{userName}},</p><p>We could not collect payment for your <strong>{{planName}}</strong> plan. Your account has been moved to Free plan limits until billing is restored.</p><p><a href=\"{{billingLink}}\">Restore your plan</a></p><p>Please update your billing details by {{restoreUntil}} to continue using paid features. Your existing forms and submissions have not been deleted.</p>",
     variables: ["userName", "userEmail", "planName", "billingLink", "restoreUntil"],
+  },
+  business_document_signing_request: {
+    name: "Document signing request",
+    description:
+      "Sent to a client when a contract or agreement is sent for digital signing.",
+    subject: "Signature requested: {{documentTitle}}",
+    textBody:
+      "Hi {{clientName}},\n\n{{ownerName}} has sent you a {{documentType}} to review and sign.\n\nDocument: {{documentTitle}}\nDocument number: {{documentNumber}}\n\nOpen and sign:\n{{signingUrl}}\n\nThis link expires on {{expiresAt}}.",
+    htmlBody:
+      "<p>Hi {{clientName}},</p><p>{{ownerName}} has sent you a {{documentType}} to review and sign.</p><p><strong>Document:</strong> {{documentTitle}}<br><strong>Document number:</strong> {{documentNumber}}</p><p><a href=\"{{signingUrl}}\">Open and sign the document</a></p><p>This link expires on {{expiresAt}}.</p>",
+    variables: [
+      "documentTitle",
+      "documentNumber",
+      "documentType",
+      "signingUrl",
+      "expiresAt",
+      "clientName",
+      "clientEmail",
+      "ownerName",
+      "ownerEmail",
+    ],
+  },
+  business_document_signed_pdf: {
+    name: "Signed document PDF",
+    description:
+      "Sent to both parties with the signed PDF after a contract or agreement is signed by both sides.",
+    subject: "Signed document: {{documentTitle}}",
+    textBody:
+      "Hi {{userName}},\n\n{{documentTitle}} has been signed by both parties.\n\nDocument number: {{documentNumber}}\nClient: {{clientName}}\nBusiness: {{ownerName}}\n\nThe signed PDF is attached.",
+    htmlBody:
+      "<p>Hi {{userName}},</p><p><strong>{{documentTitle}}</strong> has been signed by both parties.</p><p><strong>Document number:</strong> {{documentNumber}}<br><strong>Client:</strong> {{clientName}}<br><strong>Business:</strong> {{ownerName}}</p><p>The signed PDF is attached.</p>",
+    variables: [
+      "documentTitle",
+      "documentNumber",
+      "documentType",
+      "clientName",
+      "clientEmail",
+      "ownerName",
+      "ownerEmail",
+      "recipientRole",
+    ],
   },
 };
 

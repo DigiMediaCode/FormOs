@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, BriefcaseBusiness, FileText, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
+import { updateClientAction } from "@/lib/clients/actions";
 import { getUserEffectiveLimits } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceMember } from "@/lib/workspaces/access";
@@ -39,6 +40,14 @@ function DetailRow({
       </p>
     </div>
   );
+}
+
+function inputClass() {
+  return "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+}
+
+function labelClass() {
+  return "grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500";
 }
 
 export default async function ClientDetailPage({
@@ -164,24 +173,109 @@ export default async function ClientDetailPage({
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-blue-600" />
-              <h2 className="text-base font-semibold text-slate-950">Client details</h2>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <DetailRow label="Email" value={client.email} />
-              <DetailRow label="Phone" value={client.phone} />
-              <DetailRow label="Company" value={client.companyName} />
-              <DetailRow label="ABN / Business ID" value={client.abnOrBusinessId} />
-              <div className="sm:col-span-2">
-                <DetailRow label="Address" value={client.address} />
+          <div className="grid gap-5">
+            <details className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-700">
+                    Edit
+                  </span>
+                  <span className="mt-1 block text-base font-semibold text-slate-950">
+                    Client details
+                  </span>
+                </span>
+                <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                  Open
+                </span>
+              </summary>
+              <form action={updateClientAction} className="mt-5 grid gap-4">
+                <input name="clientId" type="hidden" value={client.id} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={labelClass()}>
+                    Type
+                    <select className={inputClass()} defaultValue={client.type} name="type">
+                      <option value="PERSON">Person</option>
+                      <option value="BUSINESS">Business</option>
+                    </select>
+                  </label>
+                  <label className={labelClass()}>
+                    Name
+                    <input className={inputClass()} defaultValue={client.name} name="name" />
+                  </label>
+                  <label className={labelClass()}>
+                    Email
+                    <input
+                      className={inputClass()}
+                      defaultValue={client.email ?? ""}
+                      name="email"
+                      type="email"
+                    />
+                  </label>
+                  <label className={labelClass()}>
+                    Phone
+                    <input className={inputClass()} defaultValue={client.phone ?? ""} name="phone" />
+                  </label>
+                  <label className={labelClass()}>
+                    Company
+                    <input
+                      className={inputClass()}
+                      defaultValue={client.companyName ?? ""}
+                      name="companyName"
+                    />
+                  </label>
+                  <label className={labelClass()}>
+                    ABN / Business ID
+                    <input
+                      className={inputClass()}
+                      defaultValue={client.abnOrBusinessId ?? ""}
+                      name="abnOrBusinessId"
+                    />
+                  </label>
+                  <label className={`${labelClass()} sm:col-span-2`}>
+                    Address
+                    <textarea
+                      className={`${inputClass()} min-h-24`}
+                      defaultValue={client.address ?? ""}
+                      name="address"
+                    />
+                  </label>
+                  <label className={`${labelClass()} sm:col-span-2`}>
+                    Notes
+                    <textarea
+                      className={`${inputClass()} min-h-24`}
+                      defaultValue={client.notes ?? ""}
+                      name="notes"
+                    />
+                  </label>
+                </div>
+                <button
+                  className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                  type="submit"
+                >
+                  Save client
+                </button>
+              </form>
+            </details>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-blue-600" />
+                <h2 className="text-base font-semibold text-slate-950">Client details</h2>
               </div>
-              <div className="sm:col-span-2">
-                <DetailRow label="Notes" value={client.notes} />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <DetailRow label="Email" value={client.email} />
+                <DetailRow label="Phone" value={client.phone} />
+                <DetailRow label="Company" value={client.companyName} />
+                <DetailRow label="ABN / Business ID" value={client.abnOrBusinessId} />
+                <div className="sm:col-span-2">
+                  <DetailRow label="Address" value={client.address} />
+                </div>
+                <div className="sm:col-span-2">
+                  <DetailRow label="Notes" value={client.notes} />
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
 
           <aside className="flex flex-col gap-5">
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

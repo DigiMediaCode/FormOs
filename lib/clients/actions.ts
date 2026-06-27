@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import {
   assertCanConvertSubmissionToClient,
   assertCanCreateClient,
+  assertCanUseClients,
 } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceMember } from "@/lib/workspaces/access";
@@ -149,6 +150,117 @@ export async function createManualClientAction(formData: FormData) {
 
   revalidatePath("/dashboard/clients");
   redirect(clientDetailPath(clientId, "success", "Client created."));
+}
+
+export async function updateClientAction(formData: FormData) {
+  const context = await requireWorkspaceMember();
+  const clientId = readString(formData, "clientId");
+
+  try {
+    await assertCanUseClients(context.ownerId);
+  } catch (error) {
+    redirect(
+      clientDetailPath(
+        clientId,
+        "error",
+        error instanceof Error ? error.message : "Clients are not available.",
+      ),
+    );
+  }
+
+  const existingClient = await prisma.client.findFirst({
+    where: {
+      id: clientId,
+      ownerId: context.ownerId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!existingClient) {
+    notFound();
+  }
+
+  const email = normalizeEmail(readString(formData, "email"));
+  const data = {
+    type: normalizeClientType(readString(formData, "type")),
+    name: readString(formData, "name"),
+    email,
+    phone: readString(formData, "phone"),
+    companyName: readString(formData, "companyName"),
+    abnOrBusinessId: readString(formData, "abnOrBusinessId"),
+    address: readString(formData, "address"),
+    notes: readString(formData, "notes"),
+  };
+
+  try {
+    validateClientFields(data);
+  } catch (error) {
+    redirect(
+      clientDetailPath(
+        clientId,
+        "error",
+        error instanceof Error ? error.message : "Unable to update client.",
+      ),
+    );
+  }
+
+  if (email) {
+    const duplicateClient = await prisma.client.findFirst({
+      where: {
+        ownerId: context.ownerId,
+        email: {
+          equals: email,
+          mode: "insensitive",
+        },
+        id: {
+          not: clientId,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (duplicateClient) {
+      redirect(
+        clientDetailPath(
+          clientId,
+          "error",
+          "Another client already uses this email address.",
+        ),
+      );
+    }
+  }
+
+  try {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: {
+        type: data.type,
+        name: data.name || data.companyName || data.email || data.phone,
+        email: data.email || null,
+        phone: data.phone || null,
+        companyName: data.companyName || null,
+        abnOrBusinessId: data.abnOrBusinessId || null,
+        address: data.address || null,
+        notes: data.notes || null,
+      },
+    });
+  } catch (error) {
+    redirect(
+      clientDetailPath(
+        clientId,
+        "error",
+        error instanceof Error ? error.message : "Unable to update client.",
+      ),
+    );
+  }
+
+  revalidatePath("/dashboard/clients");
+  revalidatePath(clientDetailPath(clientId));
+  redirect(clientDetailPath(clientId, "success", "Client updated."));
 }
 
 export async function convertSubmissionToClientAction(
