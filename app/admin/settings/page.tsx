@@ -360,6 +360,51 @@ export default async function AdminSettingsPage({
             </div>
           </Section>
 
+          <Section icon={ShieldCheck} title="Spam Protection (Cloudflare Turnstile)">
+            <p className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">
+              Public and embedded forms always use an invisible honeypot and
+              timing check. Add Cloudflare Turnstile for an extra CAPTCHA layer.
+              Create a free widget at{" "}
+              <a
+                className="font-semibold underline"
+                href="https://dash.cloudflare.com/?to=/:account/turnstile"
+                rel="noreferrer"
+                target="_blank"
+              >
+                Cloudflare Turnstile
+              </a>
+              , then paste the Site Key and Secret Key below. The challenge only
+              appears on forms once both keys are saved and the toggle is on.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Toggle
+                checked={settings.turnstileEnabled}
+                label="Enable Turnstile CAPTCHA"
+                name="turnstileEnabled"
+              />
+              <TextField
+                defaultValue={settings.turnstileSiteKey}
+                label="Turnstile Site Key"
+                name="turnstileSiteKey"
+                placeholder="0x4AAAAAAA..."
+              />
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-600">
+                <span>Turnstile Secret Key</span>
+                <input
+                  autoComplete="off"
+                  className={inputClass()}
+                  defaultValue={settings.turnstileSecretKey}
+                  name="turnstileSecretKey"
+                  placeholder="0x4AAAAAAA..."
+                  type="password"
+                />
+                <span className="text-[11px] font-normal leading-4 text-slate-500">
+                  Stored securely and never exposed on public forms.
+                </span>
+              </label>
+            </div>
+          </Section>
+
           <SubmitButton
             className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
             pendingText="Saving settings..."

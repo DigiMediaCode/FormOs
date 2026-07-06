@@ -27,6 +27,7 @@ export function PublicFormDraftScript({
         const checkboxNames = new Set();
         for (const element of Array.from(form.elements)) {
           if (!element || !element.name || element.type === "file") continue;
+          if (element.name.indexOf("formos_") === 0 || element.name === "cf-turnstile-response") continue;
           if (element instanceof HTMLInputElement && element.type === "checkbox") {
             if (checkboxNames.has(element.name)) continue;
             checkboxNames.add(element.name);
@@ -200,6 +201,13 @@ export function PublicFormClient({
       }
 
       if (!element.name || element.type === "file") {
+        continue;
+      }
+
+      if (
+        element.name.startsWith("formos_") ||
+        element.name === "cf-turnstile-response"
+      ) {
         continue;
       }
 

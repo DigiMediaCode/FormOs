@@ -89,6 +89,9 @@ export async function savePlatformSettingsAction(formData: FormData) {
       emailFooterText: String(formData.get("emailFooterText") ?? ""),
       emailHeaderHtml: String(formData.get("emailHeaderHtml") ?? ""),
       emailFooterHtml: String(formData.get("emailFooterHtml") ?? ""),
+      turnstileEnabled: formData.get("turnstileEnabled") === "on",
+      turnstileSiteKey: String(formData.get("turnstileSiteKey") ?? ""),
+      turnstileSecretKey: String(formData.get("turnstileSecretKey") ?? ""),
     });
   } catch (error) {
     redirectToSettings(

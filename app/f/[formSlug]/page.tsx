@@ -7,6 +7,7 @@ import {
   PublicFormClient,
   PublicFormDraftScript,
 } from "@/components/forms/public-form-client";
+import { PublicFormSecurity } from "@/components/forms/public-form-security";
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignatureCanvasBootstrapScript } from "@/components/forms/signature-canvas-bootstrap";
 import { SignaturePadField } from "@/components/forms/signature-pad-field";
@@ -531,6 +532,8 @@ export default async function PublicFormPage({
               </p>
             </section>
           )}
+
+          <PublicFormSecurity formId={form.id} turnstile={form.security} />
 
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <PublicFormSubmitControls

@@ -5,6 +5,7 @@ import {
   PublicFormClient,
   PublicFormDraftScript,
 } from "@/components/forms/public-form-client";
+import { PublicFormSecurity } from "@/components/forms/public-form-security";
 import { PublicFormSubmitControls } from "@/components/forms/public-form-submit-controls";
 import { SignatureCanvasBootstrapScript } from "@/components/forms/signature-canvas-bootstrap";
 import {
@@ -148,6 +149,8 @@ export default async function EmbedFormPage({
                 </p>
               </section>
             )}
+
+            <PublicFormSecurity formId={form.id} turnstile={form.security} />
 
             <section className="py-2" data-formos-submit-shell>
               <PublicFormSubmitControls

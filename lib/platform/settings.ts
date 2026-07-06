@@ -37,6 +37,9 @@ export type PlatformSettings = {
   emailFooterText: string;
   emailHeaderHtml: string;
   emailFooterHtml: string;
+  turnstileEnabled: boolean;
+  turnstileSiteKey: string;
+  turnstileSecretKey: string;
 };
 
 const PLATFORM_SETTING_KEYS = [
@@ -71,6 +74,9 @@ const PLATFORM_SETTING_KEYS = [
   "emailFooterText",
   "emailHeaderHtml",
   "emailFooterHtml",
+  "turnstileEnabled",
+  "turnstileSiteKey",
+  "turnstileSecretKey",
 ] as const;
 
 type PlatformSettingKey = (typeof PLATFORM_SETTING_KEYS)[number];
@@ -132,6 +138,9 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   emailFooterText: "",
   emailHeaderHtml: "",
   emailFooterHtml: "",
+  turnstileEnabled: false,
+  turnstileSiteKey: "",
+  turnstileSecretKey: "",
 };
 
 function isPlatformSettingKey(key: string): key is PlatformSettingKey {
@@ -185,6 +194,8 @@ function validatePlainTextSettings(settings: PlatformSettings) {
     ["landingBottomAdSlot", "Landing bottom ad slot"],
     ["publicFormAdSlot", "Public form ad slot"],
     ["publicFormAdLabel", "Public form ad label"],
+    ["turnstileSiteKey", "Turnstile site key"],
+    ["turnstileSecretKey", "Turnstile secret key"],
   ];
 
   for (const [key, label] of textFields) {
@@ -299,6 +310,9 @@ export async function updatePlatformSettings(input: PlatformSettings) {
     emailFooterText: input.emailFooterText.trim(),
     emailHeaderHtml: sanitizeEmailPartialHtml(input.emailHeaderHtml.trim()),
     emailFooterHtml: sanitizeEmailPartialHtml(input.emailFooterHtml.trim()),
+    turnstileEnabled: Boolean(input.turnstileEnabled),
+    turnstileSiteKey: input.turnstileSiteKey.trim(),
+    turnstileSecretKey: input.turnstileSecretKey.trim(),
   };
 
   if (!isSafePublicUrlOrPath(nextSettings.logoUrl)) {

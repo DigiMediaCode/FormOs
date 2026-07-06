@@ -45,6 +45,8 @@ import { prisma } from "@/lib/prisma";
 import { createSubmissionEvent } from "@/lib/forms/submission-events";
 import { recordFormSubmit } from "@/lib/forms/analytics";
 import { checkRateLimit, rateLimitKey } from "@/lib/security/rate-limit";
+import { assessPublicSubmission } from "@/lib/forms/spam-protection";
+import { isTurnstileConfigured } from "@/lib/security/turnstile";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import {
   getPublicWorkspaceBranding,
@@ -106,6 +108,10 @@ type PublicFormView = PublicFormSnapshot & {
     publicFormAdSlot: string;
     publicFormAdFrequency: number;
     publicFormAdLabel: string;
+  };
+  security: {
+    turnstileEnabled: boolean;
+    turnstileSiteKey: string;
   };
 };
 
@@ -487,6 +493,10 @@ export async function getPublishedFormForPublicView(formId: string) {
       publicFormAdFrequency: platformSettings.publicFormAdFrequency,
       publicFormAdLabel: platformSettings.publicFormAdLabel,
     },
+    security: {
+      turnstileEnabled: isTurnstileConfigured(platformSettings),
+      turnstileSiteKey: platformSettings.turnstileSiteKey,
+    },
   } satisfies PublicFormView;
 }
 
@@ -572,6 +582,29 @@ async function submitFormInternal(
       `Too many submissions from this connection. Please try again in ${rateLimit.retryAfterSeconds} seconds.`,
       source,
     );
+  }
+
+  const spamDecision = await assessPublicSubmission({
+    formId: form.id,
+    formData,
+    ipAddress,
+  });
+
+  if (spamDecision.action === "silent_drop") {
+    console.info("[formos:spam] Dropped suspected spam submission.", {
+      formId: form.id,
+      source,
+      reason: spamDecision.reason,
+    });
+    redirect(
+      `${formReturnPath(form.id, source)}?success=${encodeURIComponent(
+        successMessageFor(normalizeSettings(form.settings)),
+      )}`,
+    );
+  }
+
+  if (spamDecision.action === "reject") {
+    errorRedirect(form.id, spamDecision.message, source);
   }
 
   const ownerLimits = await getUserEffectiveLimits(form.ownerId);
