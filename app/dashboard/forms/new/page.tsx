@@ -13,6 +13,7 @@ type NewFormPageProps = {
   searchParams: Promise<{
     error?: string;
     template?: string;
+    category?: string;
   }>;
 };
 
@@ -20,9 +21,16 @@ function safeTemplateParam(value: string | undefined) {
   return value && /^[a-z0-9-]+$/.test(value) ? value : "";
 }
 
+function categorySlug(category: string) {
+  return category
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export default async function NewFormPage({ searchParams }: NewFormPageProps) {
   const context = await requireWorkspaceAdminOrOwner();
-  const { error, template } = await searchParams;
+  const { error, template, category } = await searchParams;
   const selectedTemplateSlug = safeTemplateParam(template);
   const [access, activePlans] = await Promise.all([
     getUserPlanAccess(context.ownerId),
@@ -43,6 +51,27 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
     selected: template.slug === selectedTemplateSlug,
   })).sort((a, b) => Number(b.selected) - Number(a.selected));
   const selectedTemplate = templateCards.find((card) => card.selected);
+
+  const allCategories = [
+    ...new Set(WORKFLOW_TEMPLATES.map((item) => item.category)),
+  ];
+  const activeCategory =
+    allCategories.find((item) => categorySlug(item) === category) ?? null;
+  const templateParamSuffix = selectedTemplateSlug
+    ? `&template=${selectedTemplateSlug}`
+    : "";
+  const categoryFilters = [
+    { label: "All", slug: "", count: templateCards.length },
+    ...allCategories.map((item) => ({
+      label: item,
+      slug: categorySlug(item),
+      count: templateCards.filter((card) => card.template.category === item)
+        .length,
+    })),
+  ];
+  const visibleCards = activeCategory
+    ? templateCards.filter((card) => card.template.category === activeCategory)
+    : templateCards;
 
   return (
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
@@ -156,8 +185,36 @@ export default async function NewFormPage({ searchParams }: NewFormPageProps) {
             </p>
           </div>
 
+          <div className="mt-4 flex flex-wrap gap-2">
+            {categoryFilters.map((filter) => {
+              const isActive = filter.slug === (activeCategory ? categorySlug(activeCategory) : "");
+              const href = filter.slug
+                ? `/dashboard/forms/new?category=${filter.slug}${templateParamSuffix}`
+                : `/dashboard/forms/new${selectedTemplateSlug ? `?template=${selectedTemplateSlug}` : ""}`;
+
+              return (
+                <Link
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                    isActive
+                      ? "border-teal-300 bg-teal-600 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  href={href}
+                  key={filter.slug || "all"}
+                >
+                  {filter.label}
+                  <span
+                    className={`ml-1.5 ${isActive ? "text-teal-100" : "text-slate-400"}`}
+                  >
+                    {filter.count}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
           <div className="mt-5 grid gap-3">
-            {templateCards.map(({ access: templateAccess, selected, template }) => (
+            {visibleCards.map(({ access: templateAccess, selected, template }) => (
               <article
                 className={`grid gap-4 rounded-2xl border p-4 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center ${
                   selected

@@ -1,4 +1,5 @@
 import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-templates";
+import { TRADES, type TradeConfig } from "@/lib/forms/templates/trade-workflow-templates";
 
 export type TemplateLandingPage = {
   routeSlug: string;
@@ -79,6 +80,49 @@ const HEALTHCARE_FAQS = [
       "No. These templates are for administrative workflows only. If this is an emergency in Australia, call 000.",
   },
 ];
+
+function buildTradeLandingPage(trade: TradeConfig): TemplateLandingPage {
+  const [firstIssue, secondIssue] = trade.issueOptions;
+  const tradeLower = trade.trade.toLowerCase();
+
+  return {
+    routeSlug: `${trade.key}-job-request`,
+    templateSlug: `${trade.key}-job-request`,
+    seoTitle: `${trade.trade} Job, Quote & Service Forms | FormOS`,
+    seoDescription: `Create online ${tradeLower} forms — job and quote requests, completion sign-off, and service agreements with photo uploads, signatures, and completed PDFs.`,
+    heroTitle: `${trade.trade} forms your customers can complete on their phone.`,
+    heroSubtitle: `Take ${tradeLower} quote requests, capture job sign-off with signatures and photos, and set up recurring service agreements — all finished as tidy PDFs.`,
+    problemTitle: `Stop juggling calls, texts, and paper for every ${trade.professional} job.`,
+    problemPoints: [
+      `Quote requests for ${firstIssue.toLowerCase()}, ${secondIssue.toLowerCase()}, and more arrive by phone, text, and email and are easy to lose.`,
+      "Job photos, addresses, and access details get scattered across messages.",
+      "Completed work often needs a signed sign-off before you can invoice.",
+      "Recurring maintenance customers are hard to track without a simple agreement.",
+    ],
+    workflowSteps: COMMON_WORKFLOW_STEPS,
+    includes: [
+      `${trade.trade} job request & quote form with ${trade.professional} job details and photo uploads`,
+      "Urgency logic that flags emergency jobs",
+      "Job completion & sign-off form with customer signature",
+      "Service & maintenance agreement with schedule, term, and pricing",
+      "Office Use Only fields for quotes, scheduling, invoicing, and status",
+    ],
+    audience: trade.audience,
+    faqs: [
+      {
+        question: `Do I get more than one ${trade.professional} form?`,
+        answer:
+          "Yes. This workflow includes three ready-to-edit templates: a job request and quote form, a job completion and sign-off form, and a service and maintenance agreement. Create the ones you need from your dashboard.",
+      },
+      {
+        question: "Can customers add photos of the job?",
+        answer:
+          "Yes. The request and completion forms include optional photo upload fields, so you can quote and document work accurately.",
+      },
+      ...COMMON_FAQS,
+    ],
+  };
+}
 
 export const TEMPLATE_LANDING_PAGES: TemplateLandingPage[] = [
   {
@@ -359,6 +403,7 @@ export const TEMPLATE_LANDING_PAGES: TemplateLandingPage[] = [
     safetyDisclaimer: HEALTHCARE_SAFETY_DISCLAIMER,
     faqs: HEALTHCARE_FAQS,
   },
+  ...TRADES.map(buildTradeLandingPage),
 ];
 
 export function getTemplateLandingPage(routeSlug: string) {
