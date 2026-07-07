@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CircleAlert, CircleCheck, LogIn } from "lucide-react";
 import { loginAction } from "@/app/(auth)/actions";
-import { GoogleLogo, LarkLogo } from "@/components/ui/oauth-provider-icons";
+import { OAuthLoginButtons } from "@/components/ui/oauth-login-buttons";
 import { PlatformBrand } from "@/components/ui/platform-brand";
 import { PendingLink } from "@/components/ui/pending-link";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -86,24 +86,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           ) : null}
 
-          <div className="mt-6 grid gap-3">
-            <PendingLink
-              className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href={`/api/auth/google/login${contextSuffix}`}
-              pendingText="Redirecting to Google..."
-            >
-              <GoogleLogo />
-              Continue with Google
-            </PendingLink>
-            <PendingLink
-              className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-              href={`/api/auth/lark/login${contextSuffix}`}
-              pendingText="Redirecting to Lark..."
-            >
-              <LarkLogo />
-              Continue with Lark
-            </PendingLink>
-          </div>
+          <OAuthLoginButtons contextSuffix={contextSuffix} />
 
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-zinc-200" />

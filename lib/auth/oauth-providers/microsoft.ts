@@ -2,48 +2,43 @@ import "server-only";
 
 import type { NormalizedOAuthProfile } from "@/lib/auth/oauth-login";
 
-const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USER_INFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+// Multi-tenant "common" authority accepts work, school, and personal accounts.
+const MICROSOFT_AUTHORITY = "https://login.microsoftonline.com/common/oauth2/v2.0";
+const MICROSOFT_USERINFO_URL = "https://graph.microsoft.com/oidc/userinfo";
 
-type GoogleTokenResponse = {
+type MicrosoftTokenResponse = {
   access_token?: string;
   error?: string;
   error_description?: string;
 };
 
-type GoogleUserInfoResponse = {
+type MicrosoftUserInfoResponse = {
   sub?: string;
   email?: string;
-  email_verified?: boolean;
   name?: string;
   given_name?: string;
   family_name?: string;
   picture?: string;
 };
 
-function getGoogleAuthConfig() {
-  const clientId = process.env.GOOGLE_AUTH_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_AUTH_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_AUTH_REDIRECT_URI;
+function getMicrosoftAuthConfig() {
+  const clientId = process.env.MICROSOFT_AUTH_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_AUTH_CLIENT_SECRET;
+  const redirectUri = process.env.MICROSOFT_AUTH_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     return null;
   }
 
-  return {
-    clientId,
-    clientSecret,
-    redirectUri,
-  };
+  return { clientId, clientSecret, redirectUri };
 }
 
-export function isGoogleAuthConfigured() {
-  return getGoogleAuthConfig() !== null;
+export function isMicrosoftAuthConfigured() {
+  return getMicrosoftAuthConfig() !== null;
 }
 
-export function getGoogleLoginUrl(state: string) {
-  const config = getGoogleAuthConfig();
+export function getMicrosoftLoginUrl(state: string) {
+  const config = getMicrosoftAuthConfig();
 
   if (!config) {
     return null;
@@ -53,22 +48,23 @@ export function getGoogleLoginUrl(state: string) {
     client_id: config.clientId,
     redirect_uri: config.redirectUri,
     response_type: "code",
+    response_mode: "query",
     scope: "openid email profile",
     state,
     prompt: "select_account",
   });
 
-  return `${GOOGLE_AUTH_URL}?${params.toString()}`;
+  return `${MICROSOFT_AUTHORITY}/authorize?${params.toString()}`;
 }
 
-export async function exchangeGoogleAuthCode(code: string) {
-  const config = getGoogleAuthConfig();
+export async function exchangeMicrosoftAuthCode(code: string) {
+  const config = getMicrosoftAuthConfig();
 
   if (!config) {
-    throw new Error("Google login is not configured.");
+    throw new Error("Microsoft login is not configured.");
   }
 
-  const response = await fetch(GOOGLE_TOKEN_URL, {
+  const response = await fetch(`${MICROSOFT_AUTHORITY}/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -81,41 +77,43 @@ export async function exchangeGoogleAuthCode(code: string) {
       redirect_uri: config.redirectUri,
     }),
   });
-  const payload = (await response.json()) as GoogleTokenResponse;
+  const payload = (await response.json()) as MicrosoftTokenResponse;
 
   if (!response.ok || !payload.access_token) {
-    console.warn("[formos:oauth-google] Token exchange failed safely.", {
+    console.warn("[formos:oauth-microsoft] Token exchange failed safely.", {
       status: response.status,
       error: payload.error,
       message: payload.error_description,
     });
-    throw new Error("Google login failed.");
+    throw new Error("Microsoft login failed.");
   }
 
   return payload.access_token;
 }
 
-export async function getGoogleProfile(
+export async function getMicrosoftProfile(
   accessToken: string,
 ): Promise<NormalizedOAuthProfile> {
-  const response = await fetch(GOOGLE_USER_INFO_URL, {
+  const response = await fetch(MICROSOFT_USERINFO_URL, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
-  const profile = (await response.json()) as GoogleUserInfoResponse;
+  const profile = (await response.json()) as MicrosoftUserInfoResponse;
 
   if (!response.ok || !profile.sub || !profile.email) {
-    console.warn("[formos:oauth-google] User info request failed safely.", {
+    console.warn("[formos:oauth-microsoft] User info request failed safely.", {
       status: response.status,
       hasProviderUserId: Boolean(profile.sub),
       hasEmail: Boolean(profile.email),
     });
-    throw new Error("We could not access your email. Please use email/password login.");
+    throw new Error(
+      "We could not access your email. Please use email/password login.",
+    );
   }
 
   return {
-    provider: "google",
+    provider: "microsoft",
     providerUserId: profile.sub,
     email: profile.email,
     name: profile.name ?? null,

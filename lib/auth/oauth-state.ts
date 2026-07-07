@@ -4,7 +4,18 @@ import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
-export type OAuthLoginProvider = "google" | "lark";
+export type OAuthLoginProvider = "google" | "microsoft" | "facebook" | "apple";
+
+const OAUTH_LOGIN_PROVIDERS: OAuthLoginProvider[] = [
+  "google",
+  "microsoft",
+  "facebook",
+  "apple",
+];
+
+function isOAuthLoginProvider(value: unknown): value is OAuthLoginProvider {
+  return OAUTH_LOGIN_PROVIDERS.includes(value as OAuthLoginProvider);
+}
 
 type OAuthStatePayload = {
   provider: OAuthLoginProvider;
@@ -77,7 +88,7 @@ export function readOAuthState(state: string) {
     if (
       !payload.nonce ||
       payload.expiresAt < Date.now() ||
-      (payload.provider !== "google" && payload.provider !== "lark")
+      !isOAuthLoginProvider(payload.provider)
     ) {
       return null;
     }
