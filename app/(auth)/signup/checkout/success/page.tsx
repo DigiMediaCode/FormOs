@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CircleAlert, CircleCheck } from "lucide-react";
 import { completePublicTrialCheckout } from "@/lib/billing/public-trial-onboarding";
 import { getSessionUserId } from "@/lib/auth/session";
+import { createTemplateFormForOwner } from "@/lib/forms/templates/apply-template";
 
 type CheckoutSuccessPageProps = {
   searchParams: Promise<{
@@ -52,6 +53,23 @@ export default async function CheckoutSuccessPage({
   }
 
   if (result.status === "ready") {
+    if (result.templateSlug) {
+      const userId = await getSessionUserId();
+
+      if (userId) {
+        const applied = await createTemplateFormForOwner({
+          ownerId: userId,
+          templateSlug: result.templateSlug,
+        });
+
+        if (applied.ok) {
+          redirect(
+            `/dashboard/forms?success=${encodeURIComponent(`Your ${result.planName} trial is active and your template is ready in Drafts.`)}`,
+          );
+        }
+      }
+    }
+
     const params = new URLSearchParams({
       success: `Your ${result.planName} trial is active.`,
     });

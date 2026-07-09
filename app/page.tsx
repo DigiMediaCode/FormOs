@@ -33,6 +33,11 @@ import { getAppUrl } from "@/lib/app-url";
 import { getPlatformSettings } from "@/lib/platform/settings";
 import { prisma } from "@/lib/prisma";
 import { getTemplateLandingPages } from "@/lib/forms/templates/template-landing-pages";
+import {
+  getMinimumPlanForTemplate,
+  type TemplatePlanOption,
+} from "@/lib/forms/templates/template-access";
+import { HomepageTemplates } from "@/components/public/homepage-templates";
 
 export const metadata: Metadata = {
   title: "FormOS - Healthcare, Service & Contract Workflow Forms",
@@ -174,6 +179,7 @@ type LandingPlan = {
   priceYearly: unknown;
   currency: string;
   slug: string;
+  sortOrder: number;
   limits: unknown;
 };
 
@@ -293,6 +299,7 @@ function defaultLandingPlans(): LandingPlan[] {
       priceYearly: plan.priceYearly,
       currency: plan.currency,
       slug: plan.slug,
+      sortOrder: plan.sortOrder,
       limits: plan.limits,
     }),
   );
@@ -326,6 +333,7 @@ async function getLandingPlans() {
         priceYearly: true,
         currency: true,
         slug: true,
+        sortOrder: true,
         limits: true,
       },
     });
@@ -356,6 +364,20 @@ export default async function HomePage() {
     ? `${settings.trialDays}-day free trial`
     : null;
   const templatePages = getTemplateLandingPages();
+  const templateCards = templatePages.map((page) => {
+    const minimumPlan = getMinimumPlanForTemplate(
+      page.template,
+      plans as unknown as TemplatePlanOption[],
+    );
+
+    return {
+      routeSlug: page.routeSlug,
+      category: page.template.category,
+      title: page.template.title,
+      description: page.template.description,
+      minimumPlanName: minimumPlan?.name ?? null,
+    };
+  });
   const appUrl = safeAppUrl();
   const structuredData = {
     "@context": "https://schema.org",
@@ -732,6 +754,12 @@ export default async function HomePage() {
                 Launch faster with templates for healthcare admin, rental,
                 contractor, service, and event workflows.
               </p>
+              {settings.trialEnabled ? (
+                <p className="mt-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  Try any template free for {settings.trialDays} days — your form
+                  is ready in one click.
+                </p>
+              ) : null}
             </div>
             <Link
               className="inline-flex w-fit rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
@@ -740,25 +768,7 @@ export default async function HomePage() {
               Explore templates
             </Link>
           </div>
-          <div className="mt-8 grid gap-4 lg:grid-cols-5">
-            {templatePages.map((page) => (
-              <Link
-                className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                href={`/templates/${page.routeSlug}`}
-                key={page.routeSlug}
-              >
-                <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                  {page.template.category}
-                </span>
-                <h3 className="mt-3 text-base font-semibold leading-6 text-slate-950">
-                  {page.template.title}
-                </h3>
-                <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-600">
-                  {page.template.description}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <HomepageTemplates templates={templateCards} />
         </div>
       </section>
 

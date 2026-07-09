@@ -9,6 +9,7 @@ import {
   markAuthTokenUsed,
 } from "@/lib/auth/tokens";
 import { hashPassword } from "@/lib/auth/password";
+import { createTemplateFormForOwner } from "@/lib/forms/templates/apply-template";
 import { prisma } from "@/lib/prisma";
 
 function redirectWithError(token: string, message: string): never {
@@ -99,13 +100,26 @@ export async function completeSignupAction(formData: FormData) {
   const templateSlug = safeTemplateSlug(
     (metadata as Record<string, unknown>).templateSlug,
   );
-  const params = new URLSearchParams({
-    success: "Your trial is active. Welcome to FormOS.",
-  });
 
   if (templateSlug) {
-    params.set("template", templateSlug);
+    const applied = await createTemplateFormForOwner({
+      ownerId: user.id,
+      templateSlug,
+    });
+
+    if (applied.ok) {
+      redirect(
+        `/dashboard/forms?success=${encodeURIComponent("Your trial is active and your template is ready in Drafts.")}`,
+      );
+    }
+
+    // Access/creation failed — fall back to the picker with it preselected.
+    redirect(
+      `/dashboard/forms/new?template=${encodeURIComponent(templateSlug)}`,
+    );
   }
 
-  redirect(`/dashboard?${params.toString()}`);
+  redirect(
+    `/dashboard?success=${encodeURIComponent("Your trial is active. Welcome to FormOS.")}`,
+  );
 }

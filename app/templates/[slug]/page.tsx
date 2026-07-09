@@ -11,6 +11,8 @@ import {
   getTemplateLandingPages,
 } from "@/lib/forms/templates/template-landing-pages";
 import { getPlatformSettings } from "@/lib/platform/settings";
+import { getMinimumPlanForTemplate } from "@/lib/forms/templates/template-access";
+import { prisma } from "@/lib/prisma";
 
 type TemplateLandingPageProps = {
   params: Promise<{
@@ -95,15 +97,22 @@ export default async function TemplateLandingPage({
     notFound();
   }
 
-  const [settings, userId] = await Promise.all([
+  const [settings, userId, activePlans] = await Promise.all([
     getPlatformSettings(),
     getSessionUserId(),
+    prisma.subscriptionPlan.findMany({
+      where: { isActive: true, isPublic: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true, sortOrder: true, limits: true },
+    }),
   ]);
   const isLoggedIn = Boolean(userId);
+  const trialPlanSlug =
+    getMinimumPlanForTemplate(page.template, activePlans)?.slug ?? "pro";
   const primaryHref = isLoggedIn
-    ? "/dashboard/forms/new"
+    ? `/api/templates/apply?slug=${encodeURIComponent(page.routeSlug)}`
     : settings.trialEnabled
-      ? `/api/billing/public-checkout?plan=pro&interval=monthly&source=template_page&template=${encodeURIComponent(page.routeSlug)}`
+      ? `/api/billing/public-checkout?plan=${encodeURIComponent(trialPlanSlug)}&interval=monthly&source=template_page&template=${encodeURIComponent(page.routeSlug)}`
       : `/signup?template=${encodeURIComponent(page.routeSlug)}`;
   const primaryLabel = isLoggedIn
     ? "Use this template"
