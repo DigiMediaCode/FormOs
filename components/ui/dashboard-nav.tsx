@@ -11,6 +11,7 @@ import {
   FileSignature,
   Gauge,
   HelpCircle,
+  LayoutTemplate,
   Plug,
   ScrollText,
   UserRound,
@@ -27,6 +28,11 @@ const NAV_ITEMS = [
     href: "/dashboard/forms",
     label: "Forms",
     icon: FileText,
+  },
+  {
+    href: "/dashboard/templates",
+    label: "Templates",
+    icon: LayoutTemplate,
   },
   {
     href: "/dashboard/widgets",

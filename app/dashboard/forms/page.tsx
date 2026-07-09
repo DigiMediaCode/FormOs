@@ -18,11 +18,6 @@ import {
   publishForm,
   unpublishForm,
 } from "@/lib/forms/actions";
-import { createWorkflowTemplate } from "@/lib/forms/templates/create-template-form";
-import { getTemplateAccessStatus } from "@/lib/forms/templates/template-access";
-import { WORKFLOW_TEMPLATES } from "@/lib/forms/templates/vertical-workflow-templates";
-import { getUserPlanAccess } from "@/lib/plans/limits";
-import { prisma } from "@/lib/prisma";
 import {
   canManageWorkspaceForms,
   requireWorkspaceMember,
@@ -79,24 +74,7 @@ function TooltipLabel({ label }: { label: string }) {
 export default async function FormsPage() {
   const context = await requireWorkspaceMember();
   const canManageForms = canManageWorkspaceForms(context);
-  const [forms, access, activePlans] = await Promise.all([
-    getUserForms(),
-    getUserPlanAccess(context.ownerId),
-    prisma.subscriptionPlan.findMany({
-      where: { isActive: true, isPublic: true },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, slug: true, sortOrder: true, limits: true },
-    }),
-  ]);
-
-  const templateCards = WORKFLOW_TEMPLATES.map((template) => ({
-    template,
-    access: getTemplateAccessStatus({
-      access,
-      activePlans,
-      template,
-    }),
-  }));
+  const forms = await getUserForms();
 
   return (
     <main className="min-h-screen px-4 py-6 lg:px-8 lg:py-8">
@@ -138,8 +116,7 @@ export default async function FormsPage() {
         </header>
 
         {canManageForms ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-5">
-          <div className="flex items-start justify-between gap-3">
+          <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-3xl sm:p-5">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
                 Workflow templates
@@ -147,65 +124,20 @@ export default async function FormsPage() {
               <h2 className="mt-1 text-base font-semibold text-slate-950 sm:text-lg">
                 Start with a complete business workflow
               </h2>
-              <p className="mt-1 hidden text-sm leading-6 text-slate-700 sm:block">
-                Choose from rental, trades, service booking, and event workflows
-                with signatures, uploads, conditional fields, and office processing.
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                Rental, trades, service booking, healthcare, and event workflows
+                with signatures, uploads, conditional fields, and office
+                processing — one click creates a Draft.
               </p>
             </div>
             <Link
-              aria-label="View all templates"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-700 transition hover:border-blue-200 hover:bg-blue-50 sm:h-auto sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm sm:font-semibold"
-              href="/dashboard/forms/new"
-              title="View all templates"
+              className="inline-flex w-fit shrink-0 items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-950/20 transition hover:bg-blue-700"
+              href="/dashboard/templates"
             >
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:ml-2 sm:inline">View all templates</span>
+              Browse templates
             </Link>
-          </div>
-          <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-            {templateCards.map(({ access: templateAccess, template }) => (
-              <div className="min-w-[70%] snap-start lg:min-w-0" key={template.slug}>
-                {templateAccess.canCreate ? (
-                  <form action={createWorkflowTemplate} className="h-full">
-                    <input name="templateSlug" type="hidden" value={template.slug} />
-                    <SubmitButton
-                      className="h-full w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-blue-200 hover:bg-blue-50"
-                      pendingText="Creating..."
-                      showStatus={false}
-                    >
-                      <span className="block text-xs font-semibold text-blue-700">
-                        {template.category}
-                      </span>
-                      <span className="mt-1 block">{template.title}</span>
-                      <span className="mt-2 block text-[11px] font-normal text-slate-500">
-                        {templateAccess.ctaLabel}
-                      </span>
-                    </SubmitButton>
-                  </form>
-                ) : (
-                  <Link
-                    className="block h-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-blue-200 hover:bg-blue-50"
-                    href={
-                      templateAccess.formLimitReached
-                        ? "/dashboard/settings/billing"
-                        : "/dashboard/settings/billing"
-                    }
-                  >
-                    <span className="block text-xs font-semibold text-blue-700">
-                      {template.category}
-                    </span>
-                    <span className="mt-1 block">{template.title}</span>
-                    <span className="mt-2 block text-[11px] font-normal text-slate-500">
-                      {templateAccess.minimumPlanName
-                        ? `Requires ${templateAccess.minimumPlanName}`
-                        : templateAccess.ctaLabel}
-                    </span>
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
+          </section>
         ) : null}
 
         {forms.length === 0 ? (
@@ -222,7 +154,7 @@ export default async function FormsPage() {
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link
                   className="inline-flex rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                  href="/dashboard/forms/new"
+                  href="/dashboard/templates"
                 >
                   Browse templates
                 </Link>

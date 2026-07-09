@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/tokens";
 import { hashPassword } from "@/lib/auth/password";
 import { createTemplateFormForOwner } from "@/lib/forms/templates/apply-template";
+import { sendSignupNotification } from "@/lib/notifications/auth-notifications";
 import { prisma } from "@/lib/prisma";
 
 function redirectWithError(token: string, message: string): never {
@@ -90,6 +91,15 @@ export async function completeSignupAction(formData: FormData) {
     exceptTokenId: token.id,
   });
   await createSession(user.id);
+
+  // Trial accounts are verified via the secure completion link, so no email
+  // verification is sent — but new users should still get the welcome email.
+  await sendSignupNotification({
+    email: user.email,
+    firstName: firstName || null,
+    lastName: lastName || null,
+    name: fullName || user.name,
+  });
 
   const metadata =
     typeof user.subscription?.metadata === "object" &&
