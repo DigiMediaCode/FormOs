@@ -1,6 +1,6 @@
 import "server-only";
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { generateBusinessDocumentPdf } from "@/lib/pdf/business-document";
 import {
   assertCanGeneratePdf,
@@ -9,16 +9,17 @@ import {
 import { prisma } from "@/lib/prisma";
 import { type BusinessDocumentType } from "@/lib/documents/templates";
 import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { getAppRedirectUrl } from "@/lib/app-url";
 
 export async function handleBusinessDocumentPdfRequest(
-  request: NextRequest,
+  _request: Request,
   documentId: string,
   type: BusinessDocumentType,
 ) {
   const context = await getWorkspaceContextForCurrentUser();
 
   if (!context) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
   try {

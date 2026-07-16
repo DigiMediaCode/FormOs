@@ -417,14 +417,17 @@ export const DEFAULT_KB_ARTICLES: DefaultKbArticle[] = [
   },
   {
     category: "Account & Security",
-    title: "Can I sign in with Google or Lark?",
+    title: "What sign-in options does FormOS support?",
     slug: "can-i-sign-in-with-google-or-lark",
     excerpt:
-      "FormOS supports email/password login and OAuth login with Google and Lark when configured.",
+      "FormOS supports email/password login and configured OAuth login providers such as Google, Microsoft, Apple, and Facebook.",
     sortOrder: 30,
-    content: `<p>Yes. If OAuth is configured, you can sign in with Google or Lark.</p>
+    content: `<h2>Available sign-in methods</h2>
+<p>FormOS supports email/password login. If OAuth providers are configured by the platform, users may also see social login options such as Google, Microsoft, Apple, or Facebook.</p>
+<p>Only providers with complete environment configuration appear on the login and signup pages, so unavailable providers are hidden automatically.</p>
+<h2>Storage and email integrations are separate</h2>
 <p>Google login is separate from Google Drive storage. Connecting Google Drive for uploads is done from Settings / Integrations.</p>
-<p>Lark login is separate from the Lark Mail email notification provider.</p>`,
+<p>Lark social login is no longer offered. Lark Mail remains available as the transactional email provider for verification, OTP, notifications, and system emails when configured by Super Admin.</p>`,
   },
   {
     category: "Account & Security",
@@ -654,7 +657,19 @@ export async function seedDefaultKbContentIfMissing({
 
     await prisma.kbArticle.upsert({
       where: { slug: article.slug },
-      update: {},
+      update:
+        article.slug === "can-i-sign-in-with-google-or-lark"
+          ? {
+              title: article.title,
+              excerpt: article.excerpt,
+              content: article.content,
+              sortOrder: article.sortOrder ?? 0,
+              isFeatured: article.isFeatured ?? false,
+              metaTitle: article.title,
+              metaDescription: article.excerpt,
+              categoryId: category.id,
+            }
+          : {},
       create: {
         title: article.title,
         slug: article.slug,

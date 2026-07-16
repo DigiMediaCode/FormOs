@@ -64,6 +64,7 @@ type LoginVerificationUser = {
   firstName?: string | null;
   lastName?: string | null;
   name?: string | null;
+  suspendedAt?: Date | null;
 };
 
 export async function loginWithOAuthProfile(
@@ -91,6 +92,7 @@ export async function loginWithOAuthProfile(
           firstName: true,
           lastName: true,
           name: true,
+          suspendedAt: true,
         },
       },
     },
@@ -116,6 +118,7 @@ export async function loginWithOAuthProfile(
       lastName: true,
       email: true,
       emailVerifiedAt: true,
+      suspendedAt: true,
     },
   });
 
@@ -144,6 +147,7 @@ export async function loginWithOAuthProfile(
         firstName: true,
         lastName: true,
         name: true,
+        suspendedAt: true,
       },
     });
 

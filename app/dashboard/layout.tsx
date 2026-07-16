@@ -14,6 +14,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  if (user.suspendedAt) {
+    redirect("/account-suspended");
+  }
+
   const workspaceContext = await getWorkspaceContextForCurrentUser();
 
   return (

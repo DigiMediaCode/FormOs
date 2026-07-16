@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (user.suspendedAt) {
+    return NextResponse.redirect(getAppRedirectUrl("/account-suspended"), {
+      status: 303,
+    });
+  }
+
   if (!slug) {
     return NextResponse.redirect(getAppRedirectUrl("/dashboard/forms/new"), {
       status: 303,

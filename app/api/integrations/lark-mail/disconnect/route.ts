@@ -11,6 +11,12 @@ export async function POST() {
     return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
+  if (user.suspendedAt) {
+    return NextResponse.redirect(getAppRedirectUrl("/account-suspended"), {
+      status: 303,
+    });
+  }
+
   if (user.role !== UserRole.SUPER_ADMIN) {
     return NextResponse.redirect(
       getAppRedirectUrl(

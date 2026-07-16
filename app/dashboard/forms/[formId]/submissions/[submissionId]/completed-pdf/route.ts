@@ -3,6 +3,7 @@ import { generateCompletedSubmissionPdf } from "@/lib/pdf/completed-submission";
 import { assertCanGeneratePdf } from "@/lib/plans/limits";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContextForCurrentUser } from "@/lib/workspaces/access";
+import { getAppRedirectUrl } from "@/lib/app-url";
 
 type CompletedPdfRouteProps = {
   params: Promise<{
@@ -12,13 +13,13 @@ type CompletedPdfRouteProps = {
 };
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: CompletedPdfRouteProps,
 ) {
   const context = await getWorkspaceContextForCurrentUser();
 
   if (!context) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppRedirectUrl("/login"));
   }
 
   const { formId, submissionId } = await params;

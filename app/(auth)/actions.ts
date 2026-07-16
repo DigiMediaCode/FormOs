@@ -167,6 +167,7 @@ export async function loginAction(formData: FormData) {
       firstName: true,
       lastName: true,
       name: true,
+      suspendedAt: true,
       passwordHash: true,
     },
   });
@@ -179,6 +180,10 @@ export async function loginAction(formData: FormData) {
 
   if (!isValidPassword) {
     errorRedirect("/login", "Invalid email or password.", redirectParams);
+  }
+
+  if (user.suspendedAt) {
+    redirect("/account-suspended");
   }
 
   const verification = await startLoginVerification({

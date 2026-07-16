@@ -32,6 +32,10 @@ export async function updateProfileAction(formData: FormData) {
     redirect("/login");
   }
 
+  if (user.suspendedAt) {
+    redirect("/account-suspended");
+  }
+
   const firstName = readString(formData, "firstName");
   const lastName = readString(formData, "lastName");
   const phone = readString(formData, "phone");

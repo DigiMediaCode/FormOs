@@ -21,6 +21,7 @@ type LoginVerificationUser = {
   firstName?: string | null;
   lastName?: string | null;
   name?: string | null;
+  suspendedAt?: Date | null;
 };
 
 function cookieOptions() {
@@ -97,6 +98,13 @@ export async function startLoginVerification(input: {
   user: LoginVerificationUser;
   nextPath?: string | null;
 }) {
+  if (input.user.suspendedAt) {
+    return {
+      ok: false,
+      message: "Your account has been suspended. Please contact support.",
+    };
+  }
+
   const email = normalizeEmail(input.user.email);
   const code = generateLoginCode();
   const tokenHash = hashAuthToken(code);
@@ -180,6 +188,7 @@ export async function getPendingLoginVerification() {
           firstName: true,
           lastName: true,
           name: true,
+          suspendedAt: true,
         },
       },
     },
@@ -249,6 +258,7 @@ export async function verifyPendingLoginCode(rawCode: string) {
           firstName: true,
           lastName: true,
           name: true,
+          suspendedAt: true,
         },
       },
     },
@@ -258,6 +268,19 @@ export async function verifyPendingLoginCode(rawCode: string) {
     return {
       ok: false,
       message: "That login code is invalid or expired.",
+    };
+  }
+
+  if (token.user.suspendedAt) {
+    await prisma.authToken.update({
+      where: { id: token.id },
+      data: { usedAt: new Date() },
+    });
+    await clearPendingLoginVerification();
+
+    return {
+      ok: false,
+      message: "Your account has been suspended. Please contact support.",
     };
   }
 

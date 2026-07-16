@@ -150,6 +150,10 @@ export const getWorkspaceContextForCurrentUser = cache(
       return null;
     }
 
+    if (user.suspendedAt) {
+      redirect("/account-suspended");
+    }
+
     const staffMembership = await prisma.workspaceMember.findFirst({
       where: {
         userId: user.id,
