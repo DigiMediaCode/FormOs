@@ -28,9 +28,9 @@ export function isTurnstileConfigured(settings: TurnstileConfigInput) {
 /**
  * Verifies a Turnstile token against Cloudflare's siteverify endpoint.
  *
- * Fails open on network/transport errors so a Cloudflare outage never blocks
- * legitimate submissions; only an explicit `success: false` (bad/expired/forged
- * token) blocks the submission.
+ * Fails closed on network/transport errors when Turnstile is configured. A
+ * verification outage should degrade submission availability, not allow spam or
+ * forged traffic through a protected form.
  */
 export async function verifyTurnstileToken({
   secret,
@@ -62,10 +62,10 @@ export async function verifyTurnstileToken({
     });
 
     if (!response.ok) {
-      console.warn("[formos:turnstile] Non-OK siteverify response; failing open.", {
+      console.warn("[formos:turnstile] Non-OK siteverify response; rejecting.", {
         status: response.status,
       });
-      return true;
+      return false;
     }
 
     const data = (await response.json()) as {
@@ -82,9 +82,9 @@ export async function verifyTurnstileToken({
 
     return true;
   } catch (error) {
-    console.error("[formos:turnstile] Verification request failed; failing open.", {
+    console.error("[formos:turnstile] Verification request failed; rejecting.", {
       message: error instanceof Error ? error.message : "unknown error",
     });
-    return true;
+    return false;
   }
 }

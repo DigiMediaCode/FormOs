@@ -22,15 +22,34 @@ export function mediaStorageRoot() {
   return path.join(process.cwd(), "storage", "media");
 }
 
+function resolveMediaStoragePath(storagePath: string) {
+  const root = path.resolve(mediaStorageRoot());
+  const candidate = path.resolve(
+    path.isAbsolute(storagePath) ? storagePath : path.join(root, storagePath),
+  );
+
+  if (candidate === root || !candidate.startsWith(`${root}${path.sep}`)) {
+    return null;
+  }
+
+  return candidate;
+}
+
 function mediaStorageCandidates(storagePath: string, fileName: string) {
   const candidates = new Set<string>();
 
   if (storagePath) {
-    candidates.add(path.isAbsolute(storagePath) ? storagePath : path.join(process.cwd(), storagePath));
+    const candidate = resolveMediaStoragePath(storagePath);
+    if (candidate) {
+      candidates.add(candidate);
+    }
   }
 
   if (fileName) {
-    candidates.add(path.join(mediaStorageRoot(), fileName));
+    const candidate = resolveMediaStoragePath(fileName);
+    if (candidate) {
+      candidates.add(candidate);
+    }
   }
 
   return Array.from(candidates);
