@@ -14,7 +14,12 @@ services:
     build:
       context: .
       args:
+        # Interpolated by docker compose from the .env file in this directory.
+        # next build needs live DB access (static prerender of sitemap +
+        # template pages queries Prisma), so the DB URLs are passed at build too.
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        DATABASE_URL: ${DATABASE_URL}
+        DIRECT_URL: ${DIRECT_URL}
     image: formos:latest
     container_name: formos
     restart: unless-stopped
