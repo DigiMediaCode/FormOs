@@ -1,10 +1,22 @@
-# FormOS — Docker Compose for a self-managed VPS.
+# FormOS — Docker Compose for a self-managed VPS (Caddy reverse proxy in Docker).
 #
 # The database stays on Supabase (external) and file uploads go to Google
 # Drive/Dropbox, so this container is STATELESS — no volumes needed for data.
 #
 # Copy .env.example -> .env and fill it in before running:
 #   docker compose up -d --build
+#
+# Routing: Caddy runs as a container on the shared `evolara-production_backend`
+# network. FormOS joins that same network (see `networks:` at the bottom), so
+# Caddy reaches it container-to-container by NAME — do NOT use 127.0.0.1, which
+# from inside the Caddy container points at Caddy itself. In the Caddyfile use:
+#
+#   dev.formos.com.au {
+#       request_body {
+#           max_size 20MB          # FormOS server actions accept up to 15 MB
+#       }
+#       reverse_proxy formos:3001  # container name : internal port
+#   }
 #
 # NEXT_PUBLIC_APP_URL is read from .env and passed as a BUILD ARG because
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time.
@@ -26,10 +38,11 @@ services:
     env_file: .env
     environment:
       PORT: 3001
-    # ── Option A: publish a port and point your existing reverse proxy at it ──
-    # (Nginx Proxy Manager / a host Nginx / Caddy → http://127.0.0.1:3001)
-    ports:
-      - "127.0.0.1:3001:3001"
+    # No host port publish needed: Caddy reaches the app over the shared Docker
+    # network by container name (formos:3001). `expose` is documentation-only —
+    # containers on the same network can already reach any port.
+    expose:
+      - "3001"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -37,20 +50,9 @@ services:
       retries: 5
       start_period: 40s
 
-    # ── Option B: attach to a shared proxy network (Traefik) instead ──
-    # Remove the `ports:` block above, then uncomment below and set your domain.
-    # networks:
-    #   - proxy
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.formos.rule=Host(`formos.com.au`)"
-    #   - "traefik.http.routers.formos.entrypoints=websecure"
-    #   - "traefik.http.routers.formos.tls.certresolver=letsencrypt"
-    #   - "traefik.http.services.formos.loadbalancer.server.port=3001"
-    #   # FormOS server actions accept up to 15 MB (see next.config.ts):
-    #   - "traefik.http.middlewares.formos-body.buffering.maxRequestBodyBytes=20971520"
-    #   - "traefik.http.routers.formos.middlewares=formos-body"
-
-# networks:
-#   proxy:
-#     external: true
+# Join the existing shared network that Caddy is already on, so the reverse
+# proxy can route to this container by name.
+networks:
+  default:
+    name: evolara-production_backend
+    external: true
