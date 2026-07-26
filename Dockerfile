@@ -35,6 +35,19 @@ COPY . .
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+# `next build` needs REAL database access: several routes are statically
+# prerendered and query Prisma at build time — app/sitemap.ts and the
+# app/templates/[slug] pages (which call prisma.subscriptionPlan.findMany).
+# This mirrors the original Hostinger build, which ran against the live Supabase
+# DB. prisma.config.ts also throws unless DIRECT_URL is set.
+#
+# These are passed as build args (from .env via docker compose) and only exist
+# in this throwaway build stage — multi-stage means they are NOT baked into the
+# final runtime image. DB schema migrations still run at container START, not here.
+ARG DATABASE_URL
+ARG DIRECT_URL
+ENV DATABASE_URL=$DATABASE_URL
+ENV DIRECT_URL=$DIRECT_URL
 RUN npx prisma generate && npx next build
 
 # ---- Runner: lean-ish runtime image ----
