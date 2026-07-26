@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+# Push-to-deploy: when main updates, SSH into the VPS, pull the new code, and
+# rebuild/restart the Docker container. The build runs ON the VPS, so it reaches
+# Supabase and joins the Caddy network exactly like a manual `docker compose up`.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # allows manual "Run workflow" from the Actions tab
+
+# Never let two deploys run at once; cancel an in-flight one if a newer push lands.
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}       # optional; defaults to 22 if empty
+          script_stop: true                    # abort on the first failed command
+          script: |
+            set -e
+            cd /opt/FormOs
+
+            echo "==> Fetching latest main"
+            git fetch --all --prune
+            # Hard reset to origin/main. This does NOT touch untracked files, so
+            # the server's .env (gitignored) is preserved.
+            git reset --hard origin/main
+
+            echo "==> Rebuilding and restarting container"
+            docker compose up -d --build
+
+            echo "==> Pruning old images to reclaim disk"
+            docker image prune -f
+
+            echo "==> Current status"
+            docker compose ps
