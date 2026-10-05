@@ -35,7 +35,8 @@ services:
     image: formos:latest
     container_name: formos
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
     environment:
       PORT: 3001
     # No host port publish needed: Caddy reaches the app over the shared Docker
