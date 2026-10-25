@@ -11,8 +11,14 @@
 # Debian slim (not alpine) is used on purpose: Prisma + bcrypt/pg native modules
 # are more reliable against glibc + OpenSSL than against alpine/musl.
 
+#
+# Node is pinned to an exact patch version on purpose. A floating tag like
+# `node:22-bookworm-slim` stays cached on the VPS, so rebuilds silently keep an
+# old (vulnerable) Node. 22.23.4 carries the Oct 21 2026 security fixes
+# (CVE-2026-111497 Brotli RCE et al). Bump this line for future Node releases.
+
 # ---- Base: shared OS layer with OpenSSL for Prisma ----
-FROM node:22-bookworm-slim AS base
+FROM node:22.23.4-bookworm-slim AS base
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
