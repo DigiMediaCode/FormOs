@@ -1,5 +1,11 @@
 # FormOS — Hostinger Cloud → VPS Migration Guide
 
+> **Historical — superseded.** This was the original migration plan (PM2 + Nginx
+> in `/var/www/formos`). Production did **not** end up that way: FormOS runs in
+> Docker at `/opt/FormOs` behind a containerized Caddy, deployed by GitHub
+> Actions. Use [`HANDOVER.md`](HANDOVER.md) for how things actually run today.
+> The environment-variable and cutover notes below are still accurate.
+
 This guide moves FormOS from a Hostinger managed/Cloud hosting plan to a self-managed
 **VPS** (Hostinger VPS, or any Ubuntu/Debian VPS). The **Supabase database does not move** —
 it stays where it is and the app simply connects to it over the network. This is an

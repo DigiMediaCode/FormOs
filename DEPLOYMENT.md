@@ -30,23 +30,23 @@ Use `DIRECT_URL` for Prisma CLI and migration commands. For Supabase, this must 
 
 ## Production Deploy
 
-Hostinger pulls from GitHub and runs:
+FormOS runs as a Docker container on the Hostinger VPS (`/opt/FormOs`). Merging
+to `main` triggers `.github/workflows/deploy.yml`, which SSHes to the VPS,
+resets to `origin/main`, and runs `docker compose build --pull` followed by
+`docker compose up -d --wait`. See `HANDOVER.md` for the full runbook.
 
-```bash
-npm run build
-```
+Inside that flow:
 
-The build script runs:
+1. **Image build** (`Dockerfile`) runs `prisma generate && next build`. It does
+   **not** migrate. `next build` still needs `DATABASE_URL`/`DIRECT_URL` (passed
+   as build args) because some routes prerender from the database.
+2. **Container start** (`docker-entrypoint.sh`) runs `prisma migrate deploy`,
+   then starts the server. Pending committed migrations are applied here.
+3. The workflow waits for the container healthcheck and fails if it goes
+   unhealthy.
 
-```bash
-prisma generate && prisma migrate deploy && next build
-```
-
-This means production deployment:
-
-1. Generates Prisma Client.
-2. Applies pending committed migrations with `prisma migrate deploy`.
-3. Builds the Next.js app.
+`npm run build` (`prisma generate && prisma migrate deploy && next build`) is
+for non-Docker/local builds only.
 
 Do not use `prisma db push` for production deployments.
 
