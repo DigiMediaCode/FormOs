@@ -36,8 +36,18 @@ jobs:
             # the server's .env (gitignored) is preserved.
             git reset --hard origin/main
 
-            echo "==> Rebuilding and restarting container"
-            docker compose up -d --build
+            echo "==> Building image (--pull refreshes the cached Node base image)"
+            docker compose build --pull
+
+            echo "==> Restarting container and waiting for it to report healthy"
+            # --wait blocks until the healthcheck passes (migrations + boot), and
+            # exits non-zero if the container goes unhealthy, so a broken deploy
+            # turns this workflow red instead of reporting success.
+            if ! docker compose up -d --wait --wait-timeout 300; then
+              echo "!! Container did not become healthy. Recent logs:"
+              docker compose logs --tail=100 formos
+              exit 1
+            fi
 
             echo "==> Pruning old images to reclaim disk"
             docker image prune -f
