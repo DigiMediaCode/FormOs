@@ -377,12 +377,18 @@ export default async function IntegrationsPage({
                   </h2>
                   <span
                     className={`rounded-md border px-2 py-1 text-xs font-medium ${
-                      larkMail.connected
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                        : "border-slate-200 bg-slate-100 text-slate-700"
+                      larkMail.needsReconnect
+                        ? "border-red-200 bg-red-50 text-red-800"
+                        : larkMail.connected
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          : "border-slate-200 bg-slate-100 text-slate-700"
                     }`}
                   >
-                    {larkMail.connected ? "Connected" : "Not connected"}
+                    {larkMail.needsReconnect
+                      ? "Reconnect needed"
+                      : larkMail.connected
+                        ? "Connected"
+                        : "Not connected"}
                   </span>
                   <span className="rounded-md border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800">
                     Super Admin
@@ -399,9 +405,27 @@ export default async function IntegrationsPage({
                   Requested scope: {LARK_MAIL_SCOPE}
                 </p>
                 {larkMail.connected ? (
-                  <p className="mt-3 text-xs text-slate-500">
-                    Connected {formatDate(larkMail.connectedAt) ?? "recently"}.
-                  </p>
+                  <>
+                    <p className="mt-3 text-xs text-slate-500">
+                      Connected {formatDate(larkMail.connectedAt) ?? "recently"}.
+                      {larkMail.refreshedAt
+                        ? ` Token last renewed ${formatDate(larkMail.refreshedAt)}.`
+                        : ""}
+                      {larkMail.refreshTokenExpiresAt
+                        ? ` Renewal valid until ${formatDate(larkMail.refreshTokenExpiresAt)}.`
+                        : ""}
+                    </p>
+                    {larkMail.needsReconnect ? (
+                      <p className="mt-3 max-w-2xl text-sm leading-6 text-red-800">
+                        FormOS can no longer renew the Lark Mail token, so emails
+                        are not being sent. Click Reconnect and authorize the
+                        sender mailbox again.
+                        {larkMail.lastRefreshError
+                          ? ` Last error: ${larkMail.lastRefreshError.message}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </>
                 ) : (
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-amber-800">
                     Lark Mail requires the sender mailbox to authorize FormOS.
@@ -411,15 +435,28 @@ export default async function IntegrationsPage({
               </div>
 
               {larkMail.connected ? (
-                <form action="/api/integrations/lark-mail/disconnect" method="post">
-                  <SubmitButton
-                    className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
-                    pendingText="Disconnecting Lark Mail..."
-                    showStatus={false}
+                <div className="flex flex-wrap gap-3">
+                  <PendingLink
+                    className={
+                      larkMail.needsReconnect
+                        ? "rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                        : "rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                    }
+                    href="/api/integrations/lark-mail/connect"
+                    pendingText="Redirecting to Lark Mail..."
                   >
-                    Disconnect
-                  </SubmitButton>
-                </form>
+                    Reconnect
+                  </PendingLink>
+                  <form action="/api/integrations/lark-mail/disconnect" method="post">
+                    <SubmitButton
+                      className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                      pendingText="Disconnecting Lark Mail..."
+                      showStatus={false}
+                    >
+                      Disconnect
+                    </SubmitButton>
+                  </form>
+                </div>
               ) : (
                 <PendingLink
                   className="rounded-md bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"

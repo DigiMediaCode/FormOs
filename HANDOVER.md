@@ -116,6 +116,30 @@ does not re-read `env_file`. If you changed `NEXT_PUBLIC_APP_URL` or the DB URLs
    `/dashboard/settings/billing`.
 5. Check Developers → Logs for API calls you don't recognise.
 
+### Email stopped (Lark Mail)
+**How the token works:** a Super Admin connects the sender mailbox once, at Settings →
+Integrations → Lark Mail. FormOS stores the OAuth tokens in the `UserIntegration` table (provider
+`LARK_MAIL`). The access token lasts about 2h. The refresh token lasts about **7 days** and is
+**single-use**: each renewal returns a new one and invalidates the old one. Lark also forces a full
+re-authorization **365 days** after the original connect.
+
+**Past incidents (Oct/Nov 2026):** FormOS only renewed the token when it sent an email. A quiet
+week let the refresh token expire, and email stopped silently while the settings page still said
+"Connected". Fixed by a keepalive (`lib/integrations/lark-mail/keepalive.ts`, started from
+`instrumentation.ts`). It checks every 6h and renews when the refresh token is within 3 days of
+expiry. The settings page now shows **Reconnect needed** with the last error.
+
+**If email stops:**
+1. Settings → Integrations → Lark Mail. If it shows *Reconnect needed*, click **Reconnect** and
+   authorize `info@formos.com.au`. That fixes it immediately.
+2. Logs: `docker compose logs formos | grep formos:lark`. Look for `token refresh failed`
+   (it includes Lark's error code) or `Lark email API returned an error`.
+3. Check `/opt/FormOs/.env`: `LARK_USER_ACCESS_TOKEN` must be **empty**, and
+   `LARK_SENDER_EMAIL=info@formos.com.au` must be spelled exactly (a dev log once showed
+   `info@formso.com.au`).
+4. Lark error codes: 20037 means the refresh token expired, 20064 revoked, 20073 already used,
+   20010 the user lost app permission. Every one of them needs a Reconnect.
+
 ### Look at the running app (SSH)
 ```bash
 cd /opt/FormOs
