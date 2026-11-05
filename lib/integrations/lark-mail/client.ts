@@ -109,7 +109,9 @@ async function requestLarkToken(
       message: tokenResponse.error_description || tokenResponse.msg,
       grantType: body.grant_type,
     });
-    throw new Error("Unable to connect Lark Mail.");
+    throw new Error(
+      `Lark OAuth token request failed (status ${response.status}, code ${tokenResponse.code ?? "none"}).`,
+    );
   }
 
   return token;
@@ -224,6 +226,35 @@ export async function saveLarkMailIntegration(
   });
 }
 
+type LarkMailMetadata = {
+  senderEmail?: unknown;
+  connectedAt?: unknown;
+  refreshedAt?: unknown;
+  refreshTokenExpiresAt?: unknown;
+  lastRefreshError?: unknown;
+};
+
+function readMetadataDate(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function readLastRefreshError(value: unknown) {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const error = value as { message?: unknown; at?: unknown };
+
+  return typeof error.message === "string"
+    ? { message: error.message, at: readMetadataDate(error.at) }
+    : null;
+}
+
 export async function getLarkMailIntegrationStatus(userId: string) {
   const integration = await prisma.userIntegration.findUnique({
     where: {
@@ -234,6 +265,7 @@ export async function getLarkMailIntegrationStatus(userId: string) {
     },
     select: {
       scope: true,
+      refreshToken: true,
       expiresAt: true,
       createdAt: true,
       updatedAt: true,
@@ -244,21 +276,29 @@ export async function getLarkMailIntegrationStatus(userId: string) {
   if (!integration) {
     return {
       connected: false,
+      needsReconnect: false,
       senderEmail: process.env.LARK_SENDER_EMAIL ?? null,
       scope: null,
       expiresAt: null,
       connectedAt: null,
+      refreshedAt: null,
+      refreshTokenExpiresAt: null,
+      lastRefreshError: null,
       updatedAt: null,
     };
   }
 
-  const metadata = normalizeMetadata(integration.metadata) as {
-    senderEmail?: unknown;
-    connectedAt?: unknown;
-  };
+  const metadata = normalizeMetadata(integration.metadata) as LarkMailMetadata;
+  const refreshTokenExpiresAt = readMetadataDate(metadata.refreshTokenExpiresAt);
+  const lastRefreshError = readLastRefreshError(metadata.lastRefreshError);
+  const needsReconnect =
+    !integration.refreshToken ||
+    lastRefreshError !== null ||
+    (refreshTokenExpiresAt !== null && refreshTokenExpiresAt.getTime() <= Date.now());
 
   return {
     connected: true,
+    needsReconnect,
     senderEmail:
       typeof metadata.senderEmail === "string"
         ? metadata.senderEmail
@@ -266,15 +306,18 @@ export async function getLarkMailIntegrationStatus(userId: string) {
     scope: integration.scope,
     expiresAt: integration.expiresAt,
     connectedAt:
-      typeof metadata.connectedAt === "string"
-        ? new Date(metadata.connectedAt)
-        : integration.createdAt,
+      readMetadataDate(metadata.connectedAt) ?? integration.createdAt,
+    refreshedAt: readMetadataDate(metadata.refreshedAt),
+    refreshTokenExpiresAt,
+    lastRefreshError,
     updatedAt: integration.updatedAt,
   };
 }
 
-export async function getLarkMailUserAccessToken() {
-  const integration = await prisma.userIntegration.findFirst({
+// FormOS sends all platform email from one sender mailbox: the most recently
+// connected LARK_MAIL integration.
+async function findSenderIntegration() {
+  return prisma.userIntegration.findFirst({
     where: {
       provider: IntegrationProvider.LARK_MAIL,
     },
@@ -289,67 +332,157 @@ export async function getLarkMailUserAccessToken() {
       metadata: true,
     },
   });
+}
+
+type SenderIntegration = NonNullable<Awaited<ReturnType<typeof findSenderIntegration>>>;
+
+async function recordRefreshFailure(integration: SenderIntegration, message: string) {
+  const metadata = normalizeMetadata(integration.metadata);
+
+  await prisma.userIntegration.updateMany({
+    where: {
+      userId: integration.userId,
+      provider: IntegrationProvider.LARK_MAIL,
+    },
+    data: {
+      metadata: {
+        ...metadata,
+        lastRefreshError: {
+          message,
+          at: new Date().toISOString(),
+        },
+      } as Prisma.InputJsonValue,
+    },
+  });
+}
+
+async function refreshSenderIntegration(integration: SenderIntegration) {
+  const refreshToken = integration.refreshToken
+    ? decryptIntegrationToken(integration.refreshToken)
+    : null;
+
+  if (!refreshToken) {
+    console.error(
+      "[formos:lark-mail] Lark Mail sender token is expired and has no refresh token. Reconnect Lark Mail in Settings / Integrations.",
+    );
+    await recordRefreshFailure(integration, "No refresh token stored.");
+    return null;
+  }
+
+  let refreshed: NormalizedLarkToken;
+
+  try {
+    refreshed = await refreshLarkMailToken(refreshToken);
+  } catch (error) {
+    // Lark refresh tokens are single-use. If another request or another
+    // instance sharing this database refreshed first, ours is spent but the
+    // row already holds a fresh token, so use that instead of failing.
+    const latest = await findSenderIntegration();
+
+    if (latest && latest.refreshToken !== integration.refreshToken) {
+      return decryptIntegrationToken(latest.accessToken);
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown error.";
+    console.error(
+      "[formos:lark-mail] Lark Mail sender token refresh failed. Email is down until Lark Mail is reconnected in Settings / Integrations.",
+      { error: message },
+    );
+    await recordRefreshFailure(integration, message);
+    return null;
+  }
+
+  const metadata = normalizeMetadata(integration.metadata) as LarkMailMetadata;
+
+  await prisma.userIntegration.update({
+    where: {
+      userId_provider: {
+        userId: integration.userId,
+        provider: IntegrationProvider.LARK_MAIL,
+      },
+    },
+    data: {
+      accessToken: encryptIntegrationToken(refreshed.accessToken),
+      refreshToken: refreshed.refreshToken
+        ? encryptIntegrationToken(refreshed.refreshToken)
+        : undefined,
+      expiresAt: getExpiresAt(refreshed.expiresIn),
+      scope: refreshed.scope ?? undefined,
+      metadata: {
+        ...metadata,
+        tokenType: refreshed.tokenType,
+        refreshTokenExpiresAt: refreshed.refreshTokenExpiresIn
+          ? new Date(
+              Date.now() + refreshed.refreshTokenExpiresIn * 1000,
+            ).toISOString()
+          : metadata.refreshTokenExpiresAt ?? null,
+        refreshedAt: new Date().toISOString(),
+        lastRefreshError: null,
+      } as Prisma.InputJsonValue,
+    },
+  });
+
+  return refreshed.accessToken;
+}
+
+// Concurrent sends must not each spend the same single-use refresh token.
+let refreshInFlight: Promise<string | null> | null = null;
+
+function refreshSenderIntegrationOnce(integration: SenderIntegration) {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshSenderIntegration(integration).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+
+  return refreshInFlight;
+}
+
+export async function getLarkMailUserAccessToken() {
+  const integration = await findSenderIntegration();
 
   if (!integration) {
     logLarkMailWarning("Lark Mail sender is not connected.");
     return null;
   }
 
-  const accessToken = decryptIntegrationToken(integration.accessToken);
-  const refreshToken = integration.refreshToken
-    ? decryptIntegrationToken(integration.refreshToken)
-    : null;
   const shouldRefresh =
     integration.expiresAt !== null &&
     integration.expiresAt.getTime() <= Date.now() + 60_000;
 
   if (!shouldRefresh) {
-    return accessToken;
+    return decryptIntegrationToken(integration.accessToken);
   }
 
-  if (!refreshToken) {
-    logLarkMailWarning("Lark Mail sender token is expired and has no refresh token.", {
-      hasRefreshToken: false,
-    });
-    return null;
+  return refreshSenderIntegrationOnce(integration);
+}
+
+// Lark refresh tokens expire about 7 days after they are issued. Sends only
+// refresh on demand, so a quiet week used to let the token die and silently
+// stop all email. Refresh ahead of that window instead.
+const REFRESH_TOKEN_RENEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+export async function keepLarkMailSenderTokenFresh() {
+  const integration = await findSenderIntegration();
+
+  if (!integration) {
+    return;
   }
 
-  try {
-    const refreshed = await refreshLarkMailToken(refreshToken);
-    const metadata = normalizeMetadata(integration.metadata);
-    const expiresAt = getExpiresAt(refreshed.expiresIn);
+  const metadata = normalizeMetadata(integration.metadata) as LarkMailMetadata;
+  const refreshTokenExpiresAt = readMetadataDate(metadata.refreshTokenExpiresAt);
+  const renewBy = Date.now() + REFRESH_TOKEN_RENEW_WINDOW_MS;
+  const shouldRenew =
+    refreshTokenExpiresAt === null || refreshTokenExpiresAt.getTime() <= renewBy;
 
-    await prisma.userIntegration.update({
-      where: {
-        userId_provider: {
-          userId: integration.userId,
-          provider: IntegrationProvider.LARK_MAIL,
-        },
-      },
-      data: {
-        accessToken: encryptIntegrationToken(refreshed.accessToken),
-        refreshToken: refreshed.refreshToken
-          ? encryptIntegrationToken(refreshed.refreshToken)
-          : undefined,
-        expiresAt,
-        scope: refreshed.scope ?? undefined,
-        metadata: {
-          ...metadata,
-          tokenType: refreshed.tokenType,
-          refreshTokenExpiresAt: refreshed.refreshTokenExpiresIn
-            ? new Date(
-                Date.now() + refreshed.refreshTokenExpiresIn * 1000,
-              ).toISOString()
-            : (metadata as { refreshTokenExpiresAt?: unknown }).refreshTokenExpiresAt ?? null,
-          refreshedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
-      },
-    });
+  if (!shouldRenew) {
+    return;
+  }
 
-    return refreshed.accessToken;
-  } catch {
-    logLarkMailWarning("Lark Mail sender token refresh failed.");
-    return null;
+  const accessToken = await refreshSenderIntegrationOnce(integration);
+
+  if (accessToken) {
+    console.info("[formos:lark-mail] Lark Mail sender token renewed ahead of expiry.");
   }
 }
 
